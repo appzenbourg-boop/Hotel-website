@@ -282,15 +282,19 @@ export default function ServicesPage() {
         }
     }, [selectedConfigType, serviceConfigs])
 
-    const filtered = requests.filter(r => {
-        const matchesSearch = r.title.toLowerCase().includes(search.toLowerCase()) ||
-            r.room.toLowerCase().includes(search.toLowerCase()) ||
-            r.guest.toLowerCase().includes(search.toLowerCase())
-        const matchesType = typeFilter === 'ALL' || r.type === typeFilter
-        const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter
-        const matchesStaff = staffFilter === 'ALL' || (r.assignedTo?.id === staffFilter)
-        return matchesSearch && matchesType && matchesStatus && matchesStaff
-    })
+    const filtered = useMemo(() => {
+        if (!Array.isArray(requests)) return []
+        return requests.filter(r => {
+            const searchStr = search.toLowerCase()
+            const matchesSearch = r.title.toLowerCase().includes(searchStr) ||
+                r.room.toLowerCase().includes(searchStr) ||
+                r.guest.toLowerCase().includes(searchStr)
+            const matchesType = typeFilter === 'ALL' || r.type === typeFilter
+            const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter
+            const matchesStaff = staffFilter === 'ALL' || (r.assignedTo?.id === staffFilter)
+            return matchesSearch && matchesType && matchesStatus && matchesStaff
+        })
+    }, [requests, search, typeFilter, statusFilter, staffFilter])
 
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#101922] overflow-hidden">
@@ -327,16 +331,19 @@ export default function ServicesPage() {
                         { label: 'Pending Approval', value: stats.pending, color: 'text-amber-500', icon: Clock },
                         { label: 'Active Work', value: stats.active, color: 'text-blue-500', icon: AlertTriangle },
                         { label: 'Critical SLA', value: stats.overdue, color: 'text-rose-500', icon: AlertTriangle },
-                        { label: 'Completed Today', value: requests.filter(r => r.status === 'COMPLETED').length, color: 'text-emerald-500', icon: CheckCircle2 },
-                    ].map((s, i) => (
-                        <div key={i} className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">{s.label}</p>
-                                <p className={cn("text-2xl font-bold", s.color)}>{s.value}</p>
+                        { label: 'Completed Today', value: (requests || []).filter((r: any) => r.status === 'COMPLETED').length, color: 'text-emerald-500', icon: CheckCircle2 },
+                    ].map((s, i) => {
+                        const Icon = s.icon
+                        return (
+                            <div key={i} className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">{s.label}</p>
+                                    <p className={cn("text-2xl font-bold", s.color)}>{s.value}</p>
+                                </div>
+                                <Icon className={cn("w-5 h-5 opacity-20", s.color)} />
                             </div>
-                            <s.icon className={cn("w-5 h-5 opacity-20", s.color)} />
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             </div>
 
