@@ -1,41 +1,23 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import { useSession } from 'next-auth/react'
 import { buildContextUrl, getAdminContext } from '@/lib/admin-context'
 import {
     Plus, Search, Clock, AlertTriangle, CheckCircle2,
-    Users, LayoutGrid, Filter, ChevronRight, RefreshCw, User,
-    Utensils, Brush, Settings as Tools, Shirt, AlertCircle, Loader2, Zap
+    Users, LayoutGrid, RefreshCw, User,
+    Utensils, Brush, Settings as Tools, Shirt, AlertCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { format, differenceInMinutes, differenceInSeconds } from 'date-fns'
+import { differenceInMinutes, differenceInSeconds } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/ui/Modal'
 import Select from '@/components/ui/Select'
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
-
-/* ───────────────── types ───────────────── */
-type ServiceStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'OVERDUE'
-type ServiceType = 'HOUSEKEEPING' | 'FOOD_ORDER' | 'MAINTENANCE' | 'CONCIERGE' | 'LAUNDRY'
-
-interface ServiceRequest {
-    id: string
-    room: string
-    guest: string
-    type: ServiceType
-    title: string
-    description?: string
-    priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'
-    status: ServiceStatus
-    assignedTo?: any
-    requestTime: string
-    slaLimit: number
-}
 
 /* ───────────────── helpers ───────────────── */
 const getServiceIcon = (type: string) => {
@@ -70,18 +52,22 @@ const getStatusStyle = (status: string) => {
 }
 
 const getElapsedTime = (timeStr: string) => {
-    const start = new Date(timeStr)
-    const now = new Date()
-    const mins = differenceInMinutes(now, start)
-    const secs = differenceInSeconds(now, start) % 60
-    return `${mins}m ${secs}s`
+    try {
+        const start = new Date(timeStr)
+        const now = new Date()
+        const mins = differenceInMinutes(now, start)
+        const secs = differenceInSeconds(now, start) % 60
+        return `${mins}m ${secs}s`
+    } catch { return '0m 0s' }
 }
 
 const getSLAPrecent = (timeStr: string, limit: number) => {
-    const start = new Date(timeStr)
-    const now = new Date()
-    const mins = differenceInMinutes(now, start)
-    return Math.min(100, (mins / (limit || 30)) * 100)
+    try {
+        const start = new Date(timeStr)
+        const now = new Date()
+        const mins = differenceInMinutes(now, start)
+        return Math.min(100, (mins / (limit || 30)) * 100)
+    } catch { return 0 }
 }
 
 const SkeletonRow = () => (
@@ -112,32 +98,23 @@ const SkeletonRow = () => (
 
 export default function ServicesPage() {
     const router = useRouter()
-    const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [typeFilter, setTypeFilter] = useState('ALL')
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [staffFilter, setStaffFilter] = useState('ALL')
 
-    // New Request State
     const [showAddModal, setShowAddModal] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [newRequestData, setNewRequestData] = useState({
-        type: 'HOUSEKEEPING',
-        roomNumber: '',
-        title: '',
-        description: '',
-        priority: 'NORMAL'
+        type: 'HOUSEKEEPING', roomNumber: '', title: '', description: '', priority: 'NORMAL'
     })
 
-    // Service Settings State
     const [showSettingsModal, setShowSettingsModal] = useState(false)
-    const [selectedConfigType, setSelectedConfigType] = useState<ServiceType>('FOOD_ORDER')
+    const [selectedConfigType, setSelectedConfigType] = useState('FOOD_ORDER')
     const [configSteps, setConfigSteps] = useState<{ name: string, duration: number }[]>([])
     const [configOptions, setConfigOptions] = useState<{ label: string, icon: string, desc: string }[]>([])
     const [isSavingConfig, setIsSavingConfig] = useState(false)
 
-    const [now, setNow] = useState(new Date())
-    const [isAutoAssigning, setIsAutoAssigning] = useState(false)
     const { data: session } = useSession()
     
     const currentPropertyId = useMemo(() => {
@@ -145,14 +122,12 @@ export default function ServicesPage() {
         return session?.user?.propertyId
     }, [session])
 
-    // Fetcher for SWR
     const fetcher = (url: string) => fetch(url).then(res => res.json()).then(json => Array.isArray(json) ? json : (json?.data ?? []))
 
-    // SWR Hooks for data
-    const { data: requests = [], error: reqError, isLoading: reqLoading, mutate: mutateRequests } = useSWR(
+    const { data: requests = [], isLoading: reqLoading, mutate: mutateRequests } = useSWR(
         currentPropertyId ? buildContextUrl('/api/admin/services', { status: 'ALL' }) : null,
         fetcher,
-        { refreshInterval: 10000, revalidateOnFocus: true }
+        { refreshInterval: 10000 }
     )
 
     const { data: rooms = [], mutate: mutateRooms } = useSWR(
@@ -171,108 +146,8 @@ export default function ServicesPage() {
         overdue: requests.filter((r: any) => r.status === 'OVERDUE').length
     }), [requests])
 
-    const fetchData = () => mutateRequests()
-
-    const fetchRooms = async () => {
-        if (!currentPropertyId) return
-        const res = await fetch(buildContextUrl('/api/admin/rooms'))
-        if (res.ok) {
-            const json = await res.json()
-            mutateRooms(Array.isArray(json) ? json : (json?.data ?? []))
-        }
-    }
-
-    const fetchServiceConfigs = async () => {
-        if (!currentPropertyId) return
-        const res = await fetch(buildContextUrl('/api/admin/service-configs'))
-        if (res.ok) {
-            const json = await res.json()
-            mutateConfigs(Array.isArray(json) ? json : (json?.data ?? []))
-        }
-    }
-
     useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 1000)
-        return () => clearInterval(timer)
-    }, [])
-
-    const handleNewRequest = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!newRequestData.roomNumber) return toast.error('Please select a room')
-        if (!newRequestData.title) return toast.error('Please enter a title')
-
-        setIsSubmitting(true)
-        try {
-            const room = rooms.find(r => r.roomNumber === newRequestData.roomNumber)
-            if (!room) return toast.error('Invalid room selected')
-
-            const res = await fetch('/api/admin/services', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    type: newRequestData.type,
-                    roomId: room.id,
-                    title: newRequestData.title,
-                    description: newRequestData.description,
-                    priority: newRequestData.priority
-                })
-            })
-
-            if (res.ok) {
-                toast.success('Service request created')
-                setShowAddModal(false)
-                fetchData()
-                setNewRequestData({ type: 'HOUSEKEEPING', roomNumber: '', title: '', description: '', priority: 'NORMAL' })
-            } else {
-                const err = await res.text()
-                toast.error(err || 'Failed to create request')
-            }
-        } catch { toast.error('An error occurred') }
-        finally { setIsSubmitting(false) }
-    }
-
-    const handleAutoAssign = async () => {
-        setIsAutoAssigning(true)
-        try {
-            const res = await fetch(buildContextUrl('/api/admin/services/auto-assign'), { method: 'POST' })
-            const data = await res.json()
-            if (res.ok) {
-                toast.success(data.message || 'Auto-assignment complete')
-                fetchData()
-            } else {
-                toast.error(data.error || 'Failed to auto-assign')
-            }
-        } catch {
-            toast.error('An error occurred during auto-assignment')
-        } finally {
-            setIsAutoAssigning(false)
-        }
-    }
-
-    const handleSaveConfig = async () => {
-        setIsSavingConfig(true)
-        try {
-            const res = await fetch(buildContextUrl('/api/admin/service-configs'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    type: selectedConfigType, 
-                    steps: configSteps,
-                    options: configOptions 
-                })
-            })
-            if (res.ok) {
-                toast.success('Service timers updated')
-                fetchServiceConfigs()
-            } else {
-                toast.error('Failed to save config')
-            }
-        } catch { toast.error('An error occurred') }
-        finally { setIsSavingConfig(false) }
-    }
-
-    useEffect(() => {
-        const config = serviceConfigs.find(c => c.type === selectedConfigType)
+        const config = serviceConfigs.find((c: any) => c.type === selectedConfigType)
         if (config) {
             setConfigSteps(config.steps.map((s: any) => ({ name: s.name, duration: s.duration })))
             setConfigOptions(config.options || [])
@@ -284,11 +159,10 @@ export default function ServicesPage() {
 
     const filtered = useMemo(() => {
         if (!Array.isArray(requests)) return []
-        return requests.filter(r => {
-            const searchStr = search.toLowerCase()
-            const matchesSearch = r.title.toLowerCase().includes(searchStr) ||
-                r.room.toLowerCase().includes(searchStr) ||
-                r.guest.toLowerCase().includes(searchStr)
+        return requests.filter((r: any) => {
+            const matchesSearch = r.title?.toLowerCase().includes(search.toLowerCase()) ||
+                r.room?.toLowerCase().includes(search.toLowerCase()) ||
+                r.guest?.toLowerCase().includes(search.toLowerCase())
             const matchesType = typeFilter === 'ALL' || r.type === typeFilter
             const matchesStatus = statusFilter === 'ALL' || r.status === statusFilter
             const matchesStaff = staffFilter === 'ALL' || (r.assignedTo?.id === staffFilter)
@@ -296,50 +170,71 @@ export default function ServicesPage() {
         })
     }, [requests, search, typeFilter, statusFilter, staffFilter])
 
+    const handleNewRequest = async (e: any) => {
+        e.preventDefault()
+        if (!newRequestData.roomNumber || !newRequestData.title) return toast.error('Required fields missing')
+        setIsSubmitting(true)
+        try {
+            const room = rooms.find((r: any) => r.roomNumber === newRequestData.roomNumber)
+            if (!room) throw new Error('Invalid room')
+            const res = await fetch('/api/admin/services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...newRequestData, roomId: room.id })
+            })
+            if (res.ok) {
+                toast.success('Created')
+                setShowAddModal(false)
+                mutateRequests()
+            }
+        } catch (err: any) { toast.error(err.message) }
+        finally { setIsSubmitting(false) }
+    }
+
+    const handleSaveConfig = async () => {
+        setIsSavingConfig(true)
+        try {
+            const res = await fetch(buildContextUrl('/api/admin/service-configs'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: selectedConfigType, steps: configSteps, options: configOptions })
+            })
+            if (res.ok) {
+                toast.success('Updated')
+                mutateConfigs()
+            }
+        } catch { toast.error('Error') }
+        finally { setIsSavingConfig(false) }
+    }
+
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#101922] overflow-hidden">
-            {/* Header / Stats */}
             <div className="shrink-0 p-6 sm:px-8 bg-[#101922] border-b border-white/[0.06]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-2xl font-bold text-white tracking-tight">Service Operations</h1>
-                        <p className="text-sm text-gray-500 mt-1">Manage and track guest requests in real-time</p>
+                        <p className="text-sm text-gray-500 mt-1">Manage guest requests</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button
-                            variant="secondary"
-                            className="bg-white/[0.04] border-white/[0.1] hover:bg-white/[0.08]"
-                            onClick={() => router.push('/admin/rooms')}
-                        >
-                            <LayoutGrid className="w-4 h-4 mr-2" /> Room Config
+                        <Button variant="secondary" onClick={() => setShowSettingsModal(true)}>
+                            <Tools className="w-4 h-4 mr-2" /> Settings
                         </Button>
-                        <Button
-                            variant="secondary"
-                            className="bg-white/[0.04] border-white/[0.1] hover:bg-white/[0.08]"
-                            onClick={() => setShowSettingsModal(true)}
-                        >
-                            <Tools className="w-4 h-4 mr-2" /> Edit Timers
-                        </Button>
-                        <Button onClick={() => setShowAddModal(true)} className="shadow-lg shadow-blue-500/20">
-                            <Plus className="w-4 h-4 mr-2" /> Create New Request
+                        <Button onClick={() => setShowAddModal(true)}>
+                            <Plus className="w-4 h-4 mr-2" /> New Request
                         </Button>
                     </div>
                 </div>
-
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { label: 'Pending Approval', value: stats.pending, color: 'text-amber-500', icon: Clock },
-                        { label: 'Active Work', value: stats.active, color: 'text-blue-500', icon: AlertTriangle },
-                        { label: 'Critical SLA', value: stats.overdue, color: 'text-rose-500', icon: AlertTriangle },
-                        { label: 'Completed Today', value: (requests || []).filter((r: any) => r.status === 'COMPLETED').length, color: 'text-emerald-500', icon: CheckCircle2 },
+                        { label: 'Pending', value: stats.pending, color: 'text-amber-500', icon: Clock },
+                        { label: 'Active', value: stats.active, color: 'text-blue-500', icon: AlertTriangle },
+                        { label: 'Overdue', value: stats.overdue, color: 'text-rose-500', icon: AlertTriangle },
+                        { label: 'Done Today', value: requests.filter((r: any) => r.status === 'COMPLETED').length, color: 'text-emerald-500', icon: CheckCircle2 },
                     ].map((s, i) => {
                         const Icon = s.icon
                         return (
                             <div key={i} className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">{s.label}</p>
-                                    <p className={cn("text-2xl font-bold", s.color)}>{s.value}</p>
-                                </div>
+                                <div><p className="text-[10px] font-bold uppercase text-gray-500 mb-1">{s.label}</p><p className={cn("text-2xl font-bold", s.color)}>{s.value}</p></div>
                                 <Icon className={cn("w-5 h-5 opacity-20", s.color)} />
                             </div>
                         )
@@ -347,329 +242,43 @@ export default function ServicesPage() {
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col min-w-0 bg-[#101922]">
-                {/* Filters Bar */}
-                <div className="shrink-0 flex flex-wrap items-center gap-3 p-4 sm:px-8 py-3 border-b border-white/[0.06]">
-                    <div className="relative flex-1 min-w-[200px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-                        <input
-                            type="text"
-                            placeholder="Search by room, guest or item..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder:text-gray-700 outline-none focus:border-blue-500/40 transition-colors"
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <select
-                            value={typeFilter}
-                            onChange={e => setTypeFilter(e.target.value)}
-                            className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-gray-400 font-bold outline-none cursor-pointer hover:border-white/10"
-                        >
-                            <option value="ALL">All Services</option>
-                            <option value="HOUSEKEEPING">Housekeeping</option>
-                            <option value="FOOD_ORDER">Food & Bv.</option>
-                            <option value="MAINTENANCE">Maintenance</option>
-                            <option value="LAUNDRY">Laundry</option>
-                        </select>
-                        <select
-                            value={statusFilter}
-                            onChange={e => setStatusFilter(e.target.value)}
-                            className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-gray-400 font-bold outline-none cursor-pointer hover:border-white/10"
-                        >
-                            <option value="ALL">All Status</option>
-                            <option value="PENDING">Pending</option>
-                            <option value="ACCEPTED">Accepted</option>
-                            <option value="IN_PROGRESS">In Progress</option>
-                            <option value="COMPLETED">Completed</option>
-                        </select>
-                        <button onClick={fetchData} className="p-2 hover:bg-white/[0.04] rounded-xl transition-colors">
-                            <RefreshCw className={cn("w-4 h-4 text-gray-600", loading && "animate-spin")} />
-                        </button>
-                    </div>
+            <div className="flex-1 flex flex-col min-w-0 bg-[#101922] overflow-auto">
+                <div className="p-4 sm:px-8 border-b border-white/[0.06] flex gap-4">
+                    <input className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-2 text-sm text-white flex-1" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} />
+                    <button onClick={() => mutateRequests()} className="p-2 hover:bg-white/[0.04] rounded-xl"><RefreshCw className="w-4 h-4 text-gray-600" /></button>
                 </div>
-
-                {/* Table View */}
-                <div className="flex-1 overflow-auto noscrollbar">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-[#0f1115] z-20 border-b border-white/[0.06]">
-                            <tr>
-                                <th className="px-8 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Request Type</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Room #</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Guest Name</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Time Elapsed (SLA)</th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Assigned Staff</th>
-                                <th className="px-6 py-4 text-right pr-10 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Status</th>
+                <table className="w-full text-left">
+                    <thead className="bg-[#0f1115] border-b border-white/[0.06] sticky top-0">
+                        <tr>
+                            <th className="px-8 py-4 text-[10px] font-bold text-gray-600 uppercase">Type</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase">Room</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase">Guest</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase">SLA</th>
+                            <th className="px-4 py-4 text-right pr-10 text-[10px] font-bold text-gray-600 uppercase">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {reqLoading ? Array(5).fill(0).map((_, i) => <SkeletonRow key={i} />) : filtered.map((req: any) => (
+                            <tr key={req.id} onClick={() => router.push(`/admin/services/${req.id}`)} className="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer">
+                                <td className="px-8 py-5"><div className="flex items-center gap-4"><div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", getServiceColor(req.type))}>{getServiceIcon(req.type)}</div><div><p className="text-sm font-bold text-white">{req.title}</p></div></div></td>
+                                <td className="px-6 py-5 text-white font-bold">{req.room}</td>
+                                <td className="px-6 py-5 text-gray-400 text-sm">{req.guest}</td>
+                                <td className="px-6 py-5"><div className="text-xs text-emerald-400 font-bold">{getElapsedTime(req.requestTime)}</div></td>
+                                <td className="px-4 py-5 text-right pr-10"><span className={cn('px-3 py-1 text-[10px] font-bold uppercase rounded-full border', getStatusStyle(req.status))}>{req.status}</span></td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {reqLoading && requests.length === 0 ? (
-                                Array(6).fill(0).map((_, i) => <SkeletonRow key={i} />)
-                            ) : filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="py-20 text-center text-gray-500">No requests found matching filters</td></tr>
-                            ) : (
-                                filtered.map(req => (
-                                <tr
-                                    key={req.id}
-                                    onClick={() => router.push(`/admin/services/${req.id}`)}
-                                    className="group cursor-pointer border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors relative"
-                                >
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-lg", getServiceColor(req.type))}>
-                                                {getServiceIcon(req.type)}
-                                            </div>
-                                            <div>
-                                                <p className="text-[15px] font-bold text-white leading-tight">{req.title}</p>
-                                                <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{req.type.toLowerCase().replace('_', ' ')}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <span className="text-lg font-bold text-white">{req.room}</span>
-                                    </td>
-                                    <td className="px-6 py-5 text-[14px] font-bold text-gray-300">
-                                        {req.guest}
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className={cn(
-                                            "inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold border",
-                                            req.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
-                                                getSLAPrecent(req.requestTime, req.slaLimit) > 75 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                                                    'bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20'
-                                        )}>
-                                            <Clock className="w-3.5 h-3.5" />
-                                            {getElapsedTime(req.requestTime)}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        {req.assignedTo ? (
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center overflow-hidden border border-blue-500/30">
-                                                    {req.assignedTo.profilePhoto ? <img src={req.assignedTo.profilePhoto} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-blue-400" />}
-                                                </div>
-                                                <span className="text-[13px] font-bold text-gray-300">{req.assignedTo.user?.name || 'Staff Member'}</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-3 text-gray-600">
-                                                <div className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center">
-                                                    <Users className="w-4 h-4" />
-                                                </div>
-                                                <span className="text-[13px]  font-medium">Unassigned</span>
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-5 text-right pr-10">
-                                        <span className={cn('px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-full border', getStatusStyle(req.status))}>
-                                            {req.status === 'ACCEPTED' ? 'OPEN' : req.status.replace('_', ' ')}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
-            {/* Modal for creating request */}
-            <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Create Service Request" description="Manually log a request for a room">
+            <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="New Request">
                 <form onSubmit={handleNewRequest} className="space-y-4 pt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <Select
-                            label="Service Type"
-                            value={newRequestData.type}
-                            onChange={e => setNewRequestData({ ...newRequestData, type: e.target.value })}
-                            options={[
-                                { value: 'HOUSEKEEPING', label: 'Housekeeping' },
-                                { value: 'FOOD_ORDER', label: 'Food & Beverage' },
-                                { value: 'MAINTENANCE', label: 'Maintenance' },
-                                { value: 'LAUNDRY', label: 'Laundry' },
-                            ]}
-                        />
-                        <Select
-                            label="Room"
-                            value={newRequestData.roomNumber}
-                            onChange={e => setNewRequestData({ ...newRequestData, roomNumber: e.target.value })}
-                            options={[
-                                { value: '', label: 'Select Room' },
-                                ...rooms.map(r => ({ value: r.roomNumber, label: `Room ${r.roomNumber}` }))
-                            ]}
-                        />
-                    </div>
-                    <Input
-                        label="Title / Item"
-                        placeholder="e.g. AC Repair, Morning Cleaning"
-                        value={newRequestData.title}
-                        onChange={e => setNewRequestData({ ...newRequestData, title: e.target.value })}
-                        required
-                    />
-                    <Select
-                        label="Priority"
-                        value={newRequestData.priority}
-                        onChange={e => setNewRequestData({ ...newRequestData, priority: e.target.value })}
-                        options={[
-                            { value: 'LOW', label: 'Low' },
-                            { value: 'NORMAL', label: 'Normal' },
-                            { value: 'HIGH', label: 'High' },
-                            { value: 'URGENT', label: 'Urgent' },
-                        ]}
-                    />
-                    <Textarea
-                        label="Internal Notes"
-                        placeholder="Any specific details for staff..."
-                        value={newRequestData.description}
-                        onChange={e => setNewRequestData({ ...newRequestData, description: e.target.value })}
-                        rows={3}
-                    />
-                    <div className="flex justify-end gap-3 mt-8">
-                        <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
-                        <Button type="submit" loading={isSubmitting}>Create Request</Button>
-                    </div>
+                    <Select label="Type" value={newRequestData.type} onChange={e => setNewRequestData({ ...newRequestData, type: e.target.value })} options={[{ value: 'HOUSEKEEPING', label: 'Housekeeping' }, { value: 'FOOD_ORDER', label: 'Food & Beverage' }]} />
+                    <Input label="Room" value={newRequestData.roomNumber} onChange={e => setNewRequestData({ ...newRequestData, roomNumber: e.target.value })} placeholder="Room Number" />
+                    <Input label="Title" value={newRequestData.title} onChange={e => setNewRequestData({ ...newRequestData, title: e.target.value })} placeholder="Request Title" />
+                    <div className="flex justify-end gap-3 pt-4"><Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button><Button type="submit" loading={isSubmitting}>Create</Button></div>
                 </form>
-            </Modal>
-
-            {/* Modal for service settings */}
-            <Modal
-                isOpen={showSettingsModal}
-                onClose={() => setShowSettingsModal(false)}
-                title="Service SLA & Flow Settings"
-                description="Define path and time for each service type"
-            >
-                <div className="space-y-6 pt-4">
-                    <Select
-                        label="Service Type"
-                        value={selectedConfigType}
-                        onChange={e => setSelectedConfigType(e.target.value as ServiceType)}
-                        options={[
-                            { value: 'FOOD_ORDER', label: 'Food Order' },
-                            { value: 'HOUSEKEEPING', label: 'Housekeeping' },
-                            { value: 'ROOM_SERVICE', label: 'Room Service' },
-                            { value: 'LAUNDRY', label: 'Laundry' },
-                            { value: 'MAINTENANCE', label: 'Maintenance' },
-                        ]}
-                    />
-
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Path Steps & Durations</p>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-7 px-2 text-[10px]"
-                                onClick={() => setConfigSteps([...configSteps, { name: '', duration: 5 }])}
-                            >
-                                <Plus className="w-3 h-3 mr-1" /> Add Step
-                            </Button>
-                        </div>
-
-                        {configSteps.map((step, i) => (
-                            <div key={i} className="flex gap-3 items-end bg-white/[0.02] p-3 rounded-xl border border-white/[0.05]">
-                                <div className="flex-1">
-                                    <Input
-                                        label={i === 0 ? "Step Name" : ""}
-                                        placeholder="e.g. Cooking, Staff Transfer"
-                                        value={step.name}
-                                        onChange={e => {
-                                            const next = [...configSteps]
-                                            next[i].name = e.target.value
-                                            setConfigSteps(next)
-                                        }}
-                                    />
-                                </div>
-                                <div className="w-24">
-                                    <Input
-                                        type="number"
-                                        label={i === 0 ? "Mins" : ""}
-                                        value={step.duration.toString()}
-                                        onChange={e => {
-                                            const next = [...configSteps]
-                                            next[i].duration = parseInt(e.target.value) || 0
-                                            setConfigSteps(next)
-                                        }}
-                                    />
-                                </div>
-                                <button
-                                    onClick={() => setConfigSteps(configSteps.filter((_, idx) => idx !== i))}
-                                    className="p-2 mb-1 h-9 rounded-lg hover:bg-rose-500/10 text-rose-500"
-                                >
-                                    <AlertCircle className="w-4 h-4 rotate-45" />
-                                </button>
-                            </div>
-                        ))}
-
-                        <div className="bg-blue-500/5 p-4 rounded-xl border border-blue-500/10 flex justify-between items-center">
-                            <span className="text-sm font-bold text-blue-400">Total SLA Duration</span>
-                            <span className="text-lg font-bold text-blue-400">{configSteps.reduce((acc, s) => acc + s.duration, 0)} Minutes</span>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Guest Options (App Display)</p>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-7 px-2 text-[10px]"
-                                onClick={() => setConfigOptions([...configOptions, { label: '', icon: '✨', desc: '' }])}
-                            >
-                                <Plus className="w-3 h-3 mr-1" /> Add Option
-                            </Button>
-                        </div>
-
-                        {configOptions.map((opt, i) => (
-                            <div key={i} className="space-y-3 bg-white/[0.02] p-4 rounded-xl border border-white/[0.04]">
-                                <div className="flex gap-3">
-                                    <div className="w-16">
-                                        <Input
-                                            label="Emoji"
-                                            value={opt.icon}
-                                            onChange={e => {
-                                                const next = [...configOptions]
-                                                next[i].icon = e.target.value
-                                                setConfigOptions(next)
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="flex-1">
-                                        <Input
-                                            label="Label"
-                                            placeholder="e.g. Full Clean"
-                                            value={opt.label}
-                                            onChange={e => {
-                                                const next = [...configOptions]
-                                                next[i].label = e.target.value
-                                                setConfigOptions(next)
-                                            }}
-                                        />
-                                    </div>
-                                    <button
-                                        onClick={() => setConfigOptions(configOptions.filter((_, idx) => idx !== i))}
-                                        className="p-2 h-9 mt-6 rounded-lg hover:bg-rose-500/10 text-rose-500"
-                                    >
-                                        <AlertCircle className="w-4 h-4 rotate-45" />
-                                    </button>
-                                </div>
-                                <Input
-                                    label="Guest Description"
-                                    placeholder="Brief description for the guest..."
-                                    value={opt.desc}
-                                    onChange={e => {
-                                        const next = [...configOptions]
-                                        next[i].desc = e.target.value
-                                        setConfigOptions(next)
-                                    }}
-                                />
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="flex justify-end gap-3 mt-8">
-                        <Button variant="secondary" onClick={() => setShowSettingsModal(false)}>Close</Button>
-                        <Button onClick={handleSaveConfig} loading={isSavingConfig}>Save Changes</Button>
-                    </div>
-                </div>
             </Modal>
         </div>
     )
 }
-
