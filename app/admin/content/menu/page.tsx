@@ -340,7 +340,7 @@ export default function MenuPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {loading ? (
                     // Premium Skeleton Loader
-                    Array.from({ length: 8 }).map((_, idx) => (
+                    Array.from({ length: 8 }).map((_: any, idx: number) => (
                         <div key={idx} className="bg-[#0D1117] rounded-3xl border border-white/[0.05] overflow-hidden flex flex-col h-full animate-pulse">
                             <div className="h-44 w-full bg-white/5" />
                             <div className="p-6 flex-1 space-y-4">
@@ -448,7 +448,7 @@ export default function MenuPage() {
                     </button>
                     
                     <div className="flex items-center gap-2">
-                        {Array.from({ length: totalPages }).map((_, idx) => (
+                        {Array.from({ length: totalPages }).map((_: any, idx: number) => (
                             <button
                                 key={idx}
                                 onClick={() => setCurrentPage(idx + 1)}

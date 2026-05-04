@@ -115,7 +115,7 @@ export default function ApprovalsPage() {
                                                 {req.type} REQUEST
                                             </h3>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <Badge variant="outline" className="text-[9px] py-0 px-2 font-black tracking-[0.1em]">
+                                                <Badge variant="secondary" className="text-[9px] py-0 px-2 font-black tracking-[0.1em]">
                                                     ID: #{req.id.slice(-6)}
                                                 </Badge>
                                                 <span className="text-[10px] text-text-tertiary flex items-center gap-1">
@@ -148,7 +148,7 @@ export default function ApprovalsPage() {
                                                 <RefreshCw className="w-3 h-3" /> Requested By
                                             </p>
                                             <div className="flex items-center gap-2">
-                                                <Avatar name={req.requestedBy?.name} size="xs" />
+                                                <Avatar name={req.requestedBy?.name} size="sm" />
                                                 <span className="text-xs font-semibold text-text-secondary">{req.requestedBy?.name}</span>
                                             </div>
                                         </div>

@@ -420,7 +420,7 @@ export default function ContentManagementPage() {
                                             {idx === 0 && <span className="absolute top-4 left-4 px-3 py-1 bg-[#4A9EFF] rounded-full text-[9px] font-bold uppercase tracking-widest">Cover</span>}
                                         </div>
                                     ))}
-                                    {galleryImages.length === 0 && Array(5).fill(0).map((_, i) => (
+                                    {galleryImages.length === 0 && Array(5).fill(0).map((_: any, i: number) => (
                                         <div key={i} className="aspect-[4/3] rounded-[2rem] border-2 border-dashed border-white/[0.04] flex items-center justify-center text-gray-800">
                                             <ImageIcon className="w-10 h-10" />
                                         </div>

@@ -510,7 +510,7 @@ export default function AmenitiesPage() {
       {/* ── Amenities Grid ── */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {[...Array(8)].map((_, i) => (
+          {[...Array(8)].map((_: any, i: number) => (
             <div key={i} className="h-32 bg-surface-light rounded-2xl animate-pulse" />
           ))}
         </div>
@@ -725,7 +725,7 @@ export default function AmenitiesPage() {
 
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {[...Array(6)].map((_, i) => (
+          {[...Array(6)].map((_: any, i: number) => (
             <div key={i} className="h-32 bg-surface-light rounded-2xl animate-pulse" />
           ))}
         </div>

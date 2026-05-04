@@ -81,7 +81,7 @@ export default function BookingsPage() {
 
   const days = useMemo(() => {
     const count = viewMode === 'day' ? 1 : viewMode === 'week' ? 7 : 30
-    return Array.from({ length: count }).map((_, i) => addDays(startDate, i))
+    return Array.from({ length: count }).map((_: any, i: number) => addDays(startDate, i))
   }, [startDate, viewMode])
 
   const endDate = useMemo(() => days[days.length - 1], [days])

@@ -44,7 +44,7 @@ export default function RestaurantAnalysisPage() {
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <AlertCircle className="w-12 h-12 text-red-500 opacity-50" />
                 <p className="text-text-secondary font-medium">Failed to connect to analysis engine</p>
-                <button onClick={() => setRefreshSignal(Date.now())} className="text-primary text-sm font-bold hover:underline">
+                <button onClick={() => revalidate()} className="text-primary text-sm font-bold hover:underline">
                     Try Again
                 </button>
             </div>
@@ -321,7 +321,7 @@ export default function RestaurantAnalysisPage() {
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                    {pieData.map((_, i) => <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                                    {pieData.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                                 </Pie>
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: '12px' }}
@@ -372,7 +372,7 @@ export default function RestaurantAnalysisPage() {
                                     <td className="px-6 py-4 text-sm text-text-secondary">{item.sales} units</td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-1">
-                                            {[...Array(5)].map((_, i) => (
+                                            {[...Array(5)].map((_: any, i: number) => (
                                                 <Star key={i} className={cn("w-3 h-3", i < Math.round(item.sentiment) ? "text-amber-400 fill-amber-400" : "text-text-tertiary")} />
                                             ))}
                                         </div>

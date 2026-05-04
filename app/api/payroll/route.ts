@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
                 }
 
                 if (targetPropertyId) {
-                    where.staff = { propertyId: targetPropertyId }
+                    where.staff = { propertyId: targetPropertyId as string }
                 }
             }
         } else {
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
                 month: monthStr,
                 year: parseInt(year),
                 status: 'PAID',
-                staff: authResult.user.role !== 'SUPER_ADMIN' ? { propertyId: authResult.user.propertyId } : undefined
+                staff: authResult.user.role !== 'SUPER_ADMIN' ? { propertyId: authResult.user.propertyId as string } : undefined
             }
         })
 
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
         // Get staff belonging to the current hotel context
         let staffFilter: any = {}
         if (authResult.user.role !== 'SUPER_ADMIN') {
-            staffFilter = { propertyId: authResult.user.propertyId }
+            staffFilter = { propertyId: authResult.user.propertyId as string }
         }
 
         const staffList = await prisma.staff.findMany({

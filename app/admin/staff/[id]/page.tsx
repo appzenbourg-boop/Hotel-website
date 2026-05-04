@@ -266,7 +266,8 @@ export default function StaffDetailPage() {
                         contractType: data.contractType || 'Full-Time Permanent',
                         workShift: data.workShift || 'Morning (06:00 - 14:00)',
                         managerName: data.managerName || 'Michael Scott',
-                        status: data.user.status || 'ACTIVE'
+                        status: data.user.status || 'ACTIVE',
+                        password: ''
                     })
                 } else {
                     toast.error('Failed to load staff details')

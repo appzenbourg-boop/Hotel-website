@@ -222,7 +222,7 @@ export async function GET(req: NextRequest) {
             }).length
             slaByDept.push({
                 department: deptDisplayNames[dept] || dept.replace('_', ' '),
-                compliance: total > 0 ? Math.round((onTime / total) * 100) : null
+                compliance: total > 0 ? Math.round((onTime / total) * 100) : 0
             })
         }
 

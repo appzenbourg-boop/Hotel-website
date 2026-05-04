@@ -204,7 +204,7 @@ async function main() {
                 isVeg: false,
                 isAvailable: true,
                 prepTime: 15,
-                image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666',
+                images: ['https://images.unsplash.com/photo-1533089860892-a7c6f0a88666'],
             },
         }),
         prisma.menuItem.create({
@@ -218,7 +218,7 @@ async function main() {
                 isVeg: true,
                 isAvailable: true,
                 prepTime: 20,
-                image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc',
+                images: ['https://images.unsplash.com/photo-1589301760014-d929f3979dbc'],
             },
         }),
         // Lunch/Dinner
@@ -233,7 +233,7 @@ async function main() {
                 isVeg: false,
                 isAvailable: true,
                 prepTime: 25,
-                image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398',
+                images: ['https://images.unsplash.com/photo-1603894584373-5ac82b2ae398'],
             },
         }),
         prisma.menuItem.create({
@@ -247,7 +247,7 @@ async function main() {
                 isVeg: true,
                 isAvailable: true,
                 prepTime: 20,
-                image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7',
+                images: ['https://images.unsplash.com/photo-1631452180519-c014fe946bc7'],
             },
         }),
         prisma.menuItem.create({
@@ -261,7 +261,7 @@ async function main() {
                 isVeg: true,
                 isAvailable: true,
                 prepTime: 18,
-                image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002',
+                images: ['https://images.unsplash.com/photo-1574071318508-1cdbab80d002'],
             },
         }),
         // Beverages
@@ -276,7 +276,7 @@ async function main() {
                 isVeg: true,
                 isAvailable: true,
                 prepTime: 5,
-                image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba',
+                images: ['https://images.unsplash.com/photo-1600271886742-f049cd451bba'],
             },
         }),
         prisma.menuItem.create({
@@ -290,7 +290,7 @@ async function main() {
                 isVeg: true,
                 isAvailable: true,
                 prepTime: 5,
-                image: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93',
+                images: ['https://images.unsplash.com/photo-1509042239860-f550ce710b93'],
             },
         }),
     ]);

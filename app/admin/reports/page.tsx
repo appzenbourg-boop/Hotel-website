@@ -409,7 +409,7 @@ export default function ReportsPage() {
                                                 dataKey="value"
                                                 strokeWidth={0}
                                             >
-                                                {sentimentData.map((_, index) => (
+                                                {sentimentData.map((_: any, index: number) => (
                                                     <Cell key={`cell-${index}`} fill={SENTIMENT_COLORS[index]} />
                                                 ))}
                                             </Pie>
@@ -486,7 +486,7 @@ export default function ReportsPage() {
                                 <div key={i} className="space-y-2.5 pb-5 border-b border-white/[0.04] last:border-0 last:pb-0">
                                     <div className="flex items-center justify-between">
                                         <div className="flex gap-0.5">
-                                            {Array.from({ length: 5 }).map((_, s) => (
+                                            {Array.from({ length: 5 }).map((_: any, s: number) => (
                                                 <Star key={s} className={`w-3.5 h-3.5 ${s < fb.rating ? 'fill-amber-500 text-amber-500' : 'text-gray-700'}`} />
                                             ))}
                                         </div>
