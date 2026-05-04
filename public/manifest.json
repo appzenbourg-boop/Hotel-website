@@ -1,0 +1,32 @@
+{
+    "name": "Zenbourg Hotel Management",
+    "short_name": "Zenbourg",
+    "description": "Premium All-in-one hotel operations platform for admins and staff",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#050505",
+    "theme_color": "#4A9EFF",
+    "icons": [
+        {
+            "src": "https://img.icons8.com/isometric/192/hotel.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "https://img.icons8.com/isometric/512/hotel.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "https://img.icons8.com/isometric/192/hotel.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "scope": "/",
+    "categories": ["business", "travel", "productivity"]
+}

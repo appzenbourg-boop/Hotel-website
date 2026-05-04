@@ -1,0 +1,4 @@
+guest_name,guest_phone,guest_email,check_in,check_out,room_number,guests_count,source,total_amount,notes
+Rahul Sharma,9876543210,rahul@email.com,2026-05-01,2026-05-04,101,2,DIRECT,5000,Anniversary trip
+Priya Patel,9876543221,priya@email.com,2026-05-02,2026-05-05,202,1,BOOKING_COM,3500,
+Amit Kumar,9876543232,,2026-05-03,2026-05-06,301,3,WALK_IN,7200,Early check-in requested
