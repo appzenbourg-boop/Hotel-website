@@ -3,7 +3,7 @@
 export type UserRole = 'SUPER_ADMIN' | 'HOTEL_ADMIN' | 'MANAGER' | 'RECEPTIONIST' | 'STAFF' | 'GUEST'
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE'
 
-export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'BLOCKED' | 'CLEANING'
+export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'BOOKED' | 'MAINTENANCE' | 'BLOCKED' | 'CLEANING'
 export type RoomCategory = 'STANDARD' | 'DELUXE' | 'SUITE' | 'PENTHOUSE' | 'CUSTOM'
 
 export type BookingStatus = 'RESERVED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED' | 'NO_SHOW'

@@ -10,18 +10,20 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
 import { buildContextUrl } from '@/lib/admin-context'
 
-type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'CLEANING'
+type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'BOOKED' | 'MAINTENANCE' | 'CLEANING'
 type Tab = 'general' | 'amenities' | 'media' | 'upgrade'
 const PAGE_SIZE = 10
 
 const STATUS_STYLE: Record<string, string> = {
     AVAILABLE: 'bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20',
     OCCUPIED: 'bg-[#4A9EFF]/10 text-[#4A9EFF] border-[#4A9EFF]/20',
+    BOOKED: 'bg-[#8A5CF5]/10 text-[#8A5CF5] border-[#8A5CF5]/20',
     CLEANING: 'bg-[#d4aa00]/10 text-[#d4aa00] border-[#d4aa00]/20',
     MAINTENANCE: 'bg-[#e53e3e]/10 text-[#e53e3e] border-[#e53e3e]/20',
 }
 const STATUS_DOT: Record<string, string> = {
     AVAILABLE: 'bg-[#1db954]', OCCUPIED: 'bg-[#4A9EFF]',
+    BOOKED: 'bg-[#8A5CF5]',
     CLEANING: 'bg-[#d4aa00]', MAINTENANCE: 'bg-[#e53e3e]',
 }
 const AMENITY_ICONS: Record<string, any> = { WiFi: Wifi, AC: Wind, TV: Tv, Coffee: Coffee }
@@ -270,6 +272,7 @@ export default function RoomsPage() {
                     <option value="ALL">Status: All</option>
                     <option value="AVAILABLE">Available</option>
                     <option value="OCCUPIED">Occupied</option>
+                    <option value="BOOKED">Booked</option>
                     <option value="CLEANING">Cleaning</option>
                     <option value="MAINTENANCE">Maintenance</option>
                 </select>
@@ -512,6 +515,7 @@ export default function RoomsPage() {
                                                     className="w-full px-3 py-2.5 bg-[#182433] border border-white/[0.08] rounded-lg text-[13px] text-white focus:outline-none cursor-pointer">
                                                     <option value="AVAILABLE">Available</option>
                                                     <option value="OCCUPIED">Occupied</option>
+                                                    <option value="BOOKED">Booked</option>
                                                     <option value="CLEANING">Cleaning</option>
                                                     <option value="MAINTENANCE">Maintenance</option>
                                                 </select>

@@ -227,6 +227,7 @@ enum RoomCategory {
 enum RoomStatus {
   AVAILABLE
   OCCUPIED
+  BOOKED
   MAINTENANCE
   BLOCKED
   CLEANING
