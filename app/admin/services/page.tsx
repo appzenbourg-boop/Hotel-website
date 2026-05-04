@@ -112,9 +112,7 @@ const SkeletonRow = () => (
 
 export default function ServicesPage() {
     const router = useRouter()
-    const [requests, setRequests] = useState<ServiceRequest[]>([])
     const [loading, setLoading] = useState(true)
-    const [stats, setStats] = useState({ pending: 0, active: 0, overdue: 0 })
     const [search, setSearch] = useState('')
     const [typeFilter, setTypeFilter] = useState('ALL')
     const [statusFilter, setStatusFilter] = useState('ALL')
@@ -122,7 +120,6 @@ export default function ServicesPage() {
 
     // New Request State
     const [showAddModal, setShowAddModal] = useState(false)
-    const [rooms, setRooms] = useState<any[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [newRequestData, setNewRequestData] = useState({
         type: 'HOUSEKEEPING',
@@ -134,7 +131,6 @@ export default function ServicesPage() {
 
     // Service Settings State
     const [showSettingsModal, setShowSettingsModal] = useState(false)
-    const [serviceConfigs, setServiceConfigs] = useState<any[]>([])
     const [selectedConfigType, setSelectedConfigType] = useState<ServiceType>('FOOD_ORDER')
     const [configSteps, setConfigSteps] = useState<{ name: string, duration: number }[]>([])
     const [configOptions, setConfigOptions] = useState<{ label: string, icon: string, desc: string }[]>([])
@@ -182,7 +178,7 @@ export default function ServicesPage() {
         const res = await fetch(buildContextUrl('/api/admin/rooms'))
         if (res.ok) {
             const json = await res.json()
-            setRooms(Array.isArray(json) ? json : (json?.data ?? []))
+            mutateRooms(Array.isArray(json) ? json : (json?.data ?? []))
         }
     }
 
@@ -191,7 +187,7 @@ export default function ServicesPage() {
         const res = await fetch(buildContextUrl('/api/admin/service-configs'))
         if (res.ok) {
             const json = await res.json()
-            setServiceConfigs(Array.isArray(json) ? json : (json?.data ?? []))
+            mutateConfigs(Array.isArray(json) ? json : (json?.data ?? []))
         }
     }
 
