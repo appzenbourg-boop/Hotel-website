@@ -1416,7 +1416,7 @@ export default function StaffDetailPage() {
                                                 placeholder="Enter new password to override (leave blank to keep current)"
                                                 className="w-full bg-rose-500/5 border border-rose-500/10 rounded-2xl py-3 px-5 text-sm text-white font-bold focus:border-rose-500 transition-all shadow-inner placeholder:text-gray-600 placeholder:font-normal" 
                                             />
-                                            <p className="text-[9px] text-gray-600 ml-1">Note: This will immediately change the employee's login credentials.</p>
+                                            <p className="text-[9px] text-gray-600 ml-1">Note: This will immediately change the employee&apos;s login credentials.</p>
                                         </div>
                                     </div>
                                 </div>
