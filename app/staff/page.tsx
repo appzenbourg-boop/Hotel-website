@@ -96,11 +96,11 @@ export default function StaffDashboard() {
         mutate()
     }, [mutate])
 
-    // Set sound banner visibility based on notification permission
+    // Set sound banner visibility based on explicit activation flag
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            const hasGrantedNotification = 'Notification' in window && Notification.permission === 'granted'
-            if (!hasGrantedNotification) {
+            const isConfigured = localStorage.getItem('zenbourg-sound-configured') === 'true'
+            if (!isConfigured) {
                 setShowSoundBanner(true)
             }
         }
@@ -108,6 +108,9 @@ export default function StaffDashboard() {
 
     const handleEnableSound = async () => {
         playNotificationChime()
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('zenbourg-sound-configured', 'true')
+        }
         if ('Notification' in window) {
             try {
                 const permission = await Notification.requestPermission()

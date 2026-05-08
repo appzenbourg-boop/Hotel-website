@@ -119,19 +119,15 @@ export default function StaffLayout({
                 </Link>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => {
-                            if (isInstallable) {
-                                installPwa()
-                            } else {
-                                window.dispatchEvent(new CustomEvent('show-pwa-install-guide'))
-                            }
-                        }}
-                        className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all active:scale-95"
-                        title="Install App"
-                    >
-                        <Download className="w-4 h-4" />
-                    </button>
+                    {isInstallable && (
+                        <button
+                            onClick={installPwa}
+                            className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all active:scale-95 animate-pulse"
+                            title="Install App"
+                        >
+                            <Download className="w-4 h-4" />
+                        </button>
+                    )}
                     <button
                         onClick={() => router.push('/staff/notifications')}
                         className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white transition-all hover:bg-white/[0.08] relative active:scale-95"
