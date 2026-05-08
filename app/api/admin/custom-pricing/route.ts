@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
                     data: {
                         name: req.hotelName,
                         address: req.hotelAddress,
-                        phone: authResult.user.phone ?? 'Not specified',
+                        phone: (authResult.user as any).phone ?? 'Not specified',
                         email: authResult.user.email ?? 'admin@hotel.com',
                         plan: 'BASE',
                         features: ['BASIC_OPS', 'STAFF_MANAGEMENT'],

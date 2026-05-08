@@ -53,6 +53,9 @@ export default function StaffDetailPage() {
     const [showSalary, setShowSalary] = useState(false)
     const [isEditModalOpen, setEditModalOpen] = useState(false)
     const [isUpdating, setIsUpdating] = useState(false)
+    const [isPasswordModalOpen, setPasswordModalOpen] = useState(false)
+    const [newPassword, setNewPassword] = useState('')
+    const [isOverriding, setIsOverriding] = useState(false)
     const [editingAttendance, setEditingAttendance] = useState<any>(null)
     const [attForm, setAttForm] = useState({ punchIn: '', punchOut: '', status: 'PRESENT', notes: '' })
     const [savingAtt, setSavingAtt] = useState(false)
@@ -132,6 +135,37 @@ export default function StaffDetailPage() {
             toast.error('Error updating record')
         } finally {
             setIsUpdating(false)
+        }
+    }
+
+    const handlePasswordOverride = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!newPassword.trim()) {
+            toast.error('Please enter a password')
+            return
+        }
+        if (newPassword.trim().length < 6) {
+            toast.error('Password must be at least 6 characters')
+            return
+        }
+        setIsOverriding(true)
+        try {
+            const res = await fetch(`/api/admin/staff/${params.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: newPassword.trim() })
+            })
+            if (res.ok) {
+                toast.success('Password overridden successfully')
+                setPasswordModalOpen(false)
+                setNewPassword('')
+            } else {
+                toast.error('Failed to override password')
+            }
+        } catch (error) {
+            toast.error('Error overriding password')
+        } finally {
+            setIsOverriding(false)
         }
     }
 
@@ -586,11 +620,7 @@ export default function StaffDetailPage() {
 
                         <div className="space-y-4">
                             <button 
-                                onClick={() => {
-                                    setEditModalOpen(true)
-                                    // Smoothly scroll to the password section in the modal if possible, 
-                                    // but opening the modal is the priority
-                                }}
+                                onClick={() => setPasswordModalOpen(true)}
                                 className="w-full h-14 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500 text-rose-400 hover:text-white rounded-[1.2rem] flex items-center justify-between px-6 transition-all group/btn"
                             >
                                 <div className="flex items-center gap-3">
@@ -1427,6 +1457,49 @@ export default function StaffDetailPage() {
                                 <Button type="button" variant="secondary" onClick={() => setEditModalOpen(false)} className="flex-1 h-14 rounded-2xl">Cancel</Button>
                                 <Button type="submit" variant="primary" loading={isUpdating} className="flex-1 h-14 rounded-2xl shadow-xl shadow-primary/20" leftIcon={<Save className="w-4 h-4" />}>
                                     Save Record
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
+
+            {/* PASSWORD OVERRIDE MODAL */}
+            {isPasswordModalOpen && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="absolute inset-0 bg-[#0a0f14]/80" onClick={() => setPasswordModalOpen(false)} />
+                    <Card className="relative w-full max-w-md bg-[#101922] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                            <div>
+                                <h2 className="text-xl font-bold text-white">Override Password</h2>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Set new credentials for {staff?.user?.name}</p>
+                            </div>
+                            <button onClick={() => setPasswordModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handlePasswordOverride} className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">New Password</label>
+                                <input 
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={e => setNewPassword(e.target.value)}
+                                    placeholder="Minimum 6 characters"
+                                    className="w-full bg-black/30 border border-white/10 rounded-2xl py-3.5 px-5 text-sm text-white font-bold focus:border-rose-500 transition-all shadow-inner placeholder:text-gray-600 placeholder:font-normal"
+                                    required
+                                    autoFocus
+                                />
+                                <p className="text-[9px] text-gray-600 leading-relaxed font-bold uppercase tracking-tight ml-1">
+                                    This will immediately overwrite the employee&apos;s login credentials. Changes are logged.
+                                </p>
+                            </div>
+
+                            <div className="pt-4 flex gap-4">
+                                <Button type="button" variant="secondary" onClick={() => setPasswordModalOpen(false)} className="flex-1 h-14 rounded-2xl">Cancel</Button>
+                                <Button type="submit" variant="primary" loading={isOverriding} className="flex-1 h-14 rounded-2xl bg-rose-600 hover:bg-rose-700 shadow-xl shadow-rose-500/20 text-white" leftIcon={<ShieldCheck className="w-4 h-4" />}>
+                                    Save Override
                                 </Button>
                             </div>
                         </form>

@@ -956,7 +956,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-xs font-semibold text-text-secondary block">Hotel Photo Gallery</label>
-                <p className="text-[10px] text-gray-500 mt-0.5">These photos will appear in your mobile app's auto-sliding banner carousel</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">These photos will appear in your mobile app&apos;s auto-sliding banner carousel</p>
               </div>
               <label className="bg-[#4A9EFF] hover:bg-[#4A9EFF]/90 text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
                 Add Photos
@@ -1087,7 +1087,7 @@ export default function SettingsPage() {
       </div>
     )
 
-    if (view === 'PAYOUTS') return <PayoutsView propertyId={effectivePropertyId} userRole={session?.user?.role} />
+    if (view === 'PAYOUTS') return <PayoutsView propertyId={effectivePropertyId || ''} userRole={session?.user?.role} />
 
     if (view === 'RETENTION') return (
       <div className="space-y-6">
@@ -1151,7 +1151,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2 bg-surface border border-border rounded-xl px-3.5 py-1.5 shadow-sm">
             <span className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider">Switch Hotel:</span>
             <select
-              value={effectivePropertyId}
+              value={effectivePropertyId || ''}
               onChange={e => setActivePropertyId(e.target.value)}
               className="bg-transparent text-xs font-bold text-[#4A9EFF] focus:outline-none cursor-pointer"
             >
@@ -1391,7 +1391,7 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
           <div className="bg-[#0d1117] border border-border rounded-2xl max-w-lg w-full p-6 space-y-5">
             <div>
               <h4 className="text-lg font-bold text-white">Process Payout Request</h4>
-              <p className="text-xs text-text-secondary mt-1">Review the hotel's registered bank details and mark as complete after manual transfer.</p>
+              <p className="text-xs text-text-secondary mt-1">Review the hotel&apos;s registered bank details and mark as complete after manual transfer.</p>
             </div>
 
             <div className="bg-surface border border-border rounded-xl p-4 space-y-3.5">

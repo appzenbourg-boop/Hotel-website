@@ -83,7 +83,7 @@ export default function StaffDashboard() {
                         body,
                         icon: '/images/icon-192.png',
                         vibrate: [150, 100, 150],
-                    });
+                    } as any);
                 }
             }
         } catch (e) {

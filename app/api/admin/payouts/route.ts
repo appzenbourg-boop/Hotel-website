@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
         // If not Super Admin, strictly enforce their own propertyId
         if (authResult.user.role !== 'SUPER_ADMIN') {
-            propertyId = authResult.user.propertyId
+            propertyId = authResult.user.propertyId ?? null
         }
 
         if (!propertyId) {
