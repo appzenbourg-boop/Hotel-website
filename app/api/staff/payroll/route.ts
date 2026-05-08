@@ -18,6 +18,23 @@ export async function GET(request: Request) {
 
         const rolls = await prisma.payroll.findMany({
             where: { staffId: staff.id },
+            include: {
+                staff: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true
+                            }
+                        },
+                        property: {
+                            select: {
+                                name: true
+                            }
+                        }
+                    }
+                }
+            },
             orderBy: [{ year: 'desc' }, { month: 'desc' }]
         })
 

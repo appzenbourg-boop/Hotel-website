@@ -18,20 +18,21 @@ import { toast } from 'sonner'
 
 export default function PayrollPage() {
     const router = useRouter()
-    const { data: payRaw, isValidating: loading } = useSWR('/api/staff/payroll', (url) => fetch(url).then(res => res.json()), {
+    const { data: payRaw, isLoading, isValidating } = useSWR('/api/staff/payroll', (url) => fetch(url).then(res => res.json()), {
         revalidateOnFocus: true,
         dedupingInterval: 5000
     })
 
-    const { data: meRaw } = useSWR('/api/staff/me', (url) => fetch(url).then(res => res.json()), {
+    const { data: meRaw, isLoading: meLoading } = useSWR('/api/staff/me', (url) => fetch(url).then(res => res.json()), {
         revalidateOnFocus: false,
         dedupingInterval: 10000
     })
 
     const payrollData = Array.isArray(payRaw) ? payRaw : []
     const staffInfo = meRaw?.profile || null
+    const loading = (isLoading && !payRaw) || (meLoading && !meRaw)
 
-    if (!payRaw && loading) return (
+    if (loading) return (
         <div className="space-y-8 animate-pulse px-4 pb-10">
             <div className="flex justify-between items-center">
                 <div className="h-10 w-10 bg-white/5 rounded-xl" />

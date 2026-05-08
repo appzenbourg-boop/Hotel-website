@@ -45,7 +45,7 @@ export default function AdminDashboard() {
     { refreshInterval: 60000 }
   )
 
-  const { data: roomsRaw = [] } = useSWR(
+  const { data: roomsRaw = [], isLoading: loadingRooms } = useSWR(
     session ? bcu('/api/admin/rooms', { status: 'ALL' }) : null,
     (url: string) => fetch(url).then(res => res.json()).then(r => Array.isArray(r) ? r : (r?.data ?? []))
   )
@@ -561,7 +561,7 @@ export default function AdminDashboard() {
       <Modal isOpen={showServiceModal} onClose={() => setShowServiceModal(false)} title="Raise Service Ticket" description="Create a new housekeeping or maintenance request">
         <form onSubmit={handleRaiseService} className="space-y-4 pt-4">
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Target Room" value={serviceForm.roomId} onChange={(e) => setServiceForm({ ...serviceForm, roomId: e.target.value })} options={[{ value: '', label: 'Select Room' }, ...(rooms as any[]).map((r: any) => ({ value: r.id, label: `Room ${r.roomNumber}` }))]} required />
+            <Select label="Target Room" value={serviceForm.roomId} onChange={(e) => setServiceForm({ ...serviceForm, roomId: e.target.value })} options={loadingRooms ? [{ value: '', label: 'Loading rooms...' }] : [{ value: '', label: 'Select Room' }, ...(rooms as any[]).map((r: any) => ({ value: r.id, label: `Room ${r.roomNumber}` }))]} required />
             <Select label="Ticket Type" value={serviceForm.type} onChange={(e) => setServiceForm({ ...serviceForm, type: e.target.value })} options={[
               { value: 'HOUSEKEEPING', label: 'Housekeeping' }, { value: 'MAINTENANCE', label: 'Maintenance' },
               { value: 'ROOM_SERVICE', label: 'Room Service' }, { value: 'FOOD_ORDER', label: 'Food & Beverage' },

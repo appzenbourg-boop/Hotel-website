@@ -9,7 +9,7 @@ import {
     Trophy, Calendar,
     ShieldCheck,
     Clock, Zap, ArrowRight, CheckCircle2, ClipboardList,
-    MessageCircle, ShieldAlert, AlertTriangle
+    MessageCircle, ShieldAlert, AlertTriangle, Volume2
 } from 'lucide-react'
 import { format, getHours } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -22,6 +22,7 @@ export default function StaffDashboard() {
     const { isInstallable, installPwa } = usePwaInstall()
     const [punchLoading, setPunchLoading] = useState(false)
     const [currentTime, setCurrentTime] = useState(new Date())
+    const [showSoundBanner, setShowSoundBanner] = useState(false)
     
     const prevTaskCount = useRef<number | null>(null)
     const prevAlertCount = useRef<number | null>(null)
@@ -95,12 +96,38 @@ export default function StaffDashboard() {
         mutate()
     }, [mutate])
 
-    // Ask for permissions on mount
+    // Set sound banner visibility based on notification permission
     useEffect(() => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
+        if (typeof window !== 'undefined') {
+            const hasGrantedNotification = 'Notification' in window && Notification.permission === 'granted'
+            if (!hasGrantedNotification) {
+                setShowSoundBanner(true)
+            }
         }
-    }, []);
+    }, [])
+
+    const handleEnableSound = async () => {
+        playNotificationChime()
+        if ('Notification' in window) {
+            try {
+                const permission = await Notification.requestPermission()
+                if (permission === 'granted') {
+                    toast.success('Sound and alerts successfully activated!', {
+                        icon: '🔊'
+                    })
+                    setShowSoundBanner(false)
+                    triggerLocalNotification('System Ready', 'Notification sound and alerts are now fully active.')
+                } else {
+                    toast.error('Notification permission denied. Please allow them in your settings.')
+                }
+            } catch (err) {
+                console.error(err)
+            }
+        } else {
+            toast.success('Sound alerts activated!', { icon: '🔊' })
+            setShowSoundBanner(false)
+        }
+    }
 
     // Watch for new tasks or system alerts
     useEffect(() => {
@@ -251,6 +278,29 @@ export default function StaffDashboard() {
                     </div>
                 </div>
             </div>
+
+            {showSoundBanner && (
+                <div className="bg-[#161b22]/90 backdrop-blur-xl border border-blue-500/30 rounded-[35px] p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group transition-all hover:border-blue-500/50">
+                    <div className="absolute inset-0 bg-blue-500/[0.01] pointer-events-none"></div>
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                            <Volume2 className="w-6 h-6 animate-pulse" />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-black text-white uppercase tracking-wider mb-1">Enable Audio Alerts</h3>
+                            <p className="text-[11px] font-medium text-gray-500 leading-normal">
+                                Grant notification permissions and unlock real-time sound alerts for new room assignments and desk dispatches.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleEnableSound}
+                        className="w-full md:w-auto px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shrink-0 active:scale-95 shadow-lg shadow-blue-500/20"
+                    >
+                        Activate Sound
+                    </button>
+                </div>
+            )}
 
             <PWAInstall />
 

@@ -32,6 +32,20 @@ export default function StaffLayout({
         }
     }, [])
 
+    // Smooth auto-scroll active inputs into view to prevent virtual keyboard overlaps on mobile
+    useEffect(() => {
+        const handleFocus = (e: FocusEvent) => {
+            const target = e.target as HTMLElement
+            if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+                setTimeout(() => {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 150)
+            }
+        }
+        document.addEventListener('focus', handleFocus, true)
+        return () => document.removeEventListener('focus', handleFocus, true)
+    }, [])
+
     // Detect navigation for progress bar with delay
     useEffect(() => {
         setIsNavigating(false)
@@ -105,15 +119,19 @@ export default function StaffLayout({
                 </Link>
 
                 <div className="flex items-center gap-2">
-                    {isInstallable && (
-                        <button
-                            onClick={installPwa}
-                            className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all active:scale-95"
-                            title="Install App"
-                        >
-                            <Download className="w-4 h-4" />
-                        </button>
-                    )}
+                    <button
+                        onClick={() => {
+                            if (isInstallable) {
+                                installPwa()
+                            } else {
+                                window.dispatchEvent(new CustomEvent('show-pwa-install-guide'))
+                            }
+                        }}
+                        className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                        title="Install App"
+                    >
+                        <Download className="w-4 h-4" />
+                    </button>
                     <button
                         onClick={() => router.push('/staff/notifications')}
                         className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white transition-all hover:bg-white/[0.08] relative active:scale-95"

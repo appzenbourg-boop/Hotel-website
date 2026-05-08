@@ -30,10 +30,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <SWRConfig
                 value={{
                     fetcher: globalFetcher,
-                    revalidateOnFocus: false,
-                    revalidateIfStale: false,
-                    revalidateOnMount: false,
-                    dedupingInterval: 10000,
+                    revalidateOnFocus: true,
+                    revalidateIfStale: true,
+                    revalidateOnMount: true,
+                    dedupingInterval: 2000,
                     errorRetryCount: 2,
                     onError: (error) => {
                         if (error?.status === 401) {

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { unauthorized, forbidden, badRequest, notFound, noContent, serverError } from '@/lib/api-response'
+import { redis } from '@/lib/redis'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +77,16 @@ export async function PATCH(
             data: updateData,
         })
 
+        // Invalidate common caches
+        try {
+            const keys = await redis.keys(`rooms:${room.propertyId}:*`)
+            if (keys && keys.length > 0) {
+                await redis.del(...keys)
+            }
+        } catch (err) {
+            console.error('Failed to invalidate rooms cache:', err)
+        }
+
         return NextResponse.json({ success: true, data: room })
     } catch (error: any) {
         if (error?.code === 'P2025') return notFound('Room')
@@ -100,7 +111,18 @@ export async function DELETE(
             return badRequest('Cannot delete room with active bookings')
         }
 
-        await prisma.room.delete({ where: { id: params.id } })
+        const deletedRoom = await prisma.room.delete({ where: { id: params.id } })
+
+        // Invalidate common caches
+        try {
+            const keys = await redis.keys(`rooms:${deletedRoom.propertyId}:*`)
+            if (keys && keys.length > 0) {
+                await redis.del(...keys)
+            }
+        } catch (err) {
+            console.error('Failed to invalidate rooms cache:', err)
+        }
+
         return noContent()
     } catch (error: any) {
         if (error?.code === 'P2025') return notFound('Room')

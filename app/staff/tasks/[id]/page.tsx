@@ -45,22 +45,26 @@ export default function TaskDetailsPage() {
         fetchTaskDetails()
     }, [id])
 
-    const handleLogPhoto = () => {
+    const handleLogPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
         setIsLoggingPhoto(true)
-        // Simulate advanced camera integration for WoW effect
-        setTimeout(() => {
-            const mockPhotos = [
-                'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&q=80&w=400',
-                'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&q=80&w=400',
-                'https://images.unsplash.com/photo-1560448204-61dc36dc98c8?auto=format&fit=crop&q=80&w=400'
-            ]
-            const newPhoto = mockPhotos[Math.floor(Math.random() * mockPhotos.length)]
-            setAttachments(prev => [...prev, newPhoto])
+        try {
+            const { uploadToCloudinary } = await import('@/lib/cloudinary')
+            const result = await uploadToCloudinary(file, 'evidence')
+            if (result?.url) {
+                setAttachments(prev => [...prev, result.url])
+                toast.success('Evidence Logged', {
+                    description: 'Live photo uploaded and attached to report.'
+                })
+            }
+        } catch (error) {
+            console.error(error)
+            toast.error('Failed to capture and upload photo')
+        } finally {
             setIsLoggingPhoto(false)
-            toast.success('Evidence Logged', {
-                description: 'Photo attached to dispatch report.'
-            })
-        }, 1500)
+        }
     }
 
     const handleComplete = async () => {
@@ -131,8 +135,8 @@ export default function TaskDetailsPage() {
                     <ChevronLeft className="w-5 h-5" />
                 </button>
                 <div className="flex flex-col items-center">
-                    <h1 className="text-xl font-black text-white tracking-tight ">Mission Context</h1>
-                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-0.5">DISPATCH-ID: {task.id.slice(-6).toUpperCase()}</span>
+                    <h1 className="text-xl font-black text-white tracking-tight ">Task Details</h1>
+                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-0.5">TASK-ID: {task.id.slice(-6).toUpperCase()}</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-500 relative">
                     <Sparkles className="w-4 h-4" />
@@ -155,7 +159,7 @@ export default function TaskDetailsPage() {
                             "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
                             task.priority === 'URGENT' ? 'bg-rose-500 text-white border-rose-400/50' : 'bg-blue-600 text-white border-blue-400/50'
                         )}>
-                            Priority Alpha: {task.priority}
+                            Priority Level: {task.priority}
                         </div>
                         <div className="px-3 py-1 bg-black/60 backdrop-blur-xl rounded-full text-[8px] font-black text-white uppercase tracking-widest border border-white/10">
                             {task.type}
@@ -163,10 +167,10 @@ export default function TaskDetailsPage() {
                     </div>
                     <div className="flex items-end justify-between">
                         <div>
-                            <h2 className="text-3xl font-black text-white  tracking-tighter mb-1">Sector {task.room?.roomNumber || 'Gen-Ops'}</h2>
+                            <h2 className="text-3xl font-black text-white  tracking-tighter mb-1">Room {task.room?.roomNumber || 'Gen-Ops'}</h2>
                             <div className="flex items-center gap-2 text-gray-400">
                               <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] ">Station: Grand Zenbourg HQ</span>
+                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] ">Zenbourg Hotel & Resort</span>
                             </div>
                         </div>
                         <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-12 group-hover:rotate-0 transition-all duration-500">
@@ -183,8 +187,8 @@ export default function TaskDetailsPage() {
                         <Info className="w-6 h-6 text-blue-500" />
                     </div>
                     <div>
-                        <h3 className="text-base font-black text-white  tracking-tight">Deployment Directives</h3>
-                        <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ">{formatDistanceToNow(new Date(task.createdAt))} since activation</p>
+                        <h3 className="text-base font-black text-white  tracking-tight">Task Instructions</h3>
+                        <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ">{formatDistanceToNow(new Date(task.createdAt))} since assigned</p>
                     </div>
                 </div>
 
@@ -194,19 +198,27 @@ export default function TaskDetailsPage() {
                         <h4 className="text-lg font-black text-white tracking-tight ">{task.title}</h4>
                     </div>
                     <p className="text-[13px] font-medium text-gray-500 leading-relaxed bg-black/40 p-6 rounded-[28px] border border-white/[0.03]  shadow-inner">
-                        {task.description || "Establish standard operational parameters. Maintenance of premium hospitality vectors is mandatory. Refer to tactical baseline for unit setup."}
+                        {task.description || "Please perform the requested service with the highest hospitality standards. Follow standard hotel guidelines and resolve the request promptly."}
                     </p>
                 </div>
 
                 {/* Evidence Logging Section */}
                 <div className="space-y-4 pt-4 border-t border-white/[0.03]">
                     <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest ">Digital Evidence Log</span>
-                        <span className="text-[9px] font-bold text-blue-500/60 uppercase">{attachments.length} files captured</span>
+                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest ">Service Completion Photos</span>
+                        <span className="text-[9px] font-bold text-blue-500/60 uppercase">{attachments.length} files uploaded</span>
                     </div>
                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                        <input 
+                            type="file" 
+                            accept="image/*" 
+                            capture="environment" 
+                            id="camera-capture-input" 
+                            className="hidden" 
+                            onChange={handleLogPhoto} 
+                        />
                         <button 
-                            onClick={handleLogPhoto}
+                            onClick={() => document.getElementById('camera-capture-input')?.click()}
                             disabled={isLoggingPhoto}
                             className="w-20 h-20 shrink-0 bg-white/[0.03] border border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center gap-2 group hover:border-blue-500/40 transition-all active:scale-95"
                         >
@@ -231,7 +243,7 @@ export default function TaskDetailsPage() {
                 </div>
             </div>
 
-            {/* Communication & Notes Terminal */}
+            {/* Communication & Team Messages */}
             <div className="bg-[#161b22] border border-white/[0.05] rounded-[40px] p-8 space-y-8 shadow-3xl">
                 <div className="space-y-6">
                     <div className="flex items-center justify-between">
@@ -239,7 +251,7 @@ export default function TaskDetailsPage() {
                             <div className="w-10 h-10 rounded-xl bg-blue-600 shadow-xl shadow-blue-500/20 flex items-center justify-center border border-blue-400/20">
                                 <MessageSquare className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xs font-black text-white uppercase tracking-[0.2em] ">Comm Terminal</span>
+                            <span className="text-xs font-black text-white uppercase tracking-[0.2em] ">Internal Team Chat</span>
                         </div>
                         <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
                     </div>
@@ -247,8 +259,8 @@ export default function TaskDetailsPage() {
                     <div className="max-h-64 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
                         {task.messages?.length === 0 ? (
                             <div className="py-12 text-center opacity-20 flex flex-col items-center gap-3">
-                                <Zap className="w-8 h-8" />
-                                <p className="text-[10px] font-black uppercase tracking-widest">Awaiting dispatch comms...</p>
+                                <MessageSquare className="w-8 h-8 text-blue-500" />
+                                <p className="text-[10px] font-black uppercase tracking-widest">No team messages yet</p>
                             </div>
                         ) : (
                             task.messages?.map((msg: any) => (
@@ -261,7 +273,7 @@ export default function TaskDetailsPage() {
                                     <p className="leading-relaxed">{msg.content}</p>
                                     <div className="flex items-center gap-2 mt-3 opacity-40 group-hover:opacity-100 transition-opacity">
                                         <span className="text-[8px] font-black uppercase tracking-widest">
-                                            {msg.senderId === task.assignedTo?.userId ? 'Operative' : 'Command HQ'}
+                                            {msg.senderId === task.assignedTo?.userId ? 'Staff Member' : 'Front Desk'}
                                         </span>
                                         <div className="w-1 h-1 rounded-full bg-gray-600"></div>
                                         <span className="text-[8px] font-black uppercase tracking-widest">{formatDistanceToNow(new Date(msg.createdAt))} ago</span>
@@ -277,7 +289,7 @@ export default function TaskDetailsPage() {
                             type="text"
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Input dispatch update..."
+                            placeholder="Type a message..."
                             className="flex-1 bg-transparent px-5 py-3 text-xs text-white outline-none font-bold placeholder:text-gray-700"
                             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                         />
@@ -295,12 +307,12 @@ export default function TaskDetailsPage() {
                 <div className="space-y-4 pt-2">
                     <div className="flex items-center gap-2 ml-1">
                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Post-Operation Briefing</span>
+                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Completion Notes</span>
                     </div>
                     <textarea 
                         value={completionNotes}
                         onChange={(e) => setCompletionNotes(e.target.value)}
-                        placeholder="Log detailed completion summary here..."
+                        placeholder="Add any completion notes or remarks here..."
                         className="w-full bg-black/40 border border-white/[0.05] rounded-[28px] p-6 text-[13px] text-white outline-none focus:border-blue-500/30 transition-all font-medium  min-h-[120px] shadow-inner"
                     />
                 </div>
@@ -323,7 +335,7 @@ export default function TaskDetailsPage() {
                     <>
                         <div className="absolute inset-0 bg-blue-600 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                         <CheckCircle2 className="w-6 h-6 relative z-10 group-hover:text-white transition-colors" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.4em] relative z-10 group-hover:text-white transition-colors ">Finalize Mission</span>
+                        <span className="text-[11px] font-black uppercase tracking-[0.4em] relative z-10 group-hover:text-white transition-colors ">Task Completed</span>
                         <div className="absolute top-0 right-10 bottom-0 flex items-center opacity-10 group-hover:opacity-30 group-hover:translate-x-2 transition-all">
                             <Sparkles className="w-10 h-10 group-hover:text-white" />
                         </div>

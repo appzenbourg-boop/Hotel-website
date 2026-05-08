@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
                 whereProperty = { propertyId: queryPropertyId }
             }
         } else {
-            const propertyId = session?.user?.propertyId
+            const propertyId = session?.user?.propertyId || (queryPropertyId && queryPropertyId !== 'ALL' ? queryPropertyId : null)
             if (propertyId) whereProperty = { propertyId }
         }
 

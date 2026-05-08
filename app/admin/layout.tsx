@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import OnboardingTour from '@/components/common/OnboardingTour'
@@ -14,6 +15,7 @@ const AUTH_PATHS = ['/admin/login', '/admin/register', '/admin/forgot-password']
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { data: session } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -21,6 +23,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => { 
     setMounted(true) 
   }, [])
+
+  // Synchronously sync context during render to prevent race conditions in child SWR keys
+  if (typeof window !== 'undefined' && session?.user) {
+    const role = (session.user as any).role
+    localStorage.setItem('user_role', role || '')
+    if (role !== 'SUPER_ADMIN') {
+      const propertyId = (session.user as any).propertyId
+      if (propertyId) {
+        localStorage.setItem('super_admin_property_context', propertyId)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (session?.user) {
+      const role = (session.user as any).role
+      localStorage.setItem('user_role', role || '')
+      
+      if (role !== 'SUPER_ADMIN') {
+        const propertyId = (session.user as any).propertyId
+        if (propertyId) {
+          localStorage.setItem('super_admin_property_context', propertyId)
+        }
+      }
+    }
+  }, [session])
 
   // Detect navigation for progress bar
   useEffect(() => {

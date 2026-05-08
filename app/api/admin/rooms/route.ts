@@ -25,7 +25,22 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'SUPER_ADMIN') {
         if (queryPropertyId && queryPropertyId !== 'ALL') where.propertyId = queryPropertyId
     } else {
-        const propertyId = session.user.propertyId
+        // Dynamically fetch live user details to support real-time property creation and switching
+        const dbUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { workplaceId: true, ownedPropertyIds: true }
+        })
+        
+        let propertyId = session.user.propertyId
+        if (dbUser) {
+            if (queryPropertyId && dbUser.ownedPropertyIds.includes(queryPropertyId)) {
+                propertyId = queryPropertyId
+            } else if (dbUser.workplaceId) {
+                propertyId = dbUser.workplaceId
+            } else if (dbUser.ownedPropertyIds.length > 0) {
+                propertyId = dbUser.ownedPropertyIds[0]
+            }
+        }
         if (propertyId) where.propertyId = propertyId
     }
 
@@ -113,7 +128,14 @@ export async function POST(request: NextRequest) {
         })
 
         // Invalidate common caches
-        await redis.del(`rooms:${propertyId}:*`)
+        try {
+            const keys = await redis.keys(`rooms:${propertyId}:*`)
+            if (keys && keys.length > 0) {
+                await redis.del(...keys)
+            }
+        } catch (err) {
+            console.error('Failed to invalidate rooms cache:', err)
+        }
 
         return NextResponse.json({ success: true, data: room }, { status: 201 })
     } catch (error: any) {

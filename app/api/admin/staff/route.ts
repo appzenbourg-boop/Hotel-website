@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
             targetPropertyId = queryPropertyId
         }
     } else {
+        // Use queryPropertyId from URL as fallback when JWT propertyId is stale/null
+        if (!targetPropertyId && queryPropertyId && queryPropertyId !== 'ALL') {
+            targetPropertyId = queryPropertyId
+        }
         if (!targetPropertyId) return NextResponse.json({ success: true, data: [], pagination: { page: 1, limit, total: 0, pages: 0 } })
         where.propertyId = targetPropertyId
     }

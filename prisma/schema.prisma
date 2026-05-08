@@ -224,6 +224,7 @@ enum RoomCategory {
   SUITE
   PENTHOUSE
   CUSTOM
+  EXECUTIVE
 }
 
 enum RoomStatus {
