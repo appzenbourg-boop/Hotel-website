@@ -61,7 +61,8 @@ export default function PropertiesPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [updatingPlan, setUpdatingPlan] = useState<string | null>(null)
     const [formData, setFormData] = useState({
-        name: '', email: '', phone: '', address: '', description: '', latitude: '', longitude: ''
+        name: '', email: '', phone: '', address: '', description: '', latitude: '', longitude: '',
+        trialPeriod: true, upiId: ''
     })
 
     const { data: properties = [], mutate, isValidating: loading } = useSWR<PropertyData[]>(
@@ -71,6 +72,9 @@ export default function PropertiesPage() {
 
     const handleAddProperty = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (formData.trialPeriod && !formData.upiId.trim()) {
+            return toast.error('UPI ID is required to configure auto-pay and activate your 14-day free trial.')
+        }
         setIsSubmitting(true)
         try {
             const res = await fetch('/api/admin/properties', {
@@ -81,7 +85,7 @@ export default function PropertiesPage() {
             if (res.ok) {
                 toast.success('Property added successfully')
                 setIsModalOpen(false)
-                setFormData({ name: '', email: '', phone: '', address: '', description: '', latitude: '', longitude: '' })
+                setFormData({ name: '', email: '', phone: '', address: '', description: '', latitude: '', longitude: '', trialPeriod: true, upiId: '' })
                 mutate()
             } else {
                 const d = await res.json()
@@ -442,6 +446,36 @@ export default function PropertiesPage() {
                     >
                         <MapPin className="w-3 h-3" /> Use my current location
                     </button>
+
+                    {/* Free Trial & UPI Autopay configuration */}
+                    <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-3.5 mt-4">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={formData.trialPeriod}
+                                onChange={e => setFormData({ ...formData, trialPeriod: e.target.checked })}
+                                className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-surface-light accent-primary mt-1"
+                            />
+                            <div className="flex-1">
+                                <span className="text-sm font-semibold text-white block leading-tight">Activate 14-Day Free Trial</span>
+                                <span className="text-[11px] text-text-secondary block mt-1 leading-normal">
+                                    Capture UPI ID details now to configure secure autopay recurring deductions after the free trial concludes. No upfront charge will be made.
+                                </span>
+                            </div>
+                        </label>
+
+                        {formData.trialPeriod && (
+                            <div className="animate-in fade-in slide-in-from-top-1 duration-150 pt-2 border-t border-primary/10">
+                                <Input
+                                    label="UPI ID for Auto-Pay (Recurring Deductions)"
+                                    placeholder="e.g. hoteladmin@upi or 9876543210@paytm"
+                                    required={formData.trialPeriod}
+                                    value={formData.upiId}
+                                    onChange={e => setFormData({ ...formData, upiId: e.target.value })}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </form>
             </Modal>
         </div>

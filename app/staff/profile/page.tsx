@@ -23,13 +23,13 @@ export default function StaffProfilePage() {
     const [staffData, setStaffData] = useState<any>(null)
     const [editing, setEditing] = useState(false)
     const [saving, setSaving] = useState(false)
-    const [editForm, setEditForm] = useState({ phone: '', address: '', emergencyContactName: '', emergencyContactPhone: '' })
+    const [editForm, setEditForm] = useState({ phone: '', address: '', emergencyContactName: '', emergencyContactPhone: '', bankName: '', accountNumber: '', ifscCode: '' })
     const [changingPassword, setChangingPassword] = useState(false)
     const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' })
     const [savingPw, setSavingPw] = useState(false)
     const photoRef = useRef<HTMLInputElement>(null)
     const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
-
+ 
     const fetchProfile = useCallback(async () => {
         try {
             const res = await fetch('/api/staff/me')
@@ -42,6 +42,9 @@ export default function StaffProfilePage() {
                     address: p.address || '',
                     emergencyContactName: p.emergencyContactName || '',
                     emergencyContactPhone: p.emergencyContactPhone || '',
+                    bankName: p.bankName || '',
+                    accountNumber: p.accountNumber || '',
+                    ifscCode: p.ifscCode || '',
                 })
             }
         } catch { /* silent */ } finally { setLoading(false) }
@@ -338,14 +341,41 @@ export default function StaffProfilePage() {
                         <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">Home Address</label>
                         <input value={editForm.address} onChange={e => setEditForm(p => ({ ...p, address: e.target.value }))} className={ic} placeholder="Your home address" />
                     </div>
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">Emergency Contact Name</label>
-                        <input value={editForm.emergencyContactName} onChange={e => setEditForm(p => ({ ...p, emergencyContactName: e.target.value }))} className={ic} placeholder="e.g. Rahul Sharma" />
+                    
+                    <div className="pt-2 border-t border-white/[0.04]">
+                        <h4 className="text-[11px] font-bold text-blue-500 uppercase tracking-widest mb-3">Emergency Contact</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block">Name</label>
+                                <input value={editForm.emergencyContactName} onChange={e => setEditForm(p => ({ ...p, emergencyContactName: e.target.value }))} className={ic} placeholder="Rahul Sharma" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block">Phone</label>
+                                <input value={editForm.emergencyContactPhone} onChange={e => setEditForm(p => ({ ...p, emergencyContactPhone: e.target.value }))} className={ic} placeholder="+91 98765 43210" />
+                            </div>
+                        </div>
                     </div>
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider block">Emergency Contact Phone</label>
-                        <input value={editForm.emergencyContactPhone} onChange={e => setEditForm(p => ({ ...p, emergencyContactPhone: e.target.value }))} className={ic} placeholder="+91 98765 43210" />
+
+                    <div className="pt-2 border-t border-white/[0.04]">
+                        <h4 className="text-[11px] font-bold text-blue-500 uppercase tracking-widest mb-3">Bank Payout Details</h4>
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block">Bank Name</label>
+                                <input value={editForm.bankName} onChange={e => setEditForm(p => ({ ...p, bankName: e.target.value }))} className={ic} placeholder="HDFC Bank, State Bank of India..." />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block">Account Number</label>
+                                    <input value={editForm.accountNumber} onChange={e => setEditForm(p => ({ ...p, accountNumber: e.target.value }))} className={ic} placeholder="1234567890" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider block">IFSC Code</label>
+                                    <input value={editForm.ifscCode} onChange={e => setEditForm(p => ({ ...p, ifscCode: e.target.value.toUpperCase() }))} className={ic} placeholder="HDFC0000123" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
                     <button onClick={handleSaveProfile} disabled={saving}
                         className="w-full h-12 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95">
                         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -367,6 +397,9 @@ export default function StaffProfilePage() {
                         { label: 'Joined', value: profile.dateOfJoining ? format(new Date(profile.dateOfJoining), 'dd MMM yyyy') : '—', icon: Calendar },
                         { label: 'Work Shift', value: profile.workShift || '—', icon: Clock },
                         { label: 'Emergency Contact', value: profile.emergencyContactName ? `${profile.emergencyContactName} · ${profile.emergencyContactPhone || ''}` : '—', icon: Phone },
+                        { label: 'Bank Name', value: profile.bankName || '—', icon: CreditCard },
+                        { label: 'Account Number', value: profile.accountNumber || '—', icon: CreditCard },
+                        { label: 'IFSC Code', value: profile.ifscCode || '—', icon: CreditCard },
                     ].map((item, i) => (
                         <div key={i} className="px-6 py-4 flex items-center gap-4">
                             <div className="w-9 h-9 rounded-xl bg-white/[0.03] flex items-center justify-center shrink-0">

@@ -250,7 +250,7 @@ export async function PATCH(req: NextRequest) {
         }
 
         const body = await req.json()
-        const { id, status } = body
+        const { id, status, transactionId, bankDetails } = body
 
         if (!id || !status) {
             return NextResponse.json({ error: 'ID and Status are required' }, { status: 400 })
@@ -260,7 +260,9 @@ export async function PATCH(req: NextRequest) {
             where: { id },
             data: {
                 status: status as any,
-                paidAt: status === 'PAID' ? new Date() : undefined
+                paidAt: status === 'PAID' ? new Date() : undefined,
+                transactionId: transactionId || (status === 'PAID' ? `MANUAL_${Date.now()}` : undefined),
+                bankDetails: bankDetails || undefined
             }
         })
 

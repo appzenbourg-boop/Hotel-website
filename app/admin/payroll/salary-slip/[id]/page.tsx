@@ -122,7 +122,9 @@ export default function SalarySlipPage() {
             const summaryRows = [
                 ['Pay Period', `${payroll.month} ${payroll.year}`],
                 ['Payment Status', payroll.status],
-                ['Issue Date', format(new Date(payroll.updatedAt), 'dd MMM yyyy')],
+                ['Transaction ID', payroll.transactionId || 'N/A'],
+                ['Bank Name', payroll.bankDetails?.bankName || payroll.staff?.bankName || 'N/A'],
+                ['A/C Number', payroll.bankDetails?.accountNumber || payroll.staff?.accountNumber || 'N/A'],
             ]
 
             summaryRows.forEach(([label, value]) => {
@@ -133,8 +135,8 @@ export default function SalarySlipPage() {
                     payroll.status === 'PAID' && label === 'Payment Status' ? emerald[1] : slate900[1],
                     payroll.status === 'PAID' && label === 'Payment Status' ? emerald[2] : slate900[2])
                 doc.setFont('helvetica', 'bold')
-                doc.text(value, 160, y2)
-                y2 += 6
+                doc.text(value, 155, y2)
+                y2 += 5
             })
 
             // ── Earnings Table ──
@@ -296,37 +298,52 @@ export default function SalarySlipPage() {
                 </div>
 
                 {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-12 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 border-b border-indigo-100 pb-1">Employee Information</h3>
                         <div className="grid grid-cols-2 gap-y-3">
-                            <span className="text-sm font-bold text-slate-400">Name</span>
-                            <span className="text-sm font-bold text-slate-800">{staffName}</span>
-                            <span className="text-sm font-bold text-slate-400">Employee ID</span>
-                            <span className="text-sm font-bold text-slate-800">{payroll.staff?.employeeId || 'N/A'}</span>
-                            <span className="text-sm font-bold text-slate-400">Designation</span>
-                            <span className="text-sm font-bold text-slate-800">{payroll.staff?.designation || 'N/A'}</span>
-                            <span className="text-sm font-bold text-slate-400">Department</span>
-                            <span className="text-sm font-bold text-slate-800">{payroll.staff?.department || 'N/A'}</span>
+                            <span className="text-xs font-bold text-slate-400">Name</span>
+                            <span className="text-xs font-bold text-slate-800">{staffName}</span>
+                            <span className="text-xs font-bold text-slate-400">Employee ID</span>
+                            <span className="text-xs font-bold text-slate-800">{payroll.staff?.employeeId || 'N/A'}</span>
+                            <span className="text-xs font-bold text-slate-400">Designation</span>
+                            <span className="text-xs font-bold text-slate-800">{payroll.staff?.designation || 'N/A'}</span>
+                            <span className="text-xs font-bold text-slate-400">Department</span>
+                            <span className="text-xs font-bold text-slate-800">{payroll.staff?.department || 'N/A'}</span>
                         </div>
                     </div>
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 border-b border-indigo-100 pb-1">Payment Summary</h3>
                         <div className="grid grid-cols-2 gap-y-3">
-                            <span className="text-sm font-bold text-slate-400">Pay Period</span>
-                            <span className="text-sm font-bold text-slate-800">{payroll.month} {payroll.year}</span>
-                            <span className="text-sm font-bold text-slate-400">Payment Status</span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded w-fit ${payroll.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            <span className="text-xs font-bold text-slate-400">Pay Period</span>
+                            <span className="text-xs font-bold text-slate-800">{payroll.month} {payroll.year}</span>
+                            <span className="text-xs font-bold text-slate-400">Payment Status</span>
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded w-fit ${payroll.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                 {payroll.status}
                             </span>
-                            <span className="text-sm font-bold text-slate-400">Issue Date</span>
-                            <span className="text-sm font-bold text-slate-800">{format(new Date(payroll.updatedAt), 'dd MMM yyyy')}</span>
+                            <span className="text-xs font-bold text-slate-400">Issue Date</span>
+                            <span className="text-xs font-bold text-slate-800">{format(new Date(payroll.updatedAt), 'dd MMM yyyy')}</span>
                             {payroll.paidAt && (
                                 <>
-                                    <span className="text-sm font-bold text-slate-400">Paid On</span>
-                                    <span className="text-sm font-bold text-emerald-600">{format(new Date(payroll.paidAt), 'dd MMM yyyy')}</span>
+                                    <span className="text-xs font-bold text-slate-400">Paid On</span>
+                                    <span className="text-xs font-bold text-emerald-600">{format(new Date(payroll.paidAt), 'dd MMM yyyy')}</span>
                                 </>
                             )}
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 border-b border-indigo-100 pb-1">Disbursement Details</h3>
+                        <div className="grid grid-cols-2 gap-y-3">
+                            <span className="text-xs font-bold text-slate-400">Bank Name</span>
+                            <span className="text-xs font-bold text-slate-800">{payroll.bankDetails?.bankName || payroll.staff?.bankName || 'N/A'}</span>
+                            <span className="text-xs font-bold text-slate-400">A/C Number</span>
+                            <span className="text-xs font-bold text-slate-800 font-mono">{payroll.bankDetails?.accountNumber || payroll.staff?.accountNumber || 'N/A'}</span>
+                            <span className="text-xs font-bold text-slate-400">IFSC Code</span>
+                            <span className="text-xs font-bold text-slate-800 font-mono">{payroll.bankDetails?.ifscCode || payroll.staff?.ifscCode || 'N/A'}</span>
+                            <span className="text-xs font-bold text-slate-400">Transaction ID</span>
+                            <span className="text-xs font-bold text-indigo-600 font-mono truncate" title={payroll.transactionId || 'N/A'}>
+                                {payroll.transactionId || 'N/A'}
+                            </span>
                         </div>
                     </div>
                 </div>

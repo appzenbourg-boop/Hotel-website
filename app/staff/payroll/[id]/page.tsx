@@ -286,7 +286,7 @@ export default function StaffSalarySlipPage() {
 
                 <div className="p-6 space-y-6">
                     {/* Employee + Payment Info */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         {/* Employee Details */}
                         <div>
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-600 border-b border-indigo-100 pb-1.5 mb-3">Employee Details</h3>
@@ -330,6 +330,24 @@ export default function StaffSalarySlipPage() {
                                         {payroll.status}
                                     </span>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Disbursement Details */}
+                        <div>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-600 border-b border-indigo-100 pb-1.5 mb-3">Disbursement Details</h3>
+                            <div className="space-y-2.5">
+                                {[
+                                    ['Bank Name', payroll.bankDetails?.bankName || payroll.staff?.bankName || 'N/A'],
+                                    ['A/C Number', payroll.bankDetails?.accountNumber || payroll.staff?.accountNumber || 'N/A'],
+                                    ['IFSC Code', payroll.bankDetails?.ifscCode || payroll.staff?.ifscCode || 'N/A'],
+                                    ['Transaction ID', payroll.transactionId || '—'],
+                                ].map(([label, value]) => (
+                                    <div key={label} className="flex items-start justify-between gap-2">
+                                        <span className="text-[11px] text-slate-400 font-medium shrink-0 w-24">{label}</span>
+                                        <span className="text-[11px] font-bold text-slate-800 text-right truncate font-mono max-w-[140px]" title={value}>{value}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>

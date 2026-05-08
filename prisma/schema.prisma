@@ -143,6 +143,8 @@ model Property {
   plan               SubscriptionPlan @default(BASE)
   features           String[]         @default(["BASIC_OPS", "STAFF_MANAGEMENT"])
   planExpiresAt      DateTime?
+  isTrialActive      Boolean          @default(false)
+  isAutopayActive    Boolean          @default(false)
 
   latitude    Float?
   longitude   Float?
@@ -661,6 +663,8 @@ model Payroll {
   status    PayrollStatus @default(PENDING)
   paidAt    DateTime?
   paymentId String?
+  transactionId String?
+  bankDetails   Json?
 
   // Calculations Breakdown
   breakdown Json? // Detailed breakdown of calculations
@@ -1160,6 +1164,23 @@ model PropertySettings {
   razorpayKeyId     String?  // Razorpay Key ID
   razorpayKeySecret String?  // Razorpay Key Secret (handle with care)
 
+  // OTA integrations connection states
+  bookingComStatus   String?  @default("NOT_CONNECTED")
+  expediaStatus      String?  @default("NOT_CONNECTED")
+  airbnbStatus       String?  @default("NOT_CONNECTED")
+  makemytripStatus   String?  @default("NOT_CONNECTED")
+
+  // OTA integrations sync states
+  otaSyncBookings    Boolean? @default(true)
+  otaSyncInventory   Boolean? @default(true)
+  otaSyncPricing     Boolean? @default(true)
+
+  // API credentials stored securely (OAuth / API Token simulation)
+  bookingComApiKey   String?
+  expediaApiKey      String?
+  airbnbApiKey       String?
+  makemytripApiKey   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1204,3 +1225,46 @@ model DashboardService {
 
   @@map("dashboard_services")
 }
+
+model PayoutRequest {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId    String    @db.ObjectId
+  amount        Float
+  status        String    @default("PENDING") // PENDING, SUCCESS, REJECTED
+  bankDetails   Json?     // Snapshot of bank/UPI details
+  transactionId String?   // UTR / Reference ID filled by Super Admin
+  requestedAt   DateTime  @default(now())
+  processedAt   DateTime?
+  notes         String?
+
+  @@map("payout_requests")
+}
+
+model CustomPricingRequest {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  numHotels      Int
+  roomDetails    String
+  status         String    @default("PENDING") // PENDING, PRICED, PAID, REJECTED
+  customPrice    Float?    // Set by Super Admin
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
+
+  @@map("custom_pricing_requests")
+}
+
+model AddHotelRequest {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  hotelName      String
+  hotelAddress   String
+  numRooms       Int
+  status         String    @default("PENDING") // PENDING, PRICED, PAID, REJECTED
+  customPrice    Float?    // Set by Super Admin
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
+
+  @@map("add_hotel_requests")
+}
+
+

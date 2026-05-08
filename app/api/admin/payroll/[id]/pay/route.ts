@@ -24,7 +24,7 @@ export async function POST(
         if (!ALLOWED_ROLES.includes(session.user.role)) return forbidden()
 
         const body = await request.json()
-        const { staffId, amount, accountNumber, ifscCode, bankName, staffName, month, year } = body
+        const { staffId, amount, accountNumber, ifscCode, bankName, staffName, month, year, transactionId } = body
 
         if (!accountNumber || !ifscCode) {
             return NextResponse.json(
@@ -146,6 +146,12 @@ export async function POST(
                 status:    'PAID',
                 paidAt:    new Date(),
                 paymentId: paymentId ?? `MANUAL_${Date.now()}`,
+                transactionId: transactionId || `MANUAL_${Date.now()}`,
+                bankDetails: {
+                    accountNumber: accountNumber || 'N/A',
+                    ifscCode: ifscCode || 'N/A',
+                    bankName: bankName || 'N/A'
+                }
             },
         })
         // Notify the staff member

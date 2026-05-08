@@ -13,7 +13,7 @@ export async function PATCH(
         if (authResult instanceof NextResponse) return authResult
 
         const body = await req.json()
-        const { status } = body
+        const { status, transactionId, bankDetails } = body
 
         if (!status) {
             return NextResponse.json({ error: 'Status is required' }, { status: 400 })
@@ -23,7 +23,9 @@ export async function PATCH(
             where: { id: params.id },
             data: {
                 status: status as any,
-                paidAt: status === 'PAID' ? new Date() : undefined
+                paidAt: status === 'PAID' ? new Date() : undefined,
+                transactionId: transactionId || (status === 'PAID' ? `MANUAL_${Date.now()}` : undefined),
+                bankDetails: bankDetails || undefined
             }
         })
 

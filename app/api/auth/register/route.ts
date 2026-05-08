@@ -26,6 +26,9 @@ export async function POST(req: NextRequest) {
             hotelAddress,
             latitude,
             longitude,
+            plan,
+            trialPeriod,
+            upiId,
         } = body
 
         if (!name || !email || !phone || !password) {
@@ -70,12 +73,32 @@ export async function POST(req: NextRequest) {
                         email: email.toLowerCase().trim(),
                         latitude: latitude ?? null,
                         longitude: longitude ?? null,
-                        plan: 'GOLD',
+                        plan: (plan === 'BASE' || plan === 'ENTERPRISE') ? plan : 'BASE',
+                        planExpiresAt: null,
+                        isTrialActive: false,
+                        isAutopayActive: false,
                         features: ['BASIC_OPS', 'STAFF_MANAGEMENT'],
                         ownerIds: [user.id],
                     } as any,
                 })
                 propertyId = property.id
+
+                // Create default property settings with UPI ID for auto-deduction
+                await tx.propertySettings.create({
+                    data: {
+                        propertyId: property.id,
+                        upiId: upiId || null,
+                        gstPercent: 18.0,
+                        serviceChargePercent: 0.0,
+                        luxuryTaxPercent: 0.0,
+                        defaultDiscountPercent: 0.0,
+                        invoicePrefix: 'INV',
+                        currency: 'INR',
+                        currencySymbol: '₹',
+                        checkInTime: '14:00',
+                        checkOutTime: '11:00',
+                    }
+                })
 
                 await tx.user.update({
                     where: { id: user.id },

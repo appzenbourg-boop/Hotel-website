@@ -14,6 +14,23 @@ export async function GET(req: NextRequest) {
         if (authResult instanceof NextResponse) return authResult
 
         const { searchParams } = new URL(req.url)
+        const listAll = searchParams.get('listAll') === 'true'
+
+        if (listAll) {
+            let properties = []
+            if (authResult.user.role === 'SUPER_ADMIN') {
+                properties = await prisma.property.findMany({ select: { id: true, name: true } })
+            } else {
+                properties = await prisma.property.findMany({
+                    where: {
+                        ownerIds: { has: authResult.user.id }
+                    },
+                    select: { id: true, name: true }
+                })
+            }
+            return NextResponse.json({ success: true, properties })
+        }
+
         const propertyId = searchParams.get('propertyId') || authResult.user.propertyId
 
         if (!propertyId || propertyId === 'ALL') {

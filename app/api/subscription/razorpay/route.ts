@@ -20,19 +20,19 @@ const PLAN_PRICES: Record<string, number> = {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
-        const { plan, propertyId, userId } = body
+        const { plan, propertyId, userId, trialPeriod } = body
 
         if (!plan) {
             return NextResponse.json({ error: 'Plan is required' }, { status: 400 })
         }
 
-        const price = PLAN_PRICES[plan]
+        const price = trialPeriod ? 2 : PLAN_PRICES[plan]
         if (price === undefined) {
             return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 })
         }
 
         // ENTERPRISE is free / custom — no payment needed
-        if (price === 0) {
+        if (price === 0 && !trialPeriod) {
             return NextResponse.json({ error: 'Enterprise plan requires manual setup. Contact us.' }, { status: 400 })
         }
 

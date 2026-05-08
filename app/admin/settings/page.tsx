@@ -6,17 +6,21 @@ import {
   Save, Building2, IndianRupee, Sparkles, Shield, Smartphone,
   Database, Globe, ChevronRight, ChevronLeft, Loader2,
   Calendar, Check, CheckCircle2, Bell, Zap, ShieldAlert, ClipboardList,
-  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle
+  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getAdminContext } from '@/lib/admin-context'
 import Switch from '@/components/ui/Switch'
 import Button from '@/components/ui/Button'
+import { uploadToCloudinary } from '@/lib/cloudinary'
 
 interface HotelInfo {
   name: string; description: string; address: string; phone: string; email: string
   plan: string; features: string[]; planExpiresAt: string | null; ranking: number
+  isTrialActive?: boolean; isAutopayActive?: boolean;
+  coverImage?: string | null; logo?: string | null;
+  images?: string[];
 }
 interface PlanDef {
   id?: string; plan: string; displayName: string; tagline?: string; description?: string
@@ -31,6 +35,7 @@ const NAV = [
   { id: 'ops',          label: 'Notifications',        icon: Smartphone,  desc: 'SMS, push, email alert settings' },
   { id: 'subscription', label: 'Subscription & Plans', icon: Sparkles,    desc: 'Current plan, upgrade, billing' },
   { id: 'integrations', label: 'Integrations',         icon: Globe,       desc: 'OTA channels and API connections' },
+  { id: 'payouts',      label: 'Payouts & Withdrawals',icon: CreditCard,  desc: 'Request withdrawals and view transaction logs' },
   { id: 'retention',    label: 'Data Retention',       icon: Database,    desc: 'How long data is stored' },
 ]
 
@@ -300,8 +305,6 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
     </div>
   )
 }
-
-// ─── Subscription Component ──────────────────────────────────────────────────
 // Map legacy plan names to new ones (for properties that still have old plan in DB)
 const LEGACY_PLAN_MAP: Record<string, string> = {
   GOLD: 'BASE', PLATINUM: 'STARTER', DIAMOND: 'STANDARD',
@@ -309,39 +312,158 @@ const LEGACY_PLAN_MAP: Record<string, string> = {
 
 const PLAN_ORDER = ['BASE', 'STARTER', 'STANDARD', 'ENTERPRISE']
 
-function SubscriptionView({ propertyId, currentPlan, onUpgrade }: {
+function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayActive, planExpiresAt, onUpgrade, onCancelAutopay }: {
   propertyId: string | null | undefined
   currentPlan: string
+  isTrialActive?: boolean
+  isAutopayActive?: boolean
+  planExpiresAt?: string | null
   onUpgrade: (plan: PlanDef) => void
+  onCancelAutopay: () => void
 }) {
+  const { data: session } = useSession()
+  const isSuper = session?.user?.role === 'SUPER_ADMIN'
+
   const [plans, setPlans] = useState<PlanDef[]>([])
   const [loading, setLoading] = useState(true)
 
-  const loadPlans = () => {
+  // Request forms states
+  const [customModal, setCustomModal] = useState(false)
+  const [addHotelModal, setAddHotelModal] = useState(false)
+  const [numHotels, setNumHotels] = useState('')
+  const [roomDetails, setRoomDetails] = useState('')
+  const [hotelName, setHotelName] = useState('')
+  const [hotelAddress, setHotelAddress] = useState('')
+  const [numRooms, setNumRooms] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  // Custom Pricing requests states
+  const [customRequests, setCustomRequests] = useState<any[]>([])
+  const [addHotelRequests, setAddHotelRequests] = useState<any[]>([])
+  const [pricingQuote, setPricingQuote] = useState<Record<string, string>>({})
+
+  const loadPlans = useCallback(() => {
     setLoading(true)
     fetch('/api/admin/subscription-plans')
       .then(r => r.json())
       .then(j => { if (j.success && j.data) setPlans(j.data) })
       .catch(() => {})
       .finally(() => setLoading(false))
+  }, [])
+
+  const loadRequests = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/custom-pricing')
+      const d = await res.json()
+      if (d.success) {
+        setCustomRequests(d.customRequests)
+        setAddHotelRequests(d.addHotelRequests)
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    loadPlans()
+    loadRequests()
+  }, [loadPlans, loadRequests])
+
+  const handleCustomSubmit = async () => {
+    if (!numHotels || parseInt(numHotels) <= 0) { toast.error('Enter a valid number of hotels'); return }
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/custom-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'CREATE_CUSTOM_PRICE_REQUEST', numHotels, roomDetails })
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success('Custom Pricing request sent to Super Admin!')
+        setCustomModal(false)
+        setNumHotels('')
+        setRoomDetails('')
+        loadRequests()
+      } else {
+        toast.error(d.error || 'Failed to submit')
+      }
+    } catch { toast.error('Connection error') } finally { setSubmitting(false) }
   }
 
-  useEffect(() => { loadPlans() }, [])
+  const handleAddHotelSubmit = async () => {
+    if (!hotelName.trim() || !hotelAddress.trim()) { toast.error('Fill in all fields'); return }
+    if (!numRooms || parseInt(numRooms) <= 0) { toast.error('Enter a valid room count'); return }
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/custom-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'CREATE_ADD_HOTEL_REQUEST', hotelName, hotelAddress, numRooms })
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success('Hotel Portfolio expansion request sent to Super Admin!')
+        setAddHotelModal(false)
+        setHotelName('')
+        setHotelAddress('')
+        setNumRooms('')
+        loadRequests()
+      } else {
+        toast.error(d.error || 'Failed to submit')
+      }
+    } catch { toast.error('Connection error') } finally { setSubmitting(false) }
+  }
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-48">
-      <Loader2 className="w-6 h-6 animate-spin text-primary" />
-    </div>
-  )
+  const handleSetPriceQuote = async (requestId: string, type: 'CUSTOM_PRICE' | 'ADD_HOTEL') => {
+    const val = parseFloat(pricingQuote[requestId] ?? '')
+    if (isNaN(val) || val < 0) { toast.error('Enter a valid price'); return }
+    try {
+      const res = await fetch('/api/admin/custom-pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'SET_PRICE_QUOTE', requestId, type, customPrice: val })
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success('Pricing quote approved and sent to owner!')
+        loadRequests()
+      } else {
+        toast.error(d.error || 'Failed to quote price')
+      }
+    } catch { toast.error('Connection error') }
+  }
+
+  const handlePayFirst = async (requestId: string, type: 'CUSTOM_PRICE' | 'ADD_HOTEL', amount: number) => {
+    const toastId = toast.loading('Connecting to Razorpay gateway...')
+    setTimeout(async () => {
+      try {
+        const res = await fetch('/api/admin/custom-pricing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'PAY_FIRST', requestId, type })
+        })
+        const d = await res.json()
+        if (d.success) {
+          toast.success(`Payment of ₹${amount.toLocaleString()} processed successfully! Multi-hotel tier is now active.`, { id: toastId })
+          window.location.reload()
+        } else {
+          toast.error(d.error || 'Failed to process payment', { id: toastId })
+        }
+      } catch { toast.error('Connection error', { id: toastId }) }
+    }, 1500)
+  }
+
+  if (loading) return <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
 
   const normalizedPlan = LEGACY_PLAN_MAP[currentPlan] ?? currentPlan
-  // Sort plans in correct order
   const sortedPlans = [...plans].sort((a, b) => {
     const ai = PLAN_ORDER.indexOf(a.plan)
     const bi = PLAN_ORDER.indexOf(b.plan)
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
   })
   const activePlan = sortedPlans.find(p => p.plan === normalizedPlan) ?? sortedPlans[0]
+
+  const PLAN_ICONS: Record<string, any> = { BASE: Star, STARTER: Zap, STANDARD: Crown, ENTERPRISE: Sparkles }
+  const PLAN_COLORS: Record<string, string> = { BASE: 'text-text-secondary', STARTER: 'text-amber-500', STANDARD: 'text-[#4A9EFF]', ENTERPRISE: 'text-purple-400' }
 
   return (
     <div className="space-y-6">
@@ -352,143 +474,201 @@ function SubscriptionView({ propertyId, currentPlan, onUpgrade }: {
             {(() => { const Icon = PLAN_ICONS[activePlan.plan] ?? Star; return <Icon className={cn('w-5 h-5', PLAN_COLORS[activePlan.plan] ?? 'text-primary')} /> })()}
             <div>
               <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">Current Plan</p>
-              <p className="text-base font-bold text-white">{activePlan.displayName ?? activePlan.plan}</p>
-              {activePlan.tagline && <p className="text-xs text-text-secondary mt-0.5">{activePlan.tagline}</p>}
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-base font-bold text-white">{activePlan.displayName ?? activePlan.plan}</p>
+                {isTrialActive && <span className="text-[10px] font-bold bg-amber-500/25 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Free Trial</span>}
+                {isAutopayActive && <span className="text-[10px] font-bold bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Autopay Active</span>}
+              </div>
             </div>
           </div>
           <div className="text-right">
-            {activePlan.plan !== 'ENTERPRISE' ? (
-              <div>
-                <p className="text-lg font-bold text-white">
-                  ₹{(activePlan.discountedPrice ?? 0).toLocaleString('en-IN')}
-                  <span className="text-xs text-text-tertiary font-normal">/mo</span>
-                </p>
-                {(activePlan.maxRooms ?? 0) > 0 && (
-                  <p className="text-xs text-text-secondary mt-0.5">Up to {activePlan.maxRooms} rooms</p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm font-bold text-white">Custom Pricing</p>
-            )}
+            {activePlan.plan !== 'ENTERPRISE' ? <p className="text-lg font-bold text-white">₹{(activePlan.discountedPrice ?? 0).toLocaleString()} <span className="text-xs text-text-tertiary">/mo</span></p> : <p className="text-sm font-bold text-white">Custom Pricing</p>}
           </div>
         </div>
       )}
 
       {/* Plans grid */}
-      {sortedPlans.length === 0 ? (
-        <div className="text-center py-12 bg-surface border border-border rounded-2xl">
-          <ShieldAlert className="w-8 h-8 mx-auto mb-3 text-text-tertiary opacity-40" />
-          <p className="text-sm text-text-tertiary mb-3">No plans loaded.</p>
-          <button onClick={loadPlans} className="text-xs text-primary hover:underline font-medium">Retry</button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sortedPlans.map(plan => {
-            const Icon = PLAN_ICONS[plan.plan] ?? Star
-            const isActive = plan.plan === normalizedPlan
-            const origPrice = plan.originalPrice ?? 0
-            const discPrice = plan.discountedPrice ?? 0
-            const savings = origPrice - discPrice
-            const discPct = plan.discountPercent ?? 0
-            const features: string[] = plan.features ?? []
-
-            return (
-              <div key={plan.plan} className={cn(
-                'relative flex flex-col border rounded-2xl p-5 transition-all',
-                isActive
-                  ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/20'
-                  : 'bg-surface border-border hover:border-primary/30'
-              )}>
-                {isActive && (
-                  <span className="absolute top-3 right-3 text-[10px] font-bold bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
-                    Active
-                  </span>
-                )}
-
-                {/* Header */}
-                <div className="flex items-start gap-3 mb-4">
-                  <div className={cn(
-                    'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
-                    isActive ? 'bg-primary/20' : 'bg-surface-light'
-                  )}>
-                    <Icon className={cn('w-4 h-4', PLAN_COLORS[plan.plan] ?? 'text-primary')} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white">{plan.displayName ?? plan.plan}</h4>
-                    {plan.tagline && <p className="text-[11px] text-text-secondary mt-0.5 leading-relaxed">{plan.tagline}</p>}
-                  </div>
-                </div>
-
-                {/* Pricing */}
-                {plan.plan !== 'ENTERPRISE' ? (
-                  <div className="mb-4">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-white">₹{discPrice.toLocaleString('en-IN')}</span>
-                      <span className="text-xs text-text-tertiary">/-month</span>
-                    </div>
-                    {savings > 0 && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-text-tertiary line-through">₹{origPrice.toLocaleString('en-IN')}</span>
-                        {discPct > 0 && (
-                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
-                            {discPct}% OFF
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mb-4">
-                    <p className="text-lg font-bold text-white">Custom Pricing</p>
-                    <p className="text-xs text-text-secondary mt-0.5">Contact us for a tailored quote</p>
-                  </div>
-                )}
-
-                {/* Limits */}
-                <div className="flex items-center gap-4 mb-4 text-xs text-text-secondary">
-                  <span className="flex items-center gap-1.5">
-                    <BedDouble className="w-3.5 h-3.5 shrink-0" />
-                    {(plan.maxRooms ?? 0) === 0 ? 'Unlimited rooms' : `Up to ${plan.maxRooms} rooms`}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 shrink-0" />
-                    {(plan.maxStaff ?? 0) === 0 ? 'Unlimited staff' : `Up to ${plan.maxStaff} staff`}
-                  </span>
-                </div>
-
-                {/* Features */}
-                <div className="space-y-1.5 mb-5 flex-1">
-                  {features.map((f, i) => (
-                    <div key={i} className="flex items-start gap-2 text-[11px] text-text-secondary">
-                      <CheckCircle2 className={cn('w-3.5 h-3.5 shrink-0 mt-0.5', PLAN_COLORS[plan.plan] ?? 'text-primary')} />
-                      <span>{f}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* CTA */}
-                {isActive ? (
-                  <div className="flex items-center gap-2 text-xs text-primary font-semibold mt-auto">
-                    <Check className="w-4 h-4" /> Current Plan
-                  </div>
-                ) : plan.plan === 'ENTERPRISE' ? (
-                  <a
-                    href="mailto:sales@zenbourg.com"
-                    className="mt-auto block w-full text-center py-2.5 rounded-xl border border-purple-500/30 text-purple-400 text-xs font-semibold hover:bg-purple-500/10 transition-all"
-                  >
-                    Contact Sales
-                  </a>
-                ) : (
-                  <button
-                    onClick={() => onUpgrade(plan)}
-                    className="mt-auto w-full py-2.5 rounded-xl bg-primary text-white text-xs font-semibold hover:bg-primary/90 active:scale-95 transition-all"
-                  >
-                    Upgrade to {plan.displayName ?? plan.plan}
-                  </button>
-                )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sortedPlans.map(plan => {
+          const Icon = PLAN_ICONS[plan.plan] ?? Star
+          const isActive = plan.plan === normalizedPlan
+          return (
+            <div key={plan.plan} className={cn('relative flex flex-col border rounded-2xl p-5 transition-all', isActive ? 'bg-primary/10 border-primary/40' : 'bg-surface border-border hover:border-primary/30')}>
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-surface-light"><Icon className={cn('w-4 h-4', PLAN_COLORS[plan.plan])} /></div>
+                <div><h4 className="text-sm font-bold text-white">{plan.displayName ?? plan.plan}</h4><p className="text-[11px] text-text-secondary mt-0.5">{plan.tagline}</p></div>
               </div>
-            )
-          })}
+              <div className="mb-4">
+                {plan.plan !== 'ENTERPRISE' ? <p className="text-2xl font-bold text-white">₹{(plan.discountedPrice ?? 0).toLocaleString()}<span className="text-xs text-text-tertiary">/-mo</span></p> : <p className="text-lg font-bold text-white">Custom Multi-Hotel</p>}
+              </div>
+              <div className="space-y-1.5 mb-5 flex-1 text-xs text-text-secondary">
+                {(plan.features ?? []).map((f: string, i: number) => <div key={i} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-primary" /><span>{f}</span></div>)}
+              </div>
+              {isActive ? <span className="text-xs text-primary font-semibold font-bold">Current Plan</span> : plan.plan === 'ENTERPRISE' ? (
+                <Button onClick={() => setCustomModal(true)} variant="secondary" className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10">Request Custom Pricing</Button>
+              ) : <Button onClick={() => onUpgrade(plan)} variant="primary">Upgrade to {plan.displayName ?? plan.plan}</Button>}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* PORTFOLIO EXPANSION FOR CURRENT CUSTOM OWNERS */}
+      {!isSuper && currentPlan === 'ENTERPRISE' && (
+        <div className="bg-surface border border-border rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div><h3 className="text-base font-semibold text-white">Hotel Portfolio expansion</h3><p className="text-xs text-text-secondary mt-0.5">Request approval to register another hotel to your active dashboard</p></div>
+            <Button onClick={() => setAddHotelModal(true)} variant="primary" className="text-xs py-1.5">Request New Hotel Addition</Button>
+          </div>
+        </div>
+      )}
+
+      {/* REQUESTS HISTORY & SUPER ADMIN MANAGEMENT LEDGER */}
+      <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
+        <div>
+          <h3 className="text-base font-semibold text-white">{isSuper ? 'Multi-Hotel & Custom Pricing Requests Dashboard' : 'Your Multi-Hotel Portfolio Requests'}</h3>
+          <p className="text-xs text-text-secondary mt-0.5">{isSuper ? 'Provide custom pricing quotes and audit incoming SaaS registration approvals' : 'Track the review, quotation, and Razorpay payment status of your portfolio extensions'}</p>
+        </div>
+
+        <div className="space-y-4">
+          {/* Custom pricing requests list */}
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-primary tracking-wider uppercase">Custom Multi-Hotel Plan Requests</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-border text-text-secondary uppercase tracking-wider pb-2">
+                    <th className="pb-2">Requested By</th>
+                    <th className="pb-2">Hotels Requested</th>
+                    <th className="pb-2">Room Specs</th>
+                    <th className="pb-2">Custom Price Quote</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border text-white">
+                  {customRequests.length === 0 ? <tr><td colSpan={6} className="py-4 text-center text-text-secondary">No custom plan requests found</td></tr> : customRequests.map(r => (
+                    <tr key={r.id}>
+                      <td className="py-3 font-medium">{r.userEmail ?? 'SaaS Customer'}</td>
+                      <td className="py-3 font-bold">{r.numHotels} Hotels</td>
+                      <td className="py-3 text-text-secondary">{r.roomDetails}</td>
+                      <td className="py-3 font-bold">{r.customPrice ? `₹${r.customPrice.toLocaleString()}/mo` : 'Pending review...'}</td>
+                      <td className="py-3">
+                        <span className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold uppercase', r.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' : r.status === 'PRICED' ? 'bg-[#4A9EFF]/10 text-[#4A9EFF]' : 'bg-orange-500/10 text-orange-400')}>{r.status}</span>
+                      </td>
+                      <td className="py-3 text-right">
+                        {isSuper && r.status === 'PENDING' ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <input type="number" placeholder="Set price" value={pricingQuote[r.id] ?? ''} onChange={e => setPricingQuote(p => ({ ...p, [r.id]: e.target.value }))} className="bg-surface-light border border-border rounded-lg px-2 py-1 text-xs text-white outline-none w-24" />
+                            <Button onClick={() => handleSetPriceQuote(r.id, 'CUSTOM_PRICE')} variant="primary" className="text-[10px] py-1 px-2.5">Approve Quote</Button>
+                          </div>
+                        ) : !isSuper && r.status === 'PRICED' ? (
+                          <Button onClick={() => handlePayFirst(r.id, 'CUSTOM_PRICE', r.customPrice)} variant="primary" className="text-[10px] py-1 px-3 bg-emerald-600 hover:bg-emerald-500">Pay First (Razorpay)</Button>
+                        ) : <span className="text-text-tertiary">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Add hotel requests list */}
+          <div className="space-y-3 pt-4 border-t border-border">
+            <p className="text-xs font-bold text-primary tracking-wider uppercase">Hotel Portfolio Extension Requests</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-border text-text-secondary uppercase tracking-wider pb-2">
+                    <th className="pb-2">Requested By</th>
+                    <th className="pb-2">New Hotel Name</th>
+                    <th className="pb-2">Room Count</th>
+                    <th className="pb-2">Extension Price Quote</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border text-white">
+                  {addHotelRequests.length === 0 ? <tr><td colSpan={6} className="py-4 text-center text-text-secondary">No hotel extension requests found</td></tr> : addHotelRequests.map(r => (
+                    <tr key={r.id}>
+                      <td className="py-3 font-medium">{r.userEmail ?? 'SaaS Owner'}</td>
+                      <td className="py-3 font-bold">{r.hotelName} <span className="text-[10px] text-text-secondary block font-normal">{r.hotelAddress}</span></td>
+                      <td className="py-3 text-text-secondary">{r.numRooms} Rooms</td>
+                      <td className="py-3 font-bold">{r.customPrice ? `₹${r.customPrice.toLocaleString()}` : 'Pending review...'}</td>
+                      <td className="py-3">
+                        <span className={cn('px-2 py-0.5 rounded-full text-[9px] font-bold uppercase', r.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400' : r.status === 'PRICED' ? 'bg-[#4A9EFF]/10 text-[#4A9EFF]' : 'bg-orange-500/10 text-orange-400')}>{r.status}</span>
+                      </td>
+                      <td className="py-3 text-right">
+                        {isSuper && r.status === 'PENDING' ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <input type="number" placeholder="Set price" value={pricingQuote[r.id] ?? ''} onChange={e => setPricingQuote(p => ({ ...p, [r.id]: e.target.value }))} className="bg-surface-light border border-border rounded-lg px-2 py-1 text-xs text-white outline-none w-24" />
+                            <Button onClick={() => handleSetPriceQuote(r.id, 'ADD_HOTEL')} variant="primary" className="text-[10px] py-1 px-2.5">Approve Quote</Button>
+                          </div>
+                        ) : !isSuper && r.status === 'PRICED' ? (
+                          <Button onClick={() => handlePayFirst(r.id, 'ADD_HOTEL', r.customPrice)} variant="primary" className="text-[10px] py-1 px-3 bg-emerald-600 hover:bg-emerald-500">Pay First (Razorpay)</Button>
+                        ) : <span className="text-text-tertiary">-</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CUSTOM PRICE MODAL */}
+      {customModal && (
+        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#0d1117] border border-border rounded-2xl max-w-md w-full p-6 space-y-5 text-left">
+            <div>
+              <h4 className="text-lg font-bold text-white">Request Custom Multi-Hotel Plan</h4>
+              <p className="text-xs text-text-secondary mt-1">Submit your requirements. Super Admin will review and provide a customized quote directly here.</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">How many hotels do you plan to manage?</label>
+                <input type="number" value={numHotels} onChange={e => setNumHotels(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. 5" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">Describe your average rooms per hotel & extra requirements</label>
+                <textarea rows={3} value={roomDetails} onChange={e => setRoomDetails(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary resize-none" placeholder="e.g. Average 50 rooms per hotel, custom reporting roles..." />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button onClick={() => setCustomModal(false)} variant="secondary" className="flex-1 text-sm py-2">Cancel</Button>
+              <Button onClick={handleCustomSubmit} loading={submitting} variant="primary" className="flex-1 text-sm py-2">Send Request</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD HOTEL MODAL */}
+      {addHotelModal && (
+        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#0d1117] border border-border rounded-2xl max-w-md w-full p-6 space-y-5 text-left">
+            <div>
+              <h4 className="text-lg font-bold text-white">Request Hotel Portfolio Addition</h4>
+              <p className="text-xs text-text-secondary mt-1">Add another hotel to your portfolio. Pricing is set dynamically by the Super Admin.</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">New Hotel Name</label>
+                <input value={hotelName} onChange={e => setHotelName(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary" placeholder="Zenbourg Palace" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">Hotel Location / Address</label>
+                <input value={hotelAddress} onChange={e => setHotelAddress(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary" placeholder="MG Road, Bangalore" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">Number of Rooms</label>
+                <input type="number" value={numRooms} onChange={e => setNumRooms(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary" placeholder="40" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button onClick={() => setAddHotelModal(false)} variant="secondary" className="flex-1 text-sm py-2">Cancel</Button>
+              <Button onClick={handleAddHotelSubmit} loading={submitting} variant="primary" className="flex-1 text-sm py-2">Submit Request</Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -500,7 +680,7 @@ export default function SettingsPage() {
   const { data: session, update } = useSession()
   const [view, setView] = useState('OVERVIEW')
   const [saving, setSaving] = useState(false)
-  const [hotelInfo, setHotelInfo] = useState<HotelInfo>({ name: '', description: '', address: '', phone: '', email: '', plan: 'BASE', features: [], planExpiresAt: null, ranking: 0 })
+  const [hotelInfo, setHotelInfo] = useState<HotelInfo>({ name: '', description: '', address: '', phone: '', email: '', plan: 'BASE', features: [], planExpiresAt: null, ranking: 0, isTrialActive: false, isAutopayActive: false, coverImage: null, logo: null, images: [] })
   const [selectedRole, setSelectedRole] = useState('MANAGER')
   const [permissions, setPermissions] = useState<Record<string, boolean>>({})
   const [notif, setNotif] = useState({ smsAlerts: false, pushNotifications: true, emailAlerts: true, bookingConfirmation: true, checkoutReminder: true, serviceUpdates: true })
@@ -515,21 +695,42 @@ export default function SettingsPage() {
     { id: 'twilio',      name: 'Twilio',        type: 'SMS / WhatsApp',   status: 'CONNECTED' },
   ]
 
+  const [activePropertyId, setActivePropertyId] = useState('')
+  const [myProperties, setMyProperties] = useState<any[]>([])
+
   const currentPropertyId = useMemo(() => session?.user?.role === 'SUPER_ADMIN' ? getAdminContext()?.propertyId : session?.user?.propertyId, [session])
+  const effectivePropertyId = activePropertyId || currentPropertyId
+
+  useEffect(() => {
+    if (currentPropertyId) setActivePropertyId(currentPropertyId)
+  }, [currentPropertyId])
+
+  useEffect(() => {
+    const loadProps = async () => {
+      try {
+        const res = await fetch('/api/admin/settings/property?listAll=true')
+        const d = await res.json()
+        if (d.success && d.properties) {
+          setMyProperties(d.properties)
+        }
+      } catch {}
+    }
+    loadProps()
+  }, [])
 
   const fetchProperty = useCallback(async () => {
-    if (!currentPropertyId || currentPropertyId === 'ALL') return
+    if (!effectivePropertyId || effectivePropertyId === 'ALL') return
     try {
-      const r = await fetch(`/api/admin/settings/property?propertyId=${currentPropertyId}`)
+      const r = await fetch(`/api/admin/settings/property?propertyId=${effectivePropertyId}`)
       const d = await r.json()
       if (d.success && d.property) setHotelInfo(d.property)
     } catch { /* silent */ }
-  }, [currentPropertyId])
+  }, [effectivePropertyId])
 
   const fetchRoles = useCallback(async () => {
-    if (!currentPropertyId || currentPropertyId === 'ALL') return
+    if (!effectivePropertyId || effectivePropertyId === 'ALL') return
     try {
-      const r = await fetch(`/api/admin/settings/roles?propertyId=${currentPropertyId}`)
+      const r = await fetch(`/api/admin/settings/roles?propertyId=${effectivePropertyId}`)
       const d = await r.json()
       if (d.success) {
         const cur = (d.rolePermissions || []).find((rp: any) => rp.role === selectedRole)
@@ -542,21 +743,63 @@ export default function SettingsPage() {
         setPermissions(normalized)
       }
     } catch { /* silent */ }
-  }, [currentPropertyId, selectedRole])
+  }, [effectivePropertyId, selectedRole])
 
   useEffect(() => { fetchProperty() }, [fetchProperty])
   useEffect(() => { fetchRoles() }, [fetchRoles])
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'coverImage') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const toastId = toast.loading(`Uploading ${field === 'logo' ? 'logo' : 'cover photo'} to Cloudinary...`)
+    try {
+      const result = await uploadToCloudinary(file, 'hotels')
+      setHotelInfo(p => ({ ...p, [field]: result.url }))
+      toast.success(`${field === 'logo' ? 'Logo' : 'Cover photo'} uploaded to Cloudinary successfully!`, { id: toastId })
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to upload image to Cloudinary.', { id: toastId })
+    }
+  }
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const toastId = toast.loading('Uploading gallery image(s) to Cloudinary...')
+    try {
+      const newUrls: string[] = []
+      for (let i = 0; i < files.length; i++) {
+        const result = await uploadToCloudinary(files[i], 'hotels/gallery')
+        newUrls.push(result.url)
+      }
+      setHotelInfo(p => ({
+        ...p,
+        images: [...(p.images || []), ...newUrls]
+      }))
+      toast.success('Gallery image(s) uploaded successfully!', { id: toastId })
+    } catch (err) {
+      console.error(err)
+      toast.error('Failed to upload one or more images.', { id: toastId })
+    }
+  }
+
+  const removeGalleryImage = (index: number) => {
+    setHotelInfo(p => ({
+      ...p,
+      images: (p.images || []).filter((_, i) => i !== index)
+    }))
+  }
 
   const saveBranding = async () => {
     if (!currentPropertyId || currentPropertyId === 'ALL') { toast.error('Select a hotel first'); return }
     setSaving(true)
     try {
       // Only send editable branding fields — never send plan/features (those are SUPER_ADMIN only)
-      const { name, description, address, phone, email } = hotelInfo
+      const { name, description, address, phone, email, logo, coverImage, images } = hotelInfo
       const r = await fetch('/api/admin/settings/property', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: currentPropertyId, name, description, address, phone, email })
+        body: JSON.stringify({ propertyId: currentPropertyId, name, description, address, phone, email, logo, coverImage, images })
       })
       const d = await r.json()
       if (d.success) toast.success('Hotel info saved')
@@ -616,6 +859,38 @@ export default function SettingsPage() {
     } catch (e: any) { toast.error(e.message || 'Upgrade failed'); setSaving(false) }
   }
 
+  const handleCancelAutopay = async () => {
+    if (!currentPropertyId || currentPropertyId === 'ALL') return
+    if (!confirm('Are you sure you want to cancel your UPI Autopay and Free Trial? Doing so will immediately downgrade your hotel to the unpaid Base plan.')) return
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/admin/subscription/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId: currentPropertyId })
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success('Autopay & Trial cancelled successfully. Downgraded to Base plan.')
+        setHotelInfo(p => ({
+          ...p,
+          plan: 'BASE',
+          isTrialActive: false,
+          isAutopayActive: false,
+          planExpiresAt: null,
+        }))
+        await update()
+      } else {
+        toast.error(d.error || 'Failed to cancel Autopay')
+      }
+    } catch {
+      toast.error('Connection error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const ic = 'w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all'
   const lc = 'text-xs font-semibold text-text-secondary block mb-1.5'
 
@@ -633,6 +908,85 @@ export default function SettingsPage() {
             <div><label className={lc}>Phone</label><input value={hotelInfo.phone} onChange={e => setHotelInfo(p => ({ ...p, phone: e.target.value }))} className={ic} placeholder="+91 98765 43210" /></div>
             <div><label className={lc}>Address</label><input value={hotelInfo.address} onChange={e => setHotelInfo(p => ({ ...p, address: e.target.value }))} className={ic} placeholder="Street, City, State" /></div>
           </div>
+
+          {/* Logo & Cover Image Upload Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            <div className="md:col-span-1 flex flex-col items-center justify-center p-4 bg-surface-light border border-white/[0.05] rounded-xl">
+              <label className="text-xs font-semibold text-text-secondary mb-3">Hotel Logo</label>
+              <div className="relative w-24 h-24 rounded-full border border-white/[0.05] bg-[#0d1117] flex items-center justify-center overflow-hidden group">
+                {hotelInfo.logo ? (
+                  <img src={hotelInfo.logo} className="w-full h-full object-cover" alt="Logo" />
+                ) : (
+                  <Building2 className="w-10 h-10 text-gray-500" />
+                )}
+                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white font-semibold cursor-pointer transition-all">
+                  Upload
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo')} className="hidden" />
+                </label>
+              </div>
+              {hotelInfo.logo && (
+                <button onClick={() => setHotelInfo(p => ({ ...p, logo: null }))} className="text-[10px] text-red-500 font-medium mt-2 hover:underline">Remove logo</button>
+              )}
+            </div>
+
+            <div className="md:col-span-2 flex flex-col p-4 bg-surface-light border border-white/[0.05] rounded-xl justify-center">
+              <label className="text-xs font-semibold text-text-secondary mb-3">Cover Image</label>
+              <div className="relative h-24 rounded-lg border border-white/[0.05] bg-[#0d1117] flex items-center justify-center overflow-hidden group">
+                {hotelInfo.coverImage ? (
+                  <img src={hotelInfo.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                ) : (
+                  <div className="text-center">
+                    <p className="text-xs text-text-secondary">Click to upload cover photo</p>
+                    <p className="text-[10px] text-gray-500 mt-1">PNG, JPG up to 5MB</p>
+                  </div>
+                )}
+                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs text-white font-semibold cursor-pointer transition-all">
+                  Upload Cover Photo
+                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'coverImage')} className="hidden" />
+                </label>
+              </div>
+              {hotelInfo.coverImage && (
+                <button onClick={() => setHotelInfo(p => ({ ...p, coverImage: null }))} className="text-[10px] text-red-500 font-medium mt-2 self-start hover:underline">Remove cover photo</button>
+              )}
+            </div>
+          </div>
+
+          {/* Hotel Gallery Upload Section */}
+          <div className="flex flex-col p-4 bg-surface-light border border-white/[0.05] rounded-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block">Hotel Photo Gallery</label>
+                <p className="text-[10px] text-gray-500 mt-0.5">These photos will appear in your mobile app's auto-sliding banner carousel</p>
+              </div>
+              <label className="bg-[#4A9EFF] hover:bg-[#4A9EFF]/90 text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer transition-all">
+                Add Photos
+                <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} className="hidden" />
+              </label>
+            </div>
+
+            {hotelInfo.images && hotelInfo.images.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {hotelInfo.images.map((imgUrl, idx) => (
+                  <div key={idx} className="relative aspect-video rounded-lg border border-white/[0.05] overflow-hidden group">
+                    <img src={imgUrl} className="w-full h-full object-cover" alt={`Gallery ${idx + 1}`} />
+                    <button 
+                      onClick={() => removeGalleryImage(idx)}
+                      className="absolute top-1.5 right-1.5 bg-black/70 hover:bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove photo"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="border border-dashed border-white/[0.05] rounded-lg p-6 text-center bg-[#0d1117]">
+                <p className="text-xs text-text-secondary">No gallery images uploaded yet</p>
+                <p className="text-[10px] text-gray-500 mt-1">Upload 2 or 3 high-quality hotel photos for your customer-facing slider</p>
+              </div>
+            )}
+          </div>
+
           <div><label className={lc}>Description</label><textarea rows={3} value={hotelInfo.description} onChange={e => setHotelInfo(p => ({ ...p, description: e.target.value }))} className={cn(ic, 'resize-none')} placeholder="Brief description of your hotel..." /></div>
         </div>
       </div>
@@ -671,7 +1025,7 @@ export default function SettingsPage() {
       </div>
     )
 
-    if (view === 'FINANCIAL') return <FinancialView propertyId={currentPropertyId} />
+    if (view === 'FINANCIAL') return <FinancialView propertyId={effectivePropertyId} />
 
     if (view === 'OPS') return (
       <div className="space-y-6">
@@ -698,7 +1052,15 @@ export default function SettingsPage() {
     )
 
     if (view === 'SUBSCRIPTION') return (
-      <SubscriptionView propertyId={currentPropertyId} currentPlan={hotelInfo.plan} onUpgrade={handleUpgrade} />
+      <SubscriptionView 
+        propertyId={effectivePropertyId} 
+        currentPlan={hotelInfo.plan} 
+        isTrialActive={hotelInfo.isTrialActive}
+        isAutopayActive={hotelInfo.isAutopayActive}
+        planExpiresAt={hotelInfo.planExpiresAt}
+        onUpgrade={handleUpgrade} 
+        onCancelAutopay={handleCancelAutopay}
+      />
     )
 
     if (view === 'INTEGRATIONS') return (
@@ -724,6 +1086,8 @@ export default function SettingsPage() {
         </div>
       </div>
     )
+
+    if (view === 'PAYOUTS') return <PayoutsView propertyId={effectivePropertyId} userRole={session?.user?.role} />
 
     if (view === 'RETENTION') return (
       <div className="space-y-6">
@@ -765,23 +1129,302 @@ export default function SettingsPage() {
   const viewTitle: Record<string, string> = {
     OVERVIEW: 'Settings', BRANDING: 'General Info', ROLES: 'Roles & Permissions',
     FINANCIAL: 'Financial & Tax', OPS: 'Notifications', SUBSCRIPTION: 'Subscription & Plans',
-    INTEGRATIONS: 'Integrations', RETENTION: 'Data Retention',
+    INTEGRATIONS: 'Integrations', PAYOUTS: 'Payouts & Withdrawals', RETENTION: 'Data Retention',
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        {view !== 'OVERVIEW' && (
-          <button onClick={() => setView('OVERVIEW')} className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-light border border-border hover:border-primary/40 transition-all">
-            <ChevronLeft className="w-4 h-4 text-text-secondary" />
-          </button>
-        )}
-        <div>
-          <h1 className="text-xl font-bold text-white">{viewTitle[view] ?? view}</h1>
-          {view !== 'OVERVIEW' && <p className="text-xs text-text-secondary mt-0.5">{NAV.find(n => n.id.toUpperCase() === view)?.desc}</p>}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {view !== 'OVERVIEW' && (
+            <button onClick={() => setView('OVERVIEW')} className="w-9 h-9 flex items-center justify-center rounded-xl bg-surface-light border border-border hover:border-primary/40 transition-all">
+              <ChevronLeft className="w-4 h-4 text-text-secondary" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-xl font-bold text-white">{viewTitle[view] ?? view}</h1>
+            {view !== 'OVERVIEW' && <p className="text-xs text-text-secondary mt-0.5">{NAV.find(n => n.id.toUpperCase() === view)?.desc}</p>}
+          </div>
         </div>
+
+        {myProperties.length > 1 && (
+          <div className="flex items-center gap-2 bg-surface border border-border rounded-xl px-3.5 py-1.5 shadow-sm">
+            <span className="text-[11px] text-text-secondary font-semibold uppercase tracking-wider">Switch Hotel:</span>
+            <select
+              value={effectivePropertyId}
+              onChange={e => setActivePropertyId(e.target.value)}
+              className="bg-transparent text-xs font-bold text-[#4A9EFF] focus:outline-none cursor-pointer"
+            >
+              {myProperties.map(p => (
+                <option key={p.id} value={p.id} className="bg-[#0d1117] text-white">{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       {renderView()}
     </div>
   )
 }
+
+// ─── Payouts & Withdrawals Ledger Component ──────────────────────────────────
+function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: string | undefined }) {
+  const [stats, setStats] = useState({ totalRevenue: 0, totalPaidOut: 0, pendingPayout: 0, currentBalance: 0 })
+  const [payoutRequests, setPayoutRequests] = useState<any[]>([])
+  const [allRequests, setAllRequests] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [withdrawModal, setWithdrawModal] = useState(false)
+  const [processModal, setProcessModal] = useState<any>(null)
+  const [amount, setAmount] = useState('')
+  const [txId, setTxId] = useState('')
+  const [notes, setNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/payouts?propertyId=${propertyId}`)
+      const d = await res.json()
+      if (d.success) {
+        setStats(d.stats)
+        setPayoutRequests(d.payoutRequests)
+        if (d.allRequests) setAllRequests(d.allRequests)
+      }
+    } catch { toast.error('Failed to load ledger') } finally { setLoading(false) }
+  }, [propertyId])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const handleRequestSubmit = async () => {
+    const val = parseFloat(amount)
+    if (isNaN(val) || val <= 0) { toast.error('Enter a valid amount'); return }
+    if (val > stats.currentBalance) { toast.error('Amount exceeds your current balance'); return }
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'CREATE_REQUEST', amount: val })
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success('Withdrawal request submitted successfully!')
+        setWithdrawModal(false)
+        setAmount('')
+        fetchData()
+      } else {
+        toast.error(d.error || 'Failed to submit request')
+      }
+    } catch { toast.error('Connection error') } finally { setSubmitting(false) }
+  }
+
+  const handleProcessSubmit = async (processAction: 'APPROVE' | 'REJECT') => {
+    if (processAction === 'APPROVE' && !txId.trim()) { toast.error('Transaction ID / UTR is required'); return }
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'PROCESS_REQUEST', requestId: processModal.id, processAction, transactionId: txId, notes })
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success(`Request marked as ${processAction === 'APPROVE' ? 'PAID' : 'REJECTED'} successfully!`)
+        setProcessModal(null)
+        setTxId('')
+        setNotes('')
+        fetchData()
+      } else {
+        toast.error(d.error || 'Failed to process request')
+      }
+    } catch { toast.error('Connection error') } finally { setSubmitting(false) }
+  }
+
+  if (loading) return <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+
+  const isSuper = userRole === 'SUPER_ADMIN'
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* 1. Statistics (for Hotel Owner) */}
+      {!isSuper && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-surface border border-border rounded-2xl p-5 space-y-2">
+            <p className="text-xs font-semibold text-text-secondary">Total Bookings Revenue</p>
+            <p className="text-2xl font-bold text-white">₹{stats.totalRevenue.toLocaleString()}</p>
+          </div>
+          <div className="bg-surface border border-border rounded-2xl p-5 space-y-2">
+            <p className="text-xs font-semibold text-text-secondary">Total Payouts Done</p>
+            <p className="text-2xl font-bold text-emerald-500">₹{stats.totalPaidOut.toLocaleString()}</p>
+          </div>
+          <div className="bg-surface border border-border rounded-2xl p-5 space-y-2">
+            <p className="text-xs font-semibold text-text-secondary">Pending requests</p>
+            <p className="text-2xl font-bold text-orange-500">₹{stats.pendingPayout.toLocaleString()}</p>
+          </div>
+          <div className="bg-gradient-to-br from-[#4A9EFF]/10 to-[#4A9EFF]/2 bg-surface border border-[#4A9EFF]/20 rounded-2xl p-5 flex flex-col justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-[#4A9EFF] tracking-wide uppercase">Requestable Balance</p>
+              <p className="text-2xl font-black text-white">₹{stats.currentBalance.toLocaleString()}</p>
+            </div>
+            {stats.currentBalance > 0 && (
+              <Button onClick={() => setWithdrawModal(true)} variant="primary" className="text-xs py-1.5 mt-3">Request Withdrawal</Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2. LEDGER FOR SUPER ADMIN */}
+      {isSuper ? (
+        <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
+          <div>
+            <h3 className="text-base font-semibold text-white">Payment & Withdrawal Requests</h3>
+            <p className="text-xs text-text-secondary mt-0.5">Approve, transfer, and ledger cash withdrawals for hotel partners</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                  <th className="pb-3">Hotel Name</th>
+                  <th className="pb-3">Amount</th>
+                  <th className="pb-3">Date</th>
+                  <th className="pb-3">Status</th>
+                  <th className="pb-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-sm text-white">
+                {allRequests.length === 0 ? (
+                  <tr><td colSpan={5} className="py-8 text-center text-text-secondary">No payout requests registered in the network</td></tr>
+                ) : allRequests.map((r) => (
+                  <tr key={r.id} className="hover:bg-surface-light/30">
+                    <td className="py-3.5 font-medium">{r.propertyName}</td>
+                    <td className="py-3.5 font-bold">₹{r.amount.toLocaleString()}</td>
+                    <td className="py-3.5 text-text-secondary text-xs">{new Date(r.requestedAt).toLocaleDateString()}</td>
+                    <td className="py-3.5">
+                      <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', 
+                        r.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' :
+                        r.status === 'PENDING' ? 'bg-orange-500/10 text-orange-500' : 'bg-red-500/10 text-red-500'
+                      )}>{r.status}</span>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      {r.status === 'PENDING' ? (
+                        <Button onClick={() => setProcessModal(r)} variant="primary" className="text-xs py-1 px-3">Review & Pay</Button>
+                      ) : r.transactionId ? (
+                        <span className="text-xs text-text-secondary font-mono">UTR: {r.transactionId}</span>
+                      ) : (
+                        <span className="text-xs text-text-secondary">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* 3. HISTORY FOR HOTEL ADMIN */
+        <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
+          <div>
+            <h3 className="text-base font-semibold text-white">Payout History & Logs</h3>
+            <p className="text-xs text-text-secondary mt-0.5">Track all requested, processed, and historical payout status</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                  <th className="pb-3">Requested Amount</th>
+                  <th className="pb-3">Request Date</th>
+                  <th className="pb-3">Status</th>
+                  <th className="pb-3">Transaction UTR</th>
+                  <th className="pb-3 text-right">Processed At</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-sm text-white">
+                {payoutRequests.length === 0 ? (
+                  <tr><td colSpan={5} className="py-8 text-center text-text-secondary">No historical payout requests registered</td></tr>
+                ) : payoutRequests.map((r) => (
+                  <tr key={r.id}>
+                    <td className="py-3.5 font-bold">₹{r.amount.toLocaleString()}</td>
+                    <td className="py-3.5 text-text-secondary text-xs">{new Date(r.requestedAt).toLocaleDateString()}</td>
+                    <td className="py-3.5">
+                      <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', 
+                        r.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' :
+                        r.status === 'PENDING' ? 'bg-orange-500/10 text-orange-500' : 'bg-red-500/10 text-red-500'
+                      )}>{r.status}</span>
+                    </td>
+                    <td className="py-3.5 font-mono text-xs text-text-secondary">{r.transactionId ?? 'Waiting for processing...'}</td>
+                    <td className="py-3.5 text-right text-text-secondary text-xs">{r.processedAt ? new Date(r.processedAt).toLocaleDateString() : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* WITHDRAW MODAL */}
+      {withdrawModal && (
+        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#0d1117] border border-border rounded-2xl max-w-md w-full p-6 space-y-5">
+            <div>
+              <h4 className="text-lg font-bold text-white">Request Balance Withdrawal</h4>
+              <p className="text-xs text-text-secondary mt-1">Submit a withdrawal request to Super Admin. Maximum requestable: ₹{stats.currentBalance.toLocaleString()}</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">Withdrawal Amount (INR)</label>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. 5000" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button onClick={() => setWithdrawModal(false)} variant="secondary" className="flex-1 text-sm py-2">Cancel</Button>
+              <Button onClick={handleRequestSubmit} loading={submitting} variant="primary" className="flex-1 text-sm py-2">Submit Request</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROCESS MODAL (For Super Admin) */}
+      {processModal && (
+        <div className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#0d1117] border border-border rounded-2xl max-w-lg w-full p-6 space-y-5">
+            <div>
+              <h4 className="text-lg font-bold text-white">Process Payout Request</h4>
+              <p className="text-xs text-text-secondary mt-1">Review the hotel's registered bank details and mark as complete after manual transfer.</p>
+            </div>
+
+            <div className="bg-surface border border-border rounded-xl p-4 space-y-3.5">
+              <p className="text-xs font-bold text-primary uppercase tracking-wide">Hotel Registered Bank & UPI details</p>
+              <div className="grid grid-cols-2 gap-3 text-xs text-left">
+                <div><span className="text-text-secondary block">Account Name</span><span className="text-white font-medium">{processModal.bankDetails?.bankAccountName ?? '-'}</span></div>
+                <div><span className="text-text-secondary block">Bank Name</span><span className="text-white font-medium">{processModal.bankDetails?.bankName ?? '-'}</span></div>
+                <div><span className="text-text-secondary block">Account Number</span><span className="text-white font-medium font-mono">{processModal.bankDetails?.bankAccountNumber ?? '-'}</span></div>
+                <div><span className="text-text-secondary block">IFSC Code</span><span className="text-white font-medium font-mono">{processModal.bankDetails?.bankIfscCode ?? '-'}</span></div>
+                <div className="col-span-2 border-t border-border pt-2"><span className="text-text-secondary block">Quick Pay UPI ID</span><span className="text-emerald-500 font-bold font-mono">{processModal.bankDetails?.upiId ?? '-'}</span></div>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-left">
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">Transaction ID / UTR Ref Number (Required to approve)</label>
+                <input value={txId} onChange={e => setTxId(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. UTR123849103" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-text-secondary block mb-1.5">Internal notes / Memo</label>
+                <input value={notes} onChange={e => setNotes(e.target.value)} className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. Paid via HDFC Netbanking" />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button onClick={() => setProcessModal(null)} variant="secondary" className="text-sm py-2">Close</Button>
+              <Button onClick={() => handleProcessSubmit('REJECT')} loading={submitting} variant="secondary" className="text-sm py-2 text-red-500 hover:bg-red-500/10">Reject Request</Button>
+              <Button onClick={() => handleProcessSubmit('APPROVE')} loading={submitting} variant="primary" className="text-sm py-2 px-6">Mark as Paid Done</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+

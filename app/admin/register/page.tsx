@@ -29,7 +29,9 @@ export default function AdminRegisterPage() {
         hotelAddress: '',
         latitude: null as number | null,
         longitude: null as number | null,
-        plan: 'BASE' as 'BASE' | 'STARTER' | 'STANDARD' | 'ENTERPRISE'
+        plan: 'BASE' as 'BASE' | 'STARTER' | 'STANDARD' | 'ENTERPRISE',
+        trialPeriod: true,
+        upiId: ''
     })
 
     const plans = [
@@ -75,12 +77,15 @@ export default function AdminRegisterPage() {
         },
     ]
 
-    const handleChange = (field: string, value: string) => {
+    const handleChange = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (formData.trialPeriod && !formData.upiId.trim()) {
+            return toast.error('UPI ID is required to set up auto-pay and activate the 14-day free trial.')
+        }
         setLoading(true)
 
         try {
@@ -105,14 +110,18 @@ export default function AdminRegisterPage() {
             // 2. If paid plan, handle Razorpay payment
             if (formData.plan !== 'BASE' && formData.plan !== 'ENTERPRISE') {
                 try {
-                    toast.loading(`Initializing payment for ${formData.plan} plan...`)
+                    const statusText = formData.trialPeriod 
+                        ? 'Initializing UPI Autopay verification mandate...' 
+                        : `Initializing payment for ${formData.plan} plan...`
+                    toast.loading(statusText)
                     const orderRes = await fetch('/api/subscription/razorpay', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             plan: formData.plan,
                             propertyId: data.propertyId,
-                            userId: data.user?.id,   // pass userId so API can verify without session
+                            userId: data.user?.id,
+                            trialPeriod: formData.trialPeriod,
                         })
                     })
                     const order = await orderRes.json()
@@ -127,7 +136,9 @@ export default function AdminRegisterPage() {
                                 amount: order.amount,
                                 currency: order.currency,
                                 name: 'Zenbourg',
-                                description: `Registration: ${formData.plan} Plan`,
+                                description: formData.trialPeriod 
+                                    ? `14-Day Free Trial Autopay Setup` 
+                                    : `Registration: ${formData.plan} Plan`,
                                 order_id: order.orderId,
                                 handler: async (response: any) => {
                                     const verifyRes = await fetch('/api/subscription/verify', {
@@ -137,7 +148,9 @@ export default function AdminRegisterPage() {
                                             ...response,
                                             plan: formData.plan,
                                             propertyId: data.propertyId,
-                                            userId: data.user?.id,  // pass userId here too
+                                            userId: data.user?.id,
+                                            trialPeriod: formData.trialPeriod,
+                                            upiId: formData.upiId,
                                         })
                                     })
                                     const verifyData = await verifyRes.json()
@@ -150,12 +163,18 @@ export default function AdminRegisterPage() {
                         })
 
                         const paid = await rzpPromise
-                        if (paid) toast.success(`Payment verified! ${formData.plan} plan activated.`)
-                        else toast.info('Payment skipped. Your account is on the Base plan.')
+                        if (paid) {
+                            const successMsg = formData.trialPeriod 
+                                ? `UPI Autopay setup verified! Your 14-day free trial of ${formData.plan} is now active.` 
+                                : `Payment verified! ${formData.plan} plan activated.`
+                            toast.success(successMsg)
+                        } else {
+                            toast.info('Autopay setup skipped. Your account is on the Base plan.')
+                        }
                     }
                 } catch (payErr) {
                     console.error('Payment Flow Error:', payErr)
-                    toast.error('Payment failed. Defaulting to Base plan.')
+                    toast.error('Autopay verification failed. Defaulting to Base plan.')
                 }
             }
 
@@ -346,6 +365,36 @@ export default function AdminRegisterPage() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+
+                        {/* Free Trial & UPI Autopay configuration */}
+                        <div className="bg-[#1a2633] p-4 rounded-2xl border border-white/[0.06] space-y-3.5 mt-4">
+                            <label className="flex items-start gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.trialPeriod}
+                                    onChange={e => handleChange('trialPeriod', e.target.checked)}
+                                    className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-surface-light accent-primary mt-1"
+                                />
+                                <div className="flex-1">
+                                    <span className="text-sm font-semibold text-white block leading-tight">Activate 14-Day Free Trial</span>
+                                    <span className="text-[11px] text-text-secondary block mt-1 leading-normal">
+                                        Activate your chosen plan with a 14-day free trial. Input your UPI ID below to configure automatic autopay deductions after the trial. No immediate charge is made.
+                                    </span>
+                                </div>
+                            </label>
+
+                            {formData.trialPeriod && (
+                                <div className="animate-in fade-in slide-in-from-top-1 duration-150 pt-2 border-t border-white/[0.06]">
+                                    <Input
+                                        label="UPI ID for Auto-Pay (After 14 Days)"
+                                        placeholder="e.g. owner@upi or 9876543210@paytm"
+                                        required={formData.trialPeriod}
+                                        value={formData.upiId}
+                                        onChange={e => handleChange('upiId', e.target.value)}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <Button

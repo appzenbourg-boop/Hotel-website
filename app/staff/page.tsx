@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import { toast } from 'sonner'
@@ -22,18 +22,104 @@ export default function StaffDashboard() {
     const { isInstallable, installPwa } = usePwaInstall()
     const [punchLoading, setPunchLoading] = useState(false)
     const [currentTime, setCurrentTime] = useState(new Date())
+    
+    const prevTaskCount = useRef<number | null>(null)
+    const prevAlertCount = useRef<number | null>(null)
 
-    const { data, mutate, isValidating } = useSWR('/api/staff/me', (url) => fetch(url).then(res => res.json()), {
+    const { data, error, mutate, isValidating } = useSWR('/api/staff/me', (url) => fetch(url).then(async res => {
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(`Status ${res.status}: ${txt}`);
+        }
+        return res.json();
+    }), {
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
+        revalidateOnMount: true,
         dedupingInterval: 10000 // 10 seconds
     })
 
     const loading = !data && isValidating
 
+    const playNotificationChime = useCallback(() => {
+        try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            osc1.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+            
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
+            osc2.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.15); // C6
+            
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            
+            osc1.start(audioCtx.currentTime);
+            osc2.start(audioCtx.currentTime);
+            
+            osc1.stop(audioCtx.currentTime + 0.85);
+            osc2.stop(audioCtx.currentTime + 0.85);
+        } catch (e) {
+            console.warn('Synth audio failed:', e);
+        }
+    }, []);
+
+    const triggerLocalNotification = useCallback((title: string, body: string) => {
+        try {
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification(title, {
+                        body,
+                        icon: '/images/icon-192.png',
+                        vibrate: [150, 100, 150],
+                    });
+                }
+            }
+        } catch (e) {
+            console.error('Push notification failed:', e);
+        }
+    }, []);
+
     const fetchData = useCallback(() => {
         mutate()
     }, [mutate])
+
+    // Ask for permissions on mount
+    useEffect(() => {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    // Watch for new tasks or system alerts
+    useEffect(() => {
+        if (data) {
+            const currentTasks = data.tasks?.length || 0;
+            const currentAlerts = data.alerts?.length || 0;
+
+            if (prevTaskCount.current !== null && currentTasks > prevTaskCount.current) {
+                playNotificationChime();
+                triggerLocalNotification("New Duty Assigned!", `You have a new room service/maintenance task.`);
+            } else if (prevAlertCount.current !== null && currentAlerts > prevAlertCount.current) {
+                playNotificationChime();
+                triggerLocalNotification("New Management Alert!", `You have received a new system alert.`);
+            }
+
+            prevTaskCount.current = currentTasks;
+            prevAlertCount.current = currentAlerts;
+        }
+    }, [data, playNotificationChime, triggerLocalNotification]);
 
     useEffect(() => {
         const isPunchedIn = data?.attendance?.punchIn && !data?.attendance?.punchOut
@@ -86,7 +172,12 @@ export default function StaffDashboard() {
         </div>
     )
 
-    if (!data) return <div className="p-8 text-center text-rose-500 font-bold">Failed to load. Please refresh.</div>
+    if (error || (!data && !isValidating)) return (
+        <div className="p-12 text-center text-rose-500 font-bold space-y-4">
+            <div>Failed to load. Please refresh.</div>
+            {error && <div className="text-xs text-rose-400 font-mono bg-rose-500/10 p-4 rounded-2xl max-w-md mx-auto border border-rose-500/20">{error.message}</div>}
+        </div>
+    )
 
     const isPunchedIn = data.attendance?.punchIn && !data.attendance?.punchOut
     const isPunchedOutToday = !!data.attendance?.punchOut

@@ -13,11 +13,13 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
-        const { name, address, phone, email, description, latitude, longitude } = body
+        const { name, address, phone, email, description, latitude, longitude, trialPeriod, upiId } = body
 
         if (!name || !address || !phone || !email) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
         }
+
+        const planExpiresAt = trialPeriod ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null
 
         const property = await prisma.property.create({
             data: {
@@ -28,6 +30,25 @@ export async function POST(request: Request) {
                 description,
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null,
+                checkInTime: '14:00',
+                checkOutTime: '11:00',
+                plan: 'BASE',
+                planExpiresAt: planExpiresAt,
+            }
+        })
+
+        // Create default property settings with UPI ID for auto-deduction
+        await prisma.propertySettings.create({
+            data: {
+                propertyId: property.id,
+                upiId: upiId || null,
+                gstPercent: 18.0,
+                serviceChargePercent: 0.0,
+                luxuryTaxPercent: 0.0,
+                defaultDiscountPercent: 0.0,
+                invoicePrefix: 'INV',
+                currency: 'INR',
+                currencySymbol: '₹',
                 checkInTime: '14:00',
                 checkOutTime: '11:00',
             }

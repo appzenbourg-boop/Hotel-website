@@ -37,6 +37,7 @@ export async function GET(request: Request) {
                 designation: session.user.role,
                 employeeId: 'ADMIN',
                 status: 'ACTIVE',
+                propertyId: session.user.propertyId || undefined,
                 user: {
                     name: session.user.name,
                     email: session.user.email
@@ -76,11 +77,13 @@ export async function GET(request: Request) {
                 where: { receiverId: session.user.id, isRead: false }
             }),
             // 5. Recent System Alerts
-            prisma.systemAlert.findMany({
-                where: { propertyId: staff.propertyId },
-                orderBy: { timestamp: 'desc' },
-                take: 3
-            }),
+            staff.propertyId
+                ? prisma.systemAlert.findMany({
+                    where: { propertyId: staff.propertyId },
+                    orderBy: { timestamp: 'desc' },
+                    take: 3
+                })
+                : Promise.resolve([]),
             // 6. Latest Performance
             prisma.performanceScore.findFirst({
                 where: { staffId: staff.id },
@@ -117,7 +120,7 @@ export async function PATCH(request: Request) {
 
     try {
         const body = await request.json()
-        const { currentPassword, newPassword, phone, address, emergencyContactName, emergencyContactPhone, profilePhoto } = body
+        const { currentPassword, newPassword, phone, address, emergencyContactName, emergencyContactPhone, profilePhoto, bankName, accountNumber, ifscCode } = body
 
         // ── Password change ──────────────────────────────────────────────────
         if (currentPassword && newPassword) {
@@ -165,6 +168,9 @@ export async function PATCH(request: Request) {
         if (emergencyContactName !== undefined) staffUpdates.emergencyContactName = emergencyContactName
         if (emergencyContactPhone !== undefined) staffUpdates.emergencyContactPhone = emergencyContactPhone
         if (profilePhoto !== undefined) staffUpdates.profilePhoto = profilePhoto
+        if (bankName !== undefined) staffUpdates.bankName = bankName
+        if (accountNumber !== undefined) staffUpdates.accountNumber = accountNumber
+        if (ifscCode !== undefined) staffUpdates.ifscCode = ifscCode
 
         if (Object.keys(staffUpdates).length > 0) {
             const staff = await prisma.staff.findUnique({

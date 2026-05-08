@@ -45,6 +45,9 @@ export default function PayrollPage() {
     // Modal state
     const [selectedPayroll, setSelectedPayroll] = useState<any>(null)
     const [showSlipModal, setShowSlipModal] = useState(false)
+    const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [payingPayroll, setPayingPayroll] = useState<any>(null)
+    const [manualTxId, setManualTxId] = useState('')
 
     const fetchPayroll = useCallback(async () => {
         setLoading(true)
@@ -120,18 +123,33 @@ export default function PayrollPage() {
         }
     }
 
-    const handleMarkAsPaid = async (payrollId: string, method: 'MANUAL' | 'RAZORPAY') => {
-        if (method === 'MANUAL' && !confirm('Confirm manual payment? This will update the record immediately.')) return
+    const handleMarkAsPaid = async (payroll: any, txIdInput?: string) => {
+        const uId = txIdInput || manualTxId
+        if (!uId) {
+            toast.error('Transaction reference ID is required for manual payments')
+            return
+        }
 
         try {
-            const res = await fetch(`/api/payroll/${payrollId}`, {
+            const res = await fetch(`/api/payroll/${payroll.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'PAID', paymentId: `MANUAL_${Date.now()}` })
+                body: JSON.stringify({
+                    status: 'PAID',
+                    transactionId: uId,
+                    bankDetails: {
+                        accountNumber: payroll.staff?.accountNumber || 'N/A',
+                        ifscCode: payroll.staff?.ifscCode || 'N/A',
+                        bankName: payroll.staff?.bankName || 'N/A'
+                    }
+                })
             })
 
             if (res.ok) {
                 toast.success('Payment recorded successfully')
+                setShowPaymentModal(false)
+                setPayingPayroll(null)
+                setManualTxId('')
                 fetchPayroll()
             } else {
                 toast.error('Failed to record payment')
@@ -446,20 +464,12 @@ export default function PayrollPage() {
                                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <Button
                                                             size="sm"
-                                                            variant="secondary"
-                                                            className="text-[10px] font-semibold uppercase h-8 px-3"
-                                                            onClick={() => handleMarkAsPaid(p.id, 'MANUAL')}
-                                                        >
-                                                            Manual
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
                                                             variant="primary"
                                                             className="text-[10px] font-semibold uppercase h-8 px-3"
-                                                            onClick={() => handleRazorpayPayment(p)}
+                                                            onClick={() => { setPayingPayroll(p); setShowPaymentModal(true); }}
                                                             leftIcon={<CreditCard className="w-3 h-3" />}
                                                         >
-                                                            Pay
+                                                            Disburse
                                                         </Button>
                                                     </div>
                                                 )}
@@ -537,13 +547,10 @@ export default function PayrollPage() {
                             >
                                 Open Full Slip &amp; Download PDF
                             </Button>
-                            {selectedPayroll.status === 'PENDING' && (
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Button variant="secondary" onClick={() => handleMarkAsPaid(selectedPayroll.id, 'MANUAL')}>
-                                        Mark as Paid
-                                    </Button>
-                                    <Button variant="primary" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleRazorpayPayment(selectedPayroll)}>
-                                        Pay via Razorpay
+                             {selectedPayroll.status === 'PENDING' && (
+                                <div className="grid grid-cols-1">
+                                    <Button variant="primary" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { setPayingPayroll(selectedPayroll); setShowPaymentModal(true); setShowSlipModal(false); }}>
+                                        Proceed to Disburse
                                     </Button>
                                 </div>
                             )}
@@ -554,6 +561,80 @@ export default function PayrollPage() {
                             <p className="text-[10px] text-warning/80 font-medium">
                                 This is a digital preview. The official salary slip includes the property seal and authorized signatures.
                             </p>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Unified Disbursement Modal */}
+            <Modal
+                isOpen={showPaymentModal}
+                onClose={() => { setShowPaymentModal(false); setPayingPayroll(null); setManualTxId(''); }}
+                title="Employee Salary Disbursement"
+                description={`Disburse monthly salary to ${payingPayroll?.staff?.name || 'Employee'}`}
+                size="md"
+            >
+                {payingPayroll && (
+                    <div className="space-y-6 pt-4 text-left">
+                        <div className="bg-surface-light border border-border rounded-2xl p-5 space-y-4">
+                            <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                                <div>
+                                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Employee Information</h4>
+                                    <p className="text-xs text-text-secondary mt-0.5">ID: {payingPayroll.staff?.employeeId || 'N/A'}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs font-semibold text-text-secondary uppercase">{payingPayroll.staff?.department || 'N/A'}</p>
+                                    <p className="text-[10px] text-text-tertiary font-bold">{payingPayroll.month} {payingPayroll.year}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-xs">
+                                <div>
+                                    <span className="text-text-secondary block font-medium">Bank Name</span>
+                                    <span className="text-white font-bold block mt-1">{payingPayroll.staff?.bankName || 'Not Provided'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-text-secondary block font-medium">IFSC Code</span>
+                                    <span className="text-white font-bold block mt-1 font-mono">{payingPayroll.staff?.ifscCode || 'Not Provided'}</span>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="text-text-secondary block font-medium">Account Number</span>
+                                    <span className="text-white font-bold block mt-1 font-mono tracking-wider">{payingPayroll.staff?.accountNumber || 'Not Provided'}</span>
+                                </div>
+                            </div>
+
+                            <div className="pt-3 border-t border-white/5 flex justify-between items-center">
+                                <span className="text-sm text-text-secondary font-medium">Net Salary Payable</span>
+                                <span className="text-xl font-bold text-primary font-mono">{formatCurrency(payingPayroll.netSalary)}</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-xs font-semibold text-text-secondary block">Transaction Reference ID / UTR (Required for Manual)</label>
+                            <input
+                                value={manualTxId}
+                                onChange={e => setManualTxId(e.target.value)}
+                                className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary font-mono"
+                                placeholder="e.g. TXN98721648123"
+                            />
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <Button
+                                onClick={() => handleMarkAsPaid(payingPayroll)}
+                                variant="secondary"
+                                className="flex-1 text-sm py-2 font-bold uppercase"
+                            >
+                                Mark Manual Paid
+                            </Button>
+                            <Button
+                                onClick={() => handleRazorpayPayment(payingPayroll)}
+                                variant="primary"
+                                className="flex-1 text-sm py-2 bg-emerald-600 hover:bg-emerald-500 font-bold uppercase"
+                                leftIcon={<CreditCard className="w-4 h-4" />}
+                            >
+                                Pay via Razorpay
+                            </Button>
                         </div>
                     </div>
                 )}

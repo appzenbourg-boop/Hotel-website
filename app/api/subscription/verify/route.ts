@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
             plan,
             propertyId,
             userId,
+            trialPeriod,
+            upiId,
         } = body
 
         // Verify Razorpay signature
@@ -70,9 +72,14 @@ export async function POST(req: NextRequest) {
 
         const features = PLAN_FEATURES[plan] ?? PLAN_FEATURES['BASE']
 
-        // Set expiry to 1 year from now
-        const expiresAt = new Date()
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+        // Set expiry to 14 days if trialPeriod is true, otherwise 1 year from now
+        const expiresAt = trialPeriod
+            ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+            : new Date()
+        
+        if (!trialPeriod) {
+            expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+        }
 
         await prisma.property.update({
             where: { id: targetPropertyId },
@@ -80,8 +87,26 @@ export async function POST(req: NextRequest) {
                 plan: plan as any,
                 features,
                 planExpiresAt: expiresAt,
-            }
+                isTrialActive: trialPeriod ? true : false,
+                isAutopayActive: trialPeriod ? true : false,
+            } as any
         })
+
+        // Upsert PropertySettings with UPI ID on verified subscription
+        if (upiId) {
+            await prisma.propertySettings.upsert({
+                where: { propertyId: targetPropertyId },
+                update: { upiId },
+                create: {
+                    propertyId: targetPropertyId,
+                    upiId,
+                    gstPercent: 18.0,
+                    serviceChargePercent: 0.0,
+                    luxuryTaxPercent: 0.0,
+                    defaultDiscountPercent: 0.0,
+                }
+            })
+        }
 
         return NextResponse.json({
             success: true,
