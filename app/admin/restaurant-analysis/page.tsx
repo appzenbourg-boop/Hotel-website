@@ -368,11 +368,12 @@ export default function RestaurantAnalysisPage() {
                                         innerRadius={65} 
                                         outerRadius={85} 
                                         paddingAngle={6} 
+                                        cornerRadius={4}
                                         dataKey="value"
                                         stroke="none"
                                         animationDuration={1200}
                                     >
-                                        {pieData.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} cornerRadius={4} />)}
+                                        {pieData.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                                     </Pie>
                                     <Tooltip
                                         contentStyle={{ 
