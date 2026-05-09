@@ -10,9 +10,6 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions)
     if (!session) return new NextResponse('Unauthorized', { status: 401 })
 
-    const cacheKey = `staff_notifications:${session.user.id}`
-    const cached = await redis.get(cacheKey)
-    if (cached) return NextResponse.json(cached)
 
     try {
         const notifications = await prisma.inAppNotification.findMany({
@@ -21,7 +18,6 @@ export async function GET(request: Request) {
             take: 50
         })
 
-        await redis.set(cacheKey, notifications, { ex: 300 }) // 5 min cache
         return NextResponse.json(notifications)
     } catch (error) {
         console.error("Notifications API Error:", error)

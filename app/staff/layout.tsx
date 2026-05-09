@@ -40,6 +40,9 @@ export default function StaffLayout({
             if (isMuted) return; // Honor user setting
 
             const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            // Bypasses arbitrary modern browser audio suspensions
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
             const osc1 = audioCtx.createOscillator();
             const osc2 = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();

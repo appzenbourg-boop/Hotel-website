@@ -14,11 +14,6 @@ export async function GET(request: Request) {
         return new NextResponse('Unauthorized', { status: 401 })
     }
 
-    const cacheKey = `staff_me:${session.user.id}`
-    const cached = await redis.get(cacheKey)
-    if (cached) {
-        return NextResponse.json({ ...cached, fromCache: true })
-    }
 
     try {
         // 1. Get Staff Profile
@@ -116,8 +111,6 @@ export async function GET(request: Request) {
             }
         }
 
-        // Cache for 1 minute
-        await redis.set(cacheKey, responseData, { ex: 60 })
 
         return NextResponse.json(responseData)
 

@@ -320,7 +320,7 @@ export default function StaffPage() {
                                 activeTab === 'ALL' ? "text-primary border-b-2 border-primary" : "text-text-tertiary hover:text-text-secondary"
                             )}
                         >
-                            Full Roster
+                            Staff
                         </button>
                         <button
                             onClick={() => setActiveTab('VERIFICATION')}
@@ -415,123 +415,139 @@ export default function StaffPage() {
                             </div>
                         ) : (
                             filteredStaff.map((staff: any) => (
-                                <Link
+                                <div
                                     key={staff.id}
-                                    href={`/admin/staff/${staff.id}`}
-                                    className="relative p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between group cursor-pointer border-b border-white/[0.04] last:border-0 overflow-hidden"
+                                    className="relative group border-b border-white/[0.04] last:border-0 hover:bg-white/[0.01] transition-colors"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <Avatar name={staff.name} src={staff.profilePhoto} />
-                                        <div>
-                                            <h3 className="font-semibold text-text-primary">{staff.name}</h3>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold">{staff.department}</span>
-                                                <span className="text-xs text-text-tertiary">• {staff.designation}</span>
-                                                {staff.isVerified && <Badge variant="success" className="text-[8px] h-4">Verified</Badge>}
-                                                {staff.verificationRequested && <Badge variant="warning" className="text-[8px] h-4">Requested</Badge>}
+                                    {/* Main Data Row - Navigates to detail on click */}
+                                    <div className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <Link
+                                            href={`/admin/staff/${staff.id}`}
+                                            className="flex-1 flex items-center gap-4 group/link cursor-pointer min-w-0"
+                                        >
+                                            <Avatar name={staff.name} src={staff.profilePhoto} className="group-hover/link:ring-2 ring-primary/30 transition-all" />
+                                            <div className="min-w-0">
+                                                <h3 className="font-semibold text-text-primary group-hover/link:text-primary transition-colors">{staff.name}</h3>
+                                                <div className="flex items-center flex-wrap gap-2 mt-1">
+                                                    <span className="text-[10px] uppercase tracking-wider bg-white/[0.04] text-text-secondary px-2 py-0.5 rounded-md font-bold border border-white/[0.05]">{staff.department}</span>
+                                                    <span className="text-xs text-text-tertiary">• {staff.designation}</span>
+                                                    {staff.isVerified && <Badge variant="success" className="text-[8px] h-4">Verified</Badge>}
+                                                    {staff.verificationRequested && activeTab === 'VERIFICATION' && <Badge variant="warning" className="text-[8px] h-4">Awaiting Action</Badge>}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        </Link>
 
-                                    <div className="flex items-center gap-8">
-                                        <div className="hidden lg:flex flex-col gap-1 w-48">
-                                            <div className="flex items-center gap-2 text-xs text-text-secondary">
-                                                <Phone className="w-3 h-3 opacity-50" /> {staff.phone || 'N/A'}
+                                        {/* Metadata Grid */}
+                                        <div className="flex items-center gap-6 flex-wrap md:flex-nowrap shrink-0">
+                                            <div className="hidden lg:flex flex-col gap-1 w-48">
+                                                <div className="flex items-center gap-2 text-xs text-text-secondary">
+                                                    <Phone className="w-3 h-3 opacity-50" /> {staff.phone || 'N/A'}
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-text-secondary truncate">
+                                                    <Mail className="w-3 h-3 opacity-50" /> {staff.email}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs text-text-secondary truncate">
-                                                <Mail className="w-3 h-3 opacity-50" /> {staff.email}
-                                            </div>
-                                        </div>
 
-                                        <div className="text-right">
-                                            <div className="flex items-center gap-2 mb-1 justify-end">
-                                                <span className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px] ${staff.dutyStatus === 'ON_DUTY'
-                                                    ? 'bg-emerald-500 shadow-emerald-500/50'
-                                                    : staff.dutyStatus === 'PUNCHED_OUT'
-                                                        ? 'bg-amber-500 shadow-amber-500/50'
-                                                        : 'bg-gray-500 shadow-gray-500/50'
-                                                    }`} />
-                                                <span className="text-xs font-semibold tracking-wide text-text-secondary whitespace-nowrap">
-                                                    {staff.dutyStatus === 'ON_DUTY' ? 'ON DUTY' : staff.dutyStatus === 'PUNCHED_OUT' ? 'PUNCHED OUT' : 'OFF DUTY'}
-                                                </span>
+                                            <div className="text-right min-w-[100px]">
+                                                <div className="flex items-center gap-2 mb-1 justify-end">
+                                                    <span className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px] ${staff.dutyStatus === 'ON_DUTY'
+                                                        ? 'bg-emerald-500 shadow-emerald-500/50'
+                                                        : staff.dutyStatus === 'PUNCHED_OUT'
+                                                            ? 'bg-amber-500 shadow-amber-500/50'
+                                                            : 'bg-gray-500 shadow-gray-500/50'
+                                                        }`} />
+                                                    <span className="text-xs font-bold tracking-wide text-text-secondary whitespace-nowrap">
+                                                        {staff.dutyStatus === 'ON_DUTY' ? 'ON DUTY' : staff.dutyStatus === 'PUNCHED_OUT' ? 'PUNCHED OUT' : 'OFF DUTY'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1 text-[10px] text-text-tertiary justify-end uppercase tracking-wider">
+                                                    <MapPin className="w-3 h-3" />
+                                                    {staff.location || 'HQ'}
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-1 text-[10px] text-text-tertiary justify-end uppercase tracking-wider">
-                                                <MapPin className="w-3 h-3" />
-                                                {staff.location || 'HQ'}
-                                            </div>
-                                        </div>
 
-                                        {/* Financials - OWNER & SUPER ADMIN */}
-                                        {['SUPER_ADMIN', 'HOTEL_ADMIN'].includes(userRole) && (
-                                            <div className="text-right border-l border-white/[0.08] pl-8 w-32 hidden sm:block">
-                                                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Salary</p>
-                                                <p className="font-bold text-text-primary font-mono text-lg">₹{staff.salary}</p>
-                                            </div>
-                                        )}
-
-                                        {/* HOVER ACTION OVERLAY */}
-                                        <div className="absolute top-0 bottom-0 right-0 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-4 group-hover:translate-x-0 gap-2 px-6 pl-24 bg-gradient-to-l from-[#0d1117] via-[#0d1117] via-70% to-transparent pointer-events-none group-hover:pointer-events-auto">
-                                            {staff.verificationRequested && (
-                                                <div className="flex items-center gap-2">
-                                                    {/* ID proof thumbnail */}
-                                                    {(staff.documents as any)?.idProofImage && (
-                                                        <button
-                                                            onClick={e => { e.stopPropagation(); setIdProofModal((staff.documents as any).idProofImage) }}
-                                                            title="View ID proof"
-                                                            className="relative group/id flex items-center gap-2 h-9 px-3 rounded-xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-400/40 transition-all shrink-0"
-                                                        >
-                                                            <div className="w-5 h-5 rounded-md overflow-hidden border border-white/20 shadow-sm">
-                                                                <img
-                                                                    src={(staff.documents as any).idProofImage}
-                                                                    alt="ID"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            </div>
-                                                            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">View ID</span>
-                                                        </button>
-                                                    )}
-                                                    <Button
-                                                        size="sm"
-                                                        className="h-9 px-4 bg-emerald-600 text-white hover:bg-emerald-500 border-none font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-sm"
-                                                        onClick={(e) => { e.stopPropagation(); handleVerifyAction(staff.id, 'APPROVE') }}
-                                                    >
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        className="h-9 px-4 bg-white/[0.05] text-rose-400 hover:bg-rose-500/10 border border-white/[0.08] font-bold text-[10px] uppercase tracking-wider rounded-xl"
-                                                        onClick={(e) => { e.stopPropagation(); handleVerifyAction(staff.id, 'REJECT') }}
-                                                    >
-                                                        Reject
-                                                    </Button>
+                                            {['SUPER_ADMIN', 'HOTEL_ADMIN'].includes(userRole) && (
+                                                <div className="text-right border-l border-white/[0.08] pl-6 min-w-[100px] hidden sm:block">
+                                                    <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">Salary</p>
+                                                    <p className="font-bold text-text-primary font-mono">₹{staff.salary}</p>
                                                 </div>
                                             )}
-                                            <div className="flex items-center gap-1.5 ml-1 pl-3 border-l border-white/[0.06]">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-9 w-9 p-0 rounded-xl hover:bg-white/[0.1] text-text-secondary hover:text-text-primary"
-                                                >
-                                                    <FileText className="w-5 h-5" />
-                                                </Button>
+
+                                            {/* Static persistent action utility strip */}
+                                            <div className="flex items-center gap-1 ml-2 pl-4 border-l border-white/[0.08]">
+                                                <Link href={`/admin/staff/${staff.id}`} title="View Record">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] text-text-secondary hover:text-text-primary"
+                                                    >
+                                                        <FileText className="w-4 h-4" />
+                                                    </Button>
+                                                </Link>
                                                 {(session?.user.role === 'SUPER_ADMIN' || session?.user.role === 'HOTEL_ADMIN') && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        className="h-9 w-9 p-0 rounded-xl hover:bg-danger/10 text-danger/70 hover:text-danger"
+                                                        className="h-8 w-8 p-0 rounded-lg bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 text-rose-400/70 hover:text-rose-400"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             handleDeleteStaff(staff.id);
                                                         }}
+                                                        title="Remove Employee"
                                                     >
-                                                        <XCircle className="w-5 h-5" />
+                                                        <XCircle className="w-4 h-4" />
                                                     </Button>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                </Link>
+
+                                    {/* FORMAL BOTTOM VERIFICATION PANEL (Only visible in verification tab) */}
+                                    {activeTab === 'VERIFICATION' && staff.verificationRequested && (
+                                        <div className="mx-5 mb-5 p-4 bg-blue-500/[0.03] border border-blue-500/10 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+                                                    <Info className="w-5 h-5 text-blue-400" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-white">Identity Verification Required</p>
+                                                    <p className="text-[10px] text-text-tertiary uppercase font-semibold tracking-wider mt-0.5">Please review documents and assign validation status.</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                                {(staff.documents as any)?.idProofImage && (
+                                                    <button
+                                                        onClick={() => setIdProofModal((staff.documents as any).idProofImage)}
+                                                        className="flex items-center gap-2 h-9 px-4 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] transition-all shrink-0"
+                                                    >
+                                                        <div className="w-5 h-5 rounded-md overflow-hidden border border-white/20 shadow-inner">
+                                                            <img src={(staff.documents as any).idProofImage} alt="Doc" className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">View Document</span>
+                                                    </button>
+                                                )}
+                                                
+                                                <div className="h-9 w-[1px] bg-white/[0.08] hidden sm:block" />
+
+                                                <Button
+                                                    size="sm"
+                                                    className="h-9 px-5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 font-bold text-[10px] uppercase tracking-wider rounded-xl shrink-0"
+                                                    onClick={() => handleVerifyAction(staff.id, 'REJECT')}
+                                                >
+                                                    Reject
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    className="h-9 px-6 bg-emerald-600 text-white hover:bg-emerald-500 border-none font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-900/20 shrink-0"
+                                                    onClick={() => handleVerifyAction(staff.id, 'APPROVE')}
+                                                >
+                                                    Approve Verification
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             ))
                         )}
                     </div>
