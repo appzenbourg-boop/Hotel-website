@@ -76,6 +76,48 @@ export default function StaffDashboard() {
         }
     }, []);
 
+    const playPunchInChime = useCallback(() => {
+        try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(329.63, audioCtx.currentTime); // E4
+            osc.frequency.exponentialRampToValueAtTime(523.25, audioCtx.currentTime + 0.15); // C5
+            osc.frequency.exponentialRampToValueAtTime(659.25, audioCtx.currentTime + 0.3); // E5
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.6);
+        } catch (e) {
+            console.warn('Synth failed:', e);
+        }
+    }, []);
+
+    const playPunchOutChime = useCallback(() => {
+        try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
+            osc.frequency.exponentialRampToValueAtTime(523.25, audioCtx.currentTime + 0.15); // C5
+            osc.frequency.exponentialRampToValueAtTime(329.63, audioCtx.currentTime + 0.3); // E4
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.6);
+        } catch (e) {
+            console.warn('Synth failed:', e);
+        }
+    }, []);
+
     const triggerLocalNotification = useCallback((title: string, body: string) => {
         try {
             if ('Notification' in window) {
@@ -161,11 +203,17 @@ export default function StaffDashboard() {
 
     const handlePunch = async () => {
         setPunchLoading(true)
+        const previouslyPunchedIn = data?.attendance?.punchIn && !data?.attendance?.punchOut
         try {
             const res = await fetch('/api/staff/attendance', { method: 'POST' })
             if (res.ok) {
                 const json = await res.json()
                 toast.success(json.message)
+                if (!previouslyPunchedIn) {
+                    playPunchInChime()
+                } else {
+                    playPunchOutChime()
+                }
                 fetchData()
             } else {
                 toast.error('Failed to update attendance')

@@ -102,7 +102,21 @@ function KpiSection({ stats, requests }: { stats: any, requests: any[] }) {
         { label: 'Pending Approval', value: stats.pending, color: 'text-amber-500', icon: Clock },
         { label: 'Active Work', value: stats.active, color: 'text-blue-500', icon: AlertTriangle },
         { label: 'Critical SLA', value: stats.overdue, color: 'text-rose-500', icon: AlertTriangle },
-        { label: 'Completed Today', value: (requests || []).filter((r: any) => r.status === 'COMPLETED').length, color: 'text-emerald-500', icon: CheckCircle2 },
+        { 
+            label: 'Completed Today', 
+            value: (requests || []).filter((r: any) => {
+                if (r.status !== 'COMPLETED') return false;
+                const dateToUse = r.completedAt || r.updatedAt || r.createdAt;
+                if (!dateToUse) return false;
+                const completedDate = new Date(dateToUse);
+                const today = new Date();
+                return completedDate.getDate() === today.getDate() &&
+                       completedDate.getMonth() === today.getMonth() &&
+                       completedDate.getFullYear() === today.getFullYear();
+            }).length, 
+            color: 'text-emerald-500', 
+            icon: CheckCircle2 
+        },
     ];
 
     return (

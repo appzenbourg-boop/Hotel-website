@@ -23,6 +23,34 @@ export default function TaskDetailsPage() {
     const [attachments, setAttachments] = useState<string[]>([])
     const [sendingMessage, setSendingMessage] = useState(false)
     const [isLoggingPhoto, setIsLoggingPhoto] = useState(false)
+    const prevMessagesLength = useRef<number | null>(null)
+
+    const playNotificationChime = () => {
+        try {
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            osc1.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
+            osc2.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.15); // C6
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            osc1.start(audioCtx.currentTime);
+            osc2.start(audioCtx.currentTime);
+            osc1.stop(audioCtx.currentTime + 0.85);
+            osc2.stop(audioCtx.currentTime + 0.85);
+        } catch (e) {
+            console.warn('Synth failed:', e);
+        }
+    }
 
     const fetchTaskDetails = async () => {
         try {
@@ -43,7 +71,21 @@ export default function TaskDetailsPage() {
 
     useEffect(() => {
         fetchTaskDetails()
+        const interval = setInterval(() => {
+            fetchTaskDetails()
+        }, 4000)
+        return () => clearInterval(interval)
     }, [id])
+
+    useEffect(() => {
+        if (task?.messages) {
+            const currentLen = task.messages.length
+            if (prevMessagesLength.current !== null && currentLen > prevMessagesLength.current) {
+                playNotificationChime()
+            }
+            prevMessagesLength.current = currentLen
+        }
+    }, [task?.messages])
 
     const handleLogPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
