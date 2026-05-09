@@ -28,7 +28,7 @@ export default function MenuPage() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 6
+    const itemsPerPage = 8
 
     const categories = ['All', 'Breakfast', 'Main Course', 'Appetizers', 'Desserts', 'Beverages']
 
