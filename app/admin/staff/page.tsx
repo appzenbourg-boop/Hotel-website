@@ -509,21 +509,21 @@ export default function StaffPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 w-8 p-0 hover:bg-white/[0.1] text-text-secondary"
+                                                className="h-9 w-9 p-0 hover:bg-white/[0.1] text-text-secondary"
                                             >
-                                                <FileText className="w-4 h-4" />
+                                                <FileText className="w-5 h-5" />
                                             </Button>
                                             {(session?.user.role === 'SUPER_ADMIN' || session?.user.role === 'HOTEL_ADMIN') && (
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-8 w-8 p-0 hover:bg-danger/10 text-danger/70 hover:text-danger"
+                                                    className="h-9 w-9 p-0 hover:bg-danger/10 text-danger/70 hover:text-danger"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleDeleteStaff(staff.id);
                                                     }}
                                                 >
-                                                    <XCircle className="w-4 h-4" />
+                                                    <XCircle className="w-5 h-5" />
                                                 </Button>
                                             )}
                                         </div>
