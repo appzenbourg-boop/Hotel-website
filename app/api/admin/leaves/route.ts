@@ -63,30 +63,84 @@ export async function PATCH(request: Request) {
 
         if (!requestId || !status) return new NextResponse('Missing Data', { status: 400 })
 
-        const updated = await prisma.leaveRequest.update({
+        // 1. Fetch current state to prevent duplicate deduction and get leave details
+        const currentLeave = await prisma.leaveRequest.findUnique({
             where: { id: requestId },
-            data: {
-                status: status as any,
-                rejectionReason: rejectionReason || null
-            },
-            include: {
-                staff: {
-                    select: { userId: true }
-                }
-            }
+            include: { staff: true }
         })
 
-        // 1. Create In-App Notification for staff
-        await prisma.inAppNotification.create({
-            data: {
-                userId: updated.staff.userId,
-                title: `Leave Request ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
-                description: status === 'APPROVED' 
-                    ? `Your leave request has been approved. Enjoy your time off!` 
-                    : `Your leave request was rejected. ${rejectionReason ? 'Reason: ' + rejectionReason : ''}`,
-                type: 'SYSTEM',
-                isRead: false
+        if (!currentLeave) return new NextResponse('Leave Request Not Found', { status: 404 })
+
+        let updated;
+
+        // Execute logic in a transaction to ensure atomicity
+        await prisma.$transaction(async (tx) => {
+            // Deduct balance ONLY if status transitions to APPROVED and wasn't already APPROVED
+            if (status === 'APPROVED' && currentLeave.status !== 'APPROVED') {
+                const fieldMap: Record<string, string> = {
+                    'EARNED': 'annualLeaveBalance',
+                    'SICK': 'sickLeaveBalance',
+                    'CASUAL': 'casualLeaveBalance'
+                }
+                const balanceField = fieldMap[currentLeave.leaveType];
+
+                if (balanceField) {
+                    await tx.staff.update({
+                        where: { id: currentLeave.staffId },
+                        data: {
+                            [balanceField]: {
+                                decrement: currentLeave.totalDays
+                            }
+                        }
+                    })
+                }
             }
+            // Restore balance if an APPROVED leave is switched to CANCELLED/REJECTED
+            else if (status !== 'APPROVED' && currentLeave.status === 'APPROVED') {
+                const fieldMap: Record<string, string> = {
+                    'EARNED': 'annualLeaveBalance',
+                    'SICK': 'sickLeaveBalance',
+                    'CASUAL': 'casualLeaveBalance'
+                }
+                const balanceField = fieldMap[currentLeave.leaveType];
+
+                if (balanceField) {
+                    await tx.staff.update({
+                        where: { id: currentLeave.staffId },
+                        data: {
+                            [balanceField]: {
+                                increment: currentLeave.totalDays
+                            }
+                        }
+                    })
+                }
+            }
+
+            updated = await tx.leaveRequest.update({
+                where: { id: requestId },
+                data: {
+                    status: status as any,
+                    rejectionReason: rejectionReason || null
+                },
+                include: {
+                    staff: {
+                        select: { userId: true }
+                    }
+                }
+            })
+
+            // Create In-App Notification for staff
+            await tx.inAppNotification.create({
+                data: {
+                    userId: updated.staff.userId,
+                    title: `Leave Request ${status === 'APPROVED' ? 'Approved' : 'Rejected'}`,
+                    description: status === 'APPROVED' 
+                        ? `Your leave request has been approved. Enjoy your time off!` 
+                        : `Your leave request was rejected. ${rejectionReason ? 'Reason: ' + rejectionReason : ''}`,
+                    type: 'SYSTEM',
+                    isRead: false
+                }
+            })
         })
 
         return NextResponse.json(updated)

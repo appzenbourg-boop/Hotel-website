@@ -9,6 +9,9 @@ import { useEffect, useState } from 'react'
 import { usePwaInstall } from '@/lib/hooks/usePwaInstall'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
+import useSWR from 'swr'
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 const PWAInstall = dynamic(() => import('@/components/common/PWAInstall'), { ssr: false })
 
@@ -22,6 +25,11 @@ export default function StaffLayout({
     const { data: session } = useSession()
     const { isInstallable, installPwa } = usePwaInstall()
     const [isNavigating, setIsNavigating] = useState(false)
+
+    const { data: staffData } = useSWR('/api/staff/me', fetcher, {
+        revalidateOnFocus: true,
+        refreshInterval: 15000 // Keep global indicators fresh every 15s
+    })
 
     useEffect(() => {
         if ('serviceWorker' in navigator) {
@@ -110,7 +118,10 @@ export default function StaffLayout({
                                 <span className="font-black text-[12px] text-white  tracking-tighter">ZB</span>
                             </div>
                         </div>
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0d1117] animate-pulse"></div>
+                        <div className={cn(
+                            "absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-[#0d1117] animate-pulse shadow-lg",
+                            staffData?.isOnLeave ? "bg-amber-500 shadow-amber-500/50" : "bg-emerald-500 shadow-emerald-500/50"
+                        )}></div>
                     </div>
                     <div className="flex flex-col">
                         <h1 className="font-black text-[14px] text-white tracking-tighter  leading-none">ZENBOURG <span className="text-blue-500 not- ml-0.5">STAFF</span></h1>
@@ -133,14 +144,18 @@ export default function StaffLayout({
                         className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white transition-all hover:bg-white/[0.08] relative active:scale-95"
                     >
                         <Bell className="w-4 h-4" />
-                        <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-[#0d1117] animate-bounce shadow-lg shadow-rose-500/40"></span>
+                        {(staffData?.unreadCounts?.notifications > 0) && (
+                            <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-[#0d1117] animate-bounce shadow-lg shadow-rose-500/40"></span>
+                        )}
                     </button>
                     <button
                         onClick={() => router.push('/staff/messages')}
                         className="w-10 h-10 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white transition-all hover:bg-white/[0.08] relative active:scale-95 ml-1"
                     >
                         <MessageSquare className="w-4 h-4" />
-                        <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-blue-500 rounded-full border border-[#0d1117]"></span>
+                        {(staffData?.unreadCounts?.messages > 0) && (
+                            <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-blue-500 rounded-full border border-[#0d1117]"></span>
+                        )}
                     </button>
                 </div>
             </header>

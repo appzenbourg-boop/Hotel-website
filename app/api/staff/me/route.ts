@@ -50,7 +50,8 @@ export async function GET(request: Request) {
         }
 
         // Fetch all related data in parallel
-        const [attendance, tasks, unreadNotifications, unreadMessages, systemAlerts, performanceScore] = await Promise.all([
+        const now = new Date()
+        const [attendance, tasks, unreadNotifications, unreadMessages, systemAlerts, performanceScore, activeLeave] = await Promise.all([
             // 2. Today's Attendance
             prisma.attendance.findFirst({
                 where: {
@@ -88,11 +89,23 @@ export async function GET(request: Request) {
             prisma.performanceScore.findFirst({
                 where: { staffId: staff.id },
                 orderBy: { createdAt: 'desc' }
-            })
+            }),
+            // 7. Active Leave Today check
+            staff.id === 'admin-view'
+                ? Promise.resolve(null)
+                : prisma.leaveRequest.findFirst({
+                    where: {
+                        staffId: staff.id,
+                        status: 'APPROVED',
+                        startDate: { lte: now },
+                        endDate: { gte: now }
+                    }
+                })
         ])
 
         const responseData = {
             profile: staff,
+            isOnLeave: !!activeLeave,
             attendance,
             tasks,
             systemAlerts,

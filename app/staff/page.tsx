@@ -365,11 +365,15 @@ export default function StaffDashboard() {
                     <div className="flex items-start justify-between mb-8">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
-                                <div className={cn("w-2 h-2 rounded-full animate-pulse", isPunchedIn ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-gray-600")}></div>
+                                <div className={cn(
+                                    "w-2 h-2 rounded-full animate-pulse", 
+                                    isPunchedIn ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : 
+                                    (data.isOnLeave ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-gray-600")
+                                )}></div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 ">Shift Status</p>
                             </div>
                             <h2 className="text-2xl font-bold text-white tracking-tight">
-                                {isPunchedIn ? 'Shift In Progress' : 'Not Punched In'}
+                                {isPunchedIn ? 'Shift In Progress' : (data.isOnLeave ? 'On Leave' : 'Not Punched In')}
                             </h2>
                         </div>
                         <div className="w-16 h-16 rounded-[24px] bg-white/[0.03] border border-white/[0.05] flex items-center justify-center shadow-inner group-hover:border-blue-500/30 transition-all">
