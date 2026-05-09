@@ -987,7 +987,7 @@ export default function SettingsPage() {
             )}
           </div>
 
-          <div><label className={lc}>Description</label><textarea rows={3} value={hotelInfo.description} onChange={e => setHotelInfo(p => ({ ...p, description: e.target.value }))} className={cn(ic, 'resize-none')} placeholder="Brief description of your hotel..." /></div>
+          <div><label className={lc}>Description</label><textarea rows={3} value={hotelInfo.description || ''} onChange={e => setHotelInfo(p => ({ ...p, description: e.target.value }))} className={cn(ic, 'resize-none')} placeholder="Brief description of your hotel..." /></div>
         </div>
       </div>
     )

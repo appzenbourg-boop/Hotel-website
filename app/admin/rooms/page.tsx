@@ -49,7 +49,7 @@ export default function RoomsPage() {
         amenities: [] as string[],
         images: [] as string[],
     })
-    const [newForm, setNewForm] = useState({ roomNumber: '', floor: '1', category: 'STANDARD', type: 'Standard King', basePrice: '150', maxOccupancy: '2', images: [] })
+    const [newForm, setNewForm] = useState({ roomNumber: '', floor: '1', category: 'STANDARD', type: 'Standard King', basePrice: '150', maxOccupancy: '2', images: [], description: '' })
     const [uploading, setUploading] = useState(false)
     const [amenitiesList, setAmenitiesList] = useState<string[]>([])
 
@@ -144,7 +144,7 @@ export default function RoomsPage() {
             if (res.ok) { 
                 toast.success('Room created successfully!') 
                 setNewModal(false) 
-                setNewForm({ roomNumber: '', floor: '1', category: 'STANDARD', type: 'Standard King', basePrice: '150', maxOccupancy: '2', images: [] })
+                setNewForm({ roomNumber: '', floor: '1', category: 'STANDARD', type: 'Standard King', basePrice: '150', maxOccupancy: '2', images: [], description: '' })
                 fetchRooms() 
             } else {
                 toast.error(await res.text())
@@ -509,7 +509,7 @@ export default function RoomsPage() {
                                             </div>
                                             <div>
                                                 <label className="text-[11px] text-gray-500 font-medium mb-1.5 block">Description</label>
-                                                <textarea value={cfgForm.description} onChange={e => setCfgForm(p => ({ ...p, description: e.target.value }))} rows={4}
+                                                <textarea value={cfgForm.description || ''} onChange={e => setCfgForm(p => ({ ...p, description: e.target.value }))} rows={4}
                                                     placeholder="A comfortable retreat featuring..."
                                                     className="w-full px-3 py-2.5 bg-[#182433] border border-white/[0.08] rounded-lg text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-[#4A9EFF]/40 resize-none" />
                                                 <p className="text-[10px] text-gray-600 mt-1">This description will appear on the booking engine.</p>
@@ -775,6 +775,12 @@ export default function RoomsPage() {
                                 <label className="text-[11px] text-gray-500 font-medium mb-1 block">Base Price / night (₹)</label>
                                 <input type="number" value={newForm.basePrice} onChange={e => setNewForm({ ...newForm, basePrice: e.target.value })}
                                     className="w-full px-3 py-2 bg-[#182433] border border-white/[0.08] rounded-lg text-[12px] text-white focus:outline-none" />
+                            </div>
+                            <div>
+                                <label className="text-[11px] text-gray-500 font-medium mb-1 block">Short Description</label>
+                                <textarea rows={2} placeholder="Brief room details..." value={(newForm as any).description} 
+                                    onChange={e => setNewForm({ ...newForm, description: e.target.value } as any)}
+                                    className="w-full px-3 py-2 bg-[#182433] border border-white/[0.08] rounded-lg text-[12px] text-white focus:outline-none resize-none" />
                             </div>
                             <div className="flex gap-3 pt-1">
                                 <button onClick={() => setNewModal(false)} className="flex-1 py-2 bg-white/[0.04] text-gray-300 text-[12px] font-medium rounded-lg border border-white/[0.06] hover:bg-white/[0.08] transition-colors">Cancel</button>

@@ -418,7 +418,7 @@ export default function StaffPage() {
                                 <Link
                                     key={staff.id}
                                     href={`/admin/staff/${staff.id}`}
-                                    className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between group cursor-pointer border-b border-white/[0.04] last:border-0"
+                                    className="relative p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between group cursor-pointer border-b border-white/[0.04] last:border-0 overflow-hidden"
                                 >
                                     <div className="flex items-center gap-4">
                                         <Avatar name={staff.name} src={staff.profilePhoto} />
@@ -469,29 +469,30 @@ export default function StaffPage() {
                                             </div>
                                         )}
 
-                                        <div className="w-48 flex justify-end opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 gap-2">
+                                        {/* HOVER ACTION OVERLAY */}
+                                        <div className="absolute top-0 bottom-0 right-0 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-x-4 group-hover:translate-x-0 gap-2 px-6 pl-24 bg-gradient-to-l from-[#0d1117] via-[#0d1117] via-70% to-transparent pointer-events-none group-hover:pointer-events-auto">
                                             {staff.verificationRequested && (
-                                                <>
+                                                <div className="flex items-center gap-2">
                                                     {/* ID proof thumbnail */}
                                                     {(staff.documents as any)?.idProofImage && (
                                                         <button
                                                             onClick={e => { e.stopPropagation(); setIdProofModal((staff.documents as any).idProofImage) }}
                                                             title="View ID proof"
-                                                            className="relative group/id flex items-center gap-2 h-8 px-3 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-400/40 transition-all shrink-0"
+                                                            className="relative group/id flex items-center gap-2 h-9 px-3 rounded-xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-400/40 transition-all shrink-0"
                                                         >
-                                                            <div className="w-5 h-5 rounded overflow-hidden border border-white/20">
+                                                            <div className="w-5 h-5 rounded-md overflow-hidden border border-white/20 shadow-sm">
                                                                 <img
                                                                     src={(staff.documents as any).idProofImage}
                                                                     alt="ID"
                                                                     className="w-full h-full object-cover"
                                                                 />
                                                             </div>
-                                                            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">View ID</span>
+                                                            <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">View ID</span>
                                                         </button>
                                                     )}
                                                     <Button
                                                         size="sm"
-                                                        className="h-8 bg-emerald-600/10 text-emerald-500 hover:bg-emerald-600 hover:text-white border-emerald-500/20 text-[10px]"
+                                                        className="h-9 px-4 bg-emerald-600 text-white hover:bg-emerald-500 border-none font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-sm"
                                                         onClick={(e) => { e.stopPropagation(); handleVerifyAction(staff.id, 'APPROVE') }}
                                                     >
                                                         Approve
@@ -499,33 +500,35 @@ export default function StaffPage() {
                                                     <Button
                                                         size="sm"
                                                         variant="secondary"
-                                                        className="h-8 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white border-rose-500/20 text-[10px]"
+                                                        className="h-9 px-4 bg-white/[0.05] text-rose-400 hover:bg-rose-500/10 border border-white/[0.08] font-bold text-[10px] uppercase tracking-wider rounded-xl"
                                                         onClick={(e) => { e.stopPropagation(); handleVerifyAction(staff.id, 'REJECT') }}
                                                     >
                                                         Reject
                                                     </Button>
-                                                </>
+                                                </div>
                                             )}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-9 w-9 p-0 hover:bg-white/[0.1] text-text-secondary"
-                                            >
-                                                <FileText className="w-5 h-5" />
-                                            </Button>
-                                            {(session?.user.role === 'SUPER_ADMIN' || session?.user.role === 'HOTEL_ADMIN') && (
+                                            <div className="flex items-center gap-1.5 ml-1 pl-3 border-l border-white/[0.06]">
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    className="h-9 w-9 p-0 hover:bg-danger/10 text-danger/70 hover:text-danger"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteStaff(staff.id);
-                                                    }}
+                                                    className="h-9 w-9 p-0 rounded-xl hover:bg-white/[0.1] text-text-secondary hover:text-text-primary"
                                                 >
-                                                    <XCircle className="w-5 h-5" />
+                                                    <FileText className="w-5 h-5" />
                                                 </Button>
-                                            )}
+                                                {(session?.user.role === 'SUPER_ADMIN' || session?.user.role === 'HOTEL_ADMIN') && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-9 w-9 p-0 rounded-xl hover:bg-danger/10 text-danger/70 hover:text-danger"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteStaff(staff.id);
+                                                        }}
+                                                    >
+                                                        <XCircle className="w-5 h-5" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </Link>

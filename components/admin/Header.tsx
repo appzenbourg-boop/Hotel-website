@@ -84,6 +84,44 @@ export default function Header({ onMenuClick }: HeaderProps) {
     } catch (e) { console.error(e) }
   }
 
+  const handleNotifClick = async (notif: any) => {
+    // Mark single as read locally & API
+    try {
+      await fetch('/api/admin/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [notif.id] }),
+      })
+      setNotifications(prev => prev.map(n => (n.id === notif.id ? { ...n, unread: false } : n)))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (e) { console.error(e) }
+
+    setShowNotifications(false)
+    setExpandedNotifications(false)
+
+    const title = (notif.title || '').toLowerCase()
+    const msg = (notif.message || '').toLowerCase()
+    const combined = `${title} ${msg}`
+
+    if (combined.includes('verification') || combined.includes('id proof') || combined.includes('document')) {
+      router.push('/admin/approvals')
+    } else if (combined.includes('leave') || combined.includes('absent')) {
+      router.push('/admin/leaves')
+    } else if (combined.includes('booking') || combined.includes('reservation') || combined.includes('upgrade') || combined.includes('extension')) {
+      router.push('/admin/bookings')
+    } else if (combined.includes('payroll') || combined.includes('salary') || combined.includes('paid')) {
+      router.push('/admin/payroll')
+    } else if (combined.includes('ticket') || combined.includes('support') || combined.includes('help')) {
+      router.push('/admin/support')
+    } else if (combined.includes('service') || combined.includes('request') || combined.includes('order') || combined.includes('task')) {
+      router.push('/admin/services')
+    } else if (combined.includes('message')) {
+      router.push('/admin/support')
+    } else {
+      router.push('/admin/dashboard')
+    }
+  }
+
   useEffect(() => {
     fetchNotifications()
     const interval = setInterval(fetchNotifications, 15000)
@@ -184,29 +222,33 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   "overflow-y-auto transition-all duration-300",
                   expandedNotifications ? "max-h-[420px]" : "max-h-[240px]"
                 )}>
-                  {(expandedNotifications ? notifications : notifications.slice(0, 4)).map((notif) => (
-                    <button
-                      key={notif.id}
-                      className={cn(
-                        'w-full px-4 py-3 text-left hover:bg-surface-light transition-colors border-b border-border last:border-b-0',
-                        notif.unread && 'bg-primary/5'
-                      )}
-                    >
-                      {notif.unread && (
+                  {(() => {
+                    const unreadList = notifications.filter(n => n.unread);
+                    const renderList = expandedNotifications ? unreadList : unreadList.slice(0, 4);
+                    
+                    if (unreadList.length === 0) {
+                      return (
+                        <div className="p-8 text-center text-text-tertiary text-xs">
+                          No unread notifications
+                        </div>
+                      );
+                    }
+                    
+                    return renderList.map((notif) => (
+                      <button
+                        key={notif.id}
+                        onClick={() => handleNotifClick(notif)}
+                        className="w-full px-4 py-3 text-left hover:bg-surface-light transition-colors border-b border-border last:border-b-0 bg-primary/5"
+                      >
                         <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-2 mb-0.5 align-middle" />
-                      )}
-                      <p className="text-sm text-text-primary font-medium inline">{notif.title}</p>
-                      <p className="text-xs text-text-secondary mt-0.5">{notif.message}</p>
-                      <p className="text-xs text-text-tertiary mt-1">{notif.time}</p>
-                    </button>
-                  ))}
-                  {notifications.length === 0 && (
-                    <div className="p-8 text-center text-text-tertiary text-xs">
-                      No new notifications
-                    </div>
-                  )}
+                        <p className="text-sm text-text-primary font-medium inline">{notif.title}</p>
+                        <p className="text-xs text-text-secondary mt-0.5">{notif.message}</p>
+                        <p className="text-xs text-text-tertiary mt-1">{notif.time}</p>
+                      </button>
+                    ));
+                  })()}
                 </div>
-                {!expandedNotifications && notifications.length > 4 && (
+                {!expandedNotifications && notifications.filter(n => n.unread).length > 4 && (
                   <div className="p-2 border-t border-border">
                     <button 
                       onClick={() => setExpandedNotifications(true)}

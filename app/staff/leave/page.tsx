@@ -17,7 +17,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 export default function LeavePage() {
     const router = useRouter()
     const [submitting, setSubmitting] = useState(false)
-    const [leaveType, setLeaveType] = useState('ANNUAL')
+    const [leaveType, setLeaveType] = useState('EARNED')
     const [reason, setReason] = useState('')
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
@@ -59,11 +59,22 @@ export default function LeavePage() {
     }
 
     const leaveTypes = [
-        { value: 'ANNUAL',  label: 'Annual Leave' },
+        { value: 'EARNED',  label: 'Annual Leave' },
         { value: 'SICK',    label: 'Sick Leave' },
         { value: 'CASUAL',  label: 'Casual Leave' },
         { value: 'UNPAID',  label: 'Unpaid Leave' },
     ]
+
+    const getLeaveLabel = (type: string) => {
+        const map: any = {
+            'EARNED': 'Annual Leave',
+            'ANNUAL': 'Annual Leave', // Fallback
+            'SICK': 'Sick Leave',
+            'CASUAL': 'Casual Leave',
+            'UNPAID': 'Unpaid Leave'
+        }
+        return map[type] || (type.charAt(0) + type.slice(1).toLowerCase() + ' Leave')
+    }
 
     const balanceCards = [
         { label: 'Annual Leave',  days: balances.annual ?? 0,  max: 15, icon: Umbrella,    color: 'text-blue-400',   bg: 'bg-blue-500/10',   bar: 'bg-blue-500' },
@@ -315,8 +326,8 @@ export default function LeavePage() {
                             {/* Info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">
-                                    <p className="text-sm font-bold text-white capitalize">
-                                        {req.leaveType.charAt(0) + req.leaveType.slice(1).toLowerCase()} Leave
+                                    <p className="text-sm font-bold text-white">
+                                        {getLeaveLabel(req.leaveType)}
                                     </p>
                                     <span className="text-[10px] text-gray-600 font-medium">· {req.totalDays}d</span>
                                 </div>
@@ -324,7 +335,15 @@ export default function LeavePage() {
                                     {format(new Date(req.startDate), 'dd MMM')} – {format(new Date(req.endDate), 'dd MMM yyyy')}
                                 </p>
                                 {req.reason && (
-                                    <p className="text-[11px] text-gray-600 mt-1 truncate">{req.reason}</p>
+                                    <p className="text-[11px] text-gray-600 mt-1 line-clamp-1">{req.reason}</p>
+                                )}
+                                
+                                {/* Admin Rejection Reason */}
+                                {req.status === 'REJECTED' && req.rejectionReason && (
+                                    <div className="mt-2.5 p-2.5 bg-rose-500/[0.04] border border-rose-500/10 rounded-xl">
+                                        <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-0.5">Admin Note</p>
+                                        <p className="text-[11px] text-gray-300 leading-relaxed italic">“{req.rejectionReason}”</p>
+                                    </div>
                                 )}
                             </div>
 

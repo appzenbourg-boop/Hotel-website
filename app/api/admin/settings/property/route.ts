@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
         if (plan !== undefined) updateData.plan = plan
         if (features !== undefined) updateData.features = features
 
+        console.log(`[ADMIN_DB] Saving property update for ${propertyId}. Description provided: "${rest.description}"`);
         const updated = await prisma.property.update({
             where: { id: propertyId },
             data: updateData,

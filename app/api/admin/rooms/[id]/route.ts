@@ -72,6 +72,7 @@ export async function PATCH(
 
         if (Object.keys(updateData).length === 0) return badRequest('No valid fields to update')
 
+        console.log(`[ADMIN_ROOMS] Updating room ${params.id}. Status=${updateData.status}, Description="${updateData.description}"`)
         const room = await prisma.room.update({
             where: { id: params.id },
             data: updateData,

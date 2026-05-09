@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json()
-        const { roomNumber, floor, category, type, basePrice, maxOccupancy, propertyId: bodyPropertyId, images } = body
+        const { roomNumber, floor, category, type, basePrice, maxOccupancy, propertyId: bodyPropertyId, images, description } = body
+        console.log(`[ADMIN_ROOMS] Creating new room "${roomNumber}". Description included: "${description || 'NULL'}"`)
 
         if (!roomNumber || !category || !type || basePrice === undefined) {
             return badRequest('roomNumber, category, type and basePrice are required')
@@ -122,6 +123,7 @@ export async function POST(request: NextRequest) {
                 type,
                 basePrice: parseFloat(String(basePrice)),
                 maxOccupancy: parseInt(String(maxOccupancy)) || 2,
+                description: description || null,
                 status: 'AVAILABLE',
                 images: images ?? [],
             },
