@@ -104,7 +104,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
     const combined = `${title} ${msg}`
 
     if (combined.includes('verification') || combined.includes('id proof') || combined.includes('document')) {
-      router.push('/admin/approvals')
+      router.push('/admin/staff?tab=verification')
     } else if (combined.includes('leave') || combined.includes('absent')) {
       router.push('/admin/leaves')
     } else if (combined.includes('booking') || combined.includes('reservation') || combined.includes('upgrade') || combined.includes('extension')) {

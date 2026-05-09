@@ -15,6 +15,9 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 const PWAInstall = dynamic(() => import('@/components/common/PWAInstall'), { ssr: false })
 
+// Persistent shared context across duration of session
+let globalAudioCtx: AudioContext | null = null;
+
 export default function StaffLayout({
     children,
 }: {
@@ -28,7 +31,7 @@ export default function StaffLayout({
 
     const { data: staffData } = useSWR('/api/staff/me', fetcher, {
         revalidateOnFocus: true,
-        refreshInterval: 15000 // Keep global indicators fresh every 15s
+        refreshInterval: 5000 // Boosted frequency to 5s for super fast response
     })
 
     const prevNoteCount = useRef<number | null>(null)
@@ -37,39 +40,80 @@ export default function StaffLayout({
     const playNotificationChime = useCallback(() => {
         try {
             const isMuted = localStorage.getItem('zenbourg-sound-configured') === 'false'
-            if (isMuted) return; // Honor user setting
+            if (isMuted) return;
 
-            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            // Bypasses arbitrary modern browser audio suspensions
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            // Leverage active global context or fallback instantly
+            if (!globalAudioCtx && typeof window !== 'undefined') {
+                const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+                if (Ctor) globalAudioCtx = new Ctor();
+            }
             
-            const osc1 = audioCtx.createOscillator();
-            const osc2 = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
+            const ctx = globalAudioCtx;
+            if (!ctx) return;
+
+            // Force validation that it is awake
+            if (ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gainNode = ctx.createGain();
             
             osc1.connect(gainNode);
             osc2.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+            gainNode.connect(ctx.destination);
             
             osc1.type = 'sine';
-            osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-            osc1.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+            osc1.frequency.setValueAtTime(523.25, ctx.currentTime); 
+            osc1.frequency.exponentialRampToValueAtTime(880.00, ctx.currentTime + 0.15); 
             
             osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
-            osc2.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.15); // C6
+            osc2.frequency.setValueAtTime(659.25, ctx.currentTime); 
+            osc2.frequency.exponentialRampToValueAtTime(1046.50, ctx.currentTime + 0.15); 
             
-            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-            gainNode.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 0.05);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.35, ctx.currentTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
             
-            osc1.start(audioCtx.currentTime);
-            osc2.start(audioCtx.currentTime);
-            osc1.stop(audioCtx.currentTime + 0.85);
-            osc2.stop(audioCtx.currentTime + 0.85);
+            osc1.start(ctx.currentTime);
+            osc2.start(ctx.currentTime);
+            osc1.stop(ctx.currentTime + 0.85);
+            osc2.stop(ctx.currentTime + 0.85);
         } catch (e) {
             console.warn('Synth audio failed:', e);
         }
+    }, []);
+
+    // ── UNLOCK AUDIO ENGINE VIA ONE-TIME USER GESTURE ───────────────────────
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        const unlockAudio = () => {
+            if (!globalAudioCtx) {
+                const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+                if (Ctor) globalAudioCtx = new Ctor();
+            }
+            
+            if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume().then(() => {
+                    // Clean up listeners once unlocked
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('touchstart', unlockAudio);
+                }).catch(() => {});
+            } else {
+                document.removeEventListener('click', unlockAudio);
+                document.removeEventListener('touchstart', unlockAudio);
+            }
+        };
+
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
     }, []);
 
     useEffect(() => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import useSWR from 'swr'
 import Link from 'next/link'
 import Card from '@/components/ui/Card'
@@ -35,6 +35,16 @@ export default function StaffPage() {
     const [activeTab, setActiveTab] = useState<'ALL' | 'VERIFICATION'>('ALL')
     const [idProofModal, setIdProofModal] = useState<string | null>(null)
     const [photoUploading, setPhotoUploading] = useState(false)
+
+    const searchParams = useSearchParams()
+
+    // React to inbound query tab overrides (e.g. navigation from notifications)
+    useEffect(() => {
+        const t = searchParams.get('tab')
+        if (t === 'verification') {
+            setActiveTab('VERIFICATION')
+        }
+    }, [searchParams])
 
     // Form State for Add/Edit
     const [formData, setFormData] = useState({
