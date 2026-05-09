@@ -195,11 +195,28 @@ export default function NotificationsPage() {
                                         if (!note.isRead) markSingleRead(note.id)
                                         
                                         const titleLower = note.title.toLowerCase()
+                                        const descLower = (note.description || '').toLowerCase()
+                                        const combined = `${titleLower} ${descLower}`
+                                        
                                         let route = '/staff'
-                                        if (titleLower.includes('message') || titleLower.includes('chat')) route = '/staff/messages'
-                                        else if (note.type === 'TASK' || titleLower.includes('task')) route = '/staff/tasks'
-                                        else if (titleLower.includes('punch') || titleLower.includes('attendance')) route = '/staff/attendance'
-                                        else if (note.type === 'ALERT') route = '/staff'
+                                        
+                                        if (combined.includes('leave')) {
+                                            route = '/staff/leave'
+                                        } else if (combined.includes('message') || combined.includes('chat')) {
+                                            route = '/staff/messages'
+                                        } else if (note.type === 'TASK' || combined.includes('task')) {
+                                            route = '/staff/tasks'
+                                        } else if (combined.includes('payroll') || combined.includes('salary') || combined.includes('payment')) {
+                                            route = '/staff/payroll'
+                                        } else if (combined.includes('lost') || combined.includes('found') || combined.includes('item')) {
+                                            route = '/staff/lost-found'
+                                        } else if (combined.includes('punch') || combined.includes('attendance')) {
+                                            route = '/staff/attendance'
+                                        } else if (combined.includes('profile') || combined.includes('verify') || combined.includes('account')) {
+                                            route = '/staff/profile'
+                                        } else if (note.type === 'ALERT') {
+                                            route = '/staff' // High level system notifications usually to dashboard
+                                        }
                                         
                                         router.push(route)
                                     }}

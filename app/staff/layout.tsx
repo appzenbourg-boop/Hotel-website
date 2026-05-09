@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Home, ClipboardList, User, Bell, MessageSquare, Calendar, Download } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { usePwaInstall } from '@/lib/hooks/usePwaInstall'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -30,6 +30,61 @@ export default function StaffLayout({
         revalidateOnFocus: true,
         refreshInterval: 15000 // Keep global indicators fresh every 15s
     })
+
+    const prevNoteCount = useRef<number | null>(null)
+    const prevMsgCount = useRef<number | null>(null)
+
+    const playNotificationChime = useCallback(() => {
+        try {
+            const isMuted = localStorage.getItem('zenbourg-sound-configured') === 'false'
+            if (isMuted) return; // Honor user setting
+
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc1.connect(gainNode);
+            osc2.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            osc1.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+            
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
+            osc2.frequency.exponentialRampToValueAtTime(1046.50, audioCtx.currentTime + 0.15); // C6
+            
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+            
+            osc1.start(audioCtx.currentTime);
+            osc2.start(audioCtx.currentTime);
+            osc1.stop(audioCtx.currentTime + 0.85);
+            osc2.stop(audioCtx.currentTime + 0.85);
+        } catch (e) {
+            console.warn('Synth audio failed:', e);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (staffData?.unreadCounts) {
+            const currentN = staffData.unreadCounts.notifications || 0
+            const currentM = staffData.unreadCounts.messages || 0
+
+            // Only trigger sound if quantity goes UP
+            if (prevNoteCount.current !== null && currentN > prevNoteCount.current) {
+                playNotificationChime()
+            } else if (prevMsgCount.current !== null && currentM > prevMsgCount.current) {
+                playNotificationChime()
+            }
+
+            prevNoteCount.current = currentN
+            prevMsgCount.current = currentM
+        }
+    }, [staffData?.unreadCounts, playNotificationChime])
 
     useEffect(() => {
         if ('serviceWorker' in navigator) {
