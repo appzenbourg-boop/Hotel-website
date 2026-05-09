@@ -28,7 +28,30 @@ export async function GET(
             return NextResponse.json({ success: false, error: 'Room not found' }, { status: 404 })
         }
 
-        return NextResponse.json({ success: true, room })
+        // Fetch dynamic pricing/tax settings for the property
+        let settings = null
+        try {
+            settings = await (prisma as any).propertySettings.findUnique({
+                where: { propertyId: room.propertyId }
+            })
+        } catch (err) {
+            console.log("[RoomsAPI] Could not fetch property settings:", err)
+        }
+
+        const responseRoom = {
+            ...room,
+            property: room.property ? {
+                ...room.property,
+                settings: settings || {
+                    gstPercent: 18.0,
+                    serviceChargePercent: 0.0,
+                    luxuryTaxPercent: 0.0,
+                    defaultDiscountPercent: 0.0
+                }
+            } : null
+        }
+
+        return NextResponse.json({ success: true, room: responseRoom })
     } catch (error) {
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
     }
