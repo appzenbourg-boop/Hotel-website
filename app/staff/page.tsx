@@ -208,7 +208,12 @@ export default function StaffDashboard() {
             const res = await fetch('/api/staff/attendance', { method: 'POST' })
             if (res.ok) {
                 const json = await res.json()
-                toast.success(json.message)
+                
+                // Localize success toast time strings to user's exact device clock
+                const localTimeStr = format(new Date(), 'hh:mm a')
+                const actionStr = !previouslyPunchedIn ? 'Punched In' : 'Punched Out'
+                toast.success(`Attendance Recorded: ${actionStr} at ${localTimeStr}`)
+
                 if (!previouslyPunchedIn) {
                     playPunchInChime()
                 } else {

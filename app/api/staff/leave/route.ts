@@ -42,7 +42,11 @@ export async function POST(request: Request) {
 
     try {
         const staff = await prisma.staff.findUnique({
-            where: { userId: session.user.id }
+            where: { userId: session.user.id },
+            include: {
+                user: { select: { name: true } },
+                property: { select: { ownerIds: true } }
+            }
         })
 
         if (!staff) return new NextResponse('Staff Profile Not Found', { status: 404 })
@@ -61,6 +65,31 @@ export async function POST(request: Request) {
                 status: 'PENDING'
             }
         })
+
+        // 1. Notify property owners and managers instantly
+        if (staff.property?.ownerIds?.length) {
+            try {
+                const leaveLabels: Record<string, string> = {
+                    'EARNED': 'Annual Leave',
+                    'SICK': 'Sick Leave',
+                    'CASUAL': 'Casual Leave',
+                    'UNPAID': 'Unpaid Leave'
+                }
+                const label = leaveLabels[leaveType] || 'Leave'
+
+                await prisma.inAppNotification.createMany({
+                    data: staff.property.ownerIds.map(ownerId => ({
+                        userId: ownerId,
+                        title: 'New Leave Request',
+                        description: `${staff.user?.name || 'Staff'} submitted a request for ${totalDays} day(s) of ${label}.`,
+                        type: 'SYSTEM',
+                        isRead: false
+                    }))
+                })
+            } catch (noteErr) {
+                console.error("Admin notify failed:", noteErr)
+            }
+        }
 
         return NextResponse.json(newRequest)
 
