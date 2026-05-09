@@ -136,10 +136,22 @@ export default function RoomsPage() {
 
     const handleCreate = async () => {
         try {
-            const res = await fetch('/api/admin/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...newForm, images: [] }) })
-            if (res.ok) { toast.success('Room created'); setNewModal(false); fetchRooms() }
-            else toast.error(await res.text())
-        } catch { toast.error('Error') }
+            const res = await fetch('/api/admin/rooms', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(newForm) 
+            })
+            if (res.ok) { 
+                toast.success('Room created successfully!') 
+                setNewModal(false) 
+                setNewForm({ roomNumber: '', floor: '1', category: 'STANDARD', type: 'Standard King', basePrice: '150', maxOccupancy: '2', images: [] })
+                fetchRooms() 
+            } else {
+                toast.error(await res.text())
+            }
+        } catch { 
+            toast.error('Error creating room') 
+        }
     }
 
     const handleDelete = async () => {
@@ -407,13 +419,8 @@ export default function RoomsPage() {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-                    <p className="hidden sm:block text-[12px] text-gray-500">
-                        Showing <b className="text-white">{Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}</b> to{' '}
-                        <b className="text-white">{Math.min(page * PAGE_SIZE, filtered.length)}</b> of{' '}
-                        <b className="text-white">{filtered.length}</b> results
-                    </p>
-                    <div className="flex-1 sm:flex-initial flex items-center justify-center gap-1">
+                <div className="flex items-center justify-end px-4 py-3 border-t border-white/[0.06]">
+                    <div className="flex items-center justify-center gap-1">
                         <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
                             className="px-3 py-1.5 text-[12px] text-gray-400 hover:text-white bg-[#182433] rounded-lg border border-white/[0.06] disabled:opacity-40 transition-colors">Prev</button>
                         {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => i + 1).map(p => (
