@@ -126,6 +126,14 @@ export default function TermsAndConditions() {
                         </p>
                     </section>
 
+                    {/* Account Deletion */}
+                    <section>
+                        <h3 className="text-lg font-bold text-white mb-4">7. Dissolution & Termination</h3>
+                        <p className="text-sm text-gray-500">
+                            To delete your Entry Club account, email <span className="text-white font-bold">info.zenbourg@gmail.com</span> with your registered phone number. We will delete your account and data within 7 business days.
+                        </p>
+                    </section>
+
                     {/* Final Contact Footer */}
                     <section className="relative mt-20 overflow-hidden rounded-[40px] bg-gradient-to-br from-purple-900/20 via-transparent to-transparent border border-purple-500/20 p-8 md:p-12 text-center">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent" />

@@ -138,7 +138,7 @@ export default function PrivacyPolicy() {
                             </div>
                             <div>
                                 <h4 className="font-bold text-white text-lg mb-3">Retention & Erasure</h4>
-                                <p className="text-sm text-gray-400 leading-relaxed">Your logical profile is maintained strictly through the active duration of your relationship. Verified users reserve the categorical right to direct permanent erasure of their telemetry vectors from our records by initiating standard support tickets.</p>
+                                <p className="text-sm text-gray-400 leading-relaxed">Your logical profile is maintained strictly through the active duration of your relationship. To delete your Entry Club account, email <span className="text-white font-bold">info.zenbourg@gmail.com</span> with your registered phone number. We will delete your account and data within 7 business days.</p>
                             </div>
                         </div>
                         
