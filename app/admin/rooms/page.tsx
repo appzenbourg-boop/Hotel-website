@@ -298,9 +298,7 @@ export default function RoomsPage() {
                     <option value="ALL">Type: All</option>
                     {types.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-                <button className="flex items-center gap-1.5 px-3 py-2 bg-[#233648] border border-white/[0.08] rounded-lg text-[12px] text-gray-400 hover:text-white transition-colors">
-                    <SlidersHorizontal className="w-3.5 h-3.5" /> More Filters
-                </button>
+
             </div>
 
             {/* ── TABLE / MOBILE CARDS ── */}
