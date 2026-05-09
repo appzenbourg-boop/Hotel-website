@@ -586,27 +586,50 @@ export default function StaffDetailPage() {
                     <Card className="bg-[#233648]/50 border-white/5 rounded-[2.5rem] p-8 space-y-6">
                         <h3 className="text-[11px] font-bold text-gray-600 uppercase tracking-[0.2em] ml-1">Current Month Performance</h3>
 
-                        <div className="space-y-6">
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <p className="text-xs font-bold text-gray-400">Task Completion</p>
-                                    <p className="text-xs font-bold text-white">92%</p>
-                                </div>
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary rounded-full w-[92%] shadow-[0_0_10px_rgba(74,158,255,0.5)]" />
-                                </div>
-                            </div>
+                        {(() => {
+                            const latestScore = staff?.performanceScores?.[0]
+                            const totalMTD = (latestScore?.tasksCompleted || 0) + (latestScore?.slaBreaches || 0)
+                            
+                            // Task Completion MTD %
+                            const compPct = totalMTD > 0 
+                                ? Math.round(((latestScore?.tasksCompleted || 0) / totalMTD) * 100) 
+                                : (latestScore?.overallScore ? Math.round(latestScore.overallScore) : 0)
 
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <p className="text-xs font-bold text-gray-400">SLA Adherence</p>
-                                    <p className="text-xs font-bold text-white">98%</p>
+                            // SLA Adherence %
+                            const slaPct = latestScore?.tasksCompleted > 0
+                                ? Math.round(((latestScore?.tasksOnTime || 0) / latestScore.tasksCompleted) * 100)
+                                : 0
+
+                            return (
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs font-bold text-gray-400">Task Completion</p>
+                                            <p className="text-xs font-bold text-white">{compPct}%</p>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-primary rounded-full shadow-[0_0_10px_rgba(74,158,255,0.5)] transition-all duration-500" 
+                                                style={{ width: `${compPct}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs font-bold text-gray-400">SLA Adherence</p>
+                                            <p className="text-xs font-bold text-white">{slaPct}%</p>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-500" 
+                                                style={{ width: `${slaPct}%` }}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-emerald-500 rounded-full w-[98%] shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-                                </div>
-                            </div>
-                        </div>
+                            )
+                        })()}
                     </Card>
 
                     {/* Security & Access Sidebar Card */}
@@ -707,19 +730,11 @@ export default function StaffDetailPage() {
                                                 <p className="text-sm font-bold text-white">{staff.contractType || 'Full-Time Permanent'}</p>
                                             </div>
                                         </div>
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Reporting Manager</label>
-                                            <div className="flex items-center gap-3 p-4 bg-black/30 border border-white/5 rounded-2xl shadow-inner">
-                                                <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10">
-                                                    <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${staff.managerName || 'manager'}`} alt="" width={24} height={24} unoptimized />
-                                                </div>
-                                                <p className="text-sm font-bold text-white">{staff.managerName || 'Michael Scott'}</p>
-                                            </div>
-                                        </div>
+
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Work Shift</label>
                                             <div className="p-4 bg-black/30 border border-white/5 rounded-2xl shadow-inner">
-                                                <p className="text-sm font-bold text-white">{staff.workShift || 'Morning (06:00 - 14:00)'}</p>
+                                                <p className="text-sm font-bold text-white">{staff.workShift || 'Not Assigned'}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -730,19 +745,19 @@ export default function StaffDetailPage() {
                                             <div className="space-y-3">
                                                 <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Contact Name</label>
                                                 <div className="p-4 bg-black/30 border border-white/5 rounded-2xl shadow-inner">
-                                                    <p className="text-sm font-bold text-white">{staff.emergencyContactName || 'Robert Jenkins'}</p>
+                                                    <p className="text-sm font-bold text-white">{staff.emergencyContactName || 'Not Provided'}</p>
                                                 </div>
                                             </div>
                                             <div className="space-y-3">
                                                 <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Relationship</label>
                                                 <div className="p-4 bg-black/30 border border-white/5 rounded-2xl shadow-inner">
-                                                    <p className="text-sm font-bold text-white">Spouse</p>
+                                                    <p className="text-sm font-bold text-white">{staff.emergencyContactName ? 'Primary Contact' : 'Not Provided'}</p>
                                                 </div>
                                             </div>
                                             <div className="space-y-3">
                                                 <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Emergency Phone</label>
                                                 <div className="p-4 bg-black/30 border border-white/5 rounded-2xl shadow-inner">
-                                                    <p className="text-sm font-bold text-white">{staff.emergencyContactPhone || '+1 (555) 987-6543'}</p>
+                                                    <p className="text-sm font-bold text-white">{staff.emergencyContactPhone || 'Not Provided'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -1390,13 +1405,7 @@ export default function StaffDetailPage() {
                                                 className="w-full bg-black/30 border border-white/10 rounded-2xl py-3 px-5 text-sm text-white font-bold focus:border-primary transition-all shadow-inner" 
                                             />
                                         </div>
-                                        <div className="space-y-2 col-span-2">
-                                            <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Reporting Manager Name</label>
-                                            <input 
-                                                value={editForm.managerName} onChange={e => setEditForm({...editForm, managerName: e.target.value})}
-                                                className="w-full bg-black/30 border border-white/10 rounded-2xl py-3 px-5 text-sm text-white font-bold focus:border-primary transition-all shadow-inner" 
-                                            />
-                                        </div>
+
                                         <div className="space-y-2 col-span-2">
                                             <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Account Status</label>
                                             <div className="relative group">

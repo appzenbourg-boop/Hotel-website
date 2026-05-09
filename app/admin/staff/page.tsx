@@ -42,7 +42,7 @@ export default function StaffPage() {
         email: '',
         phone: '',
         department: 'FRONT_DESK',
-        role: 'Receptionist',
+        designation: 'Receptionist',
         salary: '0',
         password: '',
         userRole: 'STAFF',
@@ -62,7 +62,7 @@ export default function StaffPage() {
     const filteredStaff = useMemo(() => {
         return staffList.filter((s: any) => {
             const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                (s.role || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (s.designation || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (s.department || '').toLowerCase().includes(searchQuery.toLowerCase());
             const matchesDept = filterDept === 'ALL' || s.department === filterDept;
             const matchesTab = activeTab === 'ALL' || (activeTab === 'VERIFICATION' && s.verificationRequested);
@@ -94,7 +94,7 @@ export default function StaffPage() {
                 setShowAddModal(false)
                 fetchStaff()
                 setFormData({
-                    name: '', email: '', phone: '', department: 'FRONT_DESK', role: 'Receptionist', salary: '0', password: '', userRole: 'STAFF', profilePhoto: ''
+                    name: '', email: '', phone: '', department: 'FRONT_DESK', designation: 'Receptionist', salary: '0', password: '', userRole: 'STAFF', profilePhoto: ''
                 })
             } else {
                 const error = await res.text()
@@ -133,7 +133,7 @@ export default function StaffPage() {
             Email: s.email,
             Phone: s.phone,
             Department: s.department,
-            Role: s.role,
+            Role: s.designation,
             Salary: s.salary,
             Status: s.dutyStatus
         })), 'Staff_Directory');
@@ -274,8 +274,8 @@ export default function StaffPage() {
                             />
                             <Input
                                 label="Designation/Role"
-                                value={formData.role}
-                                onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                value={formData.designation}
+                                onChange={e => setFormData({ ...formData, designation: e.target.value })}
                                 placeholder="Chef / Manager / Waiter"
                                 required
                             />
@@ -426,7 +426,7 @@ export default function StaffPage() {
                                             <h3 className="font-semibold text-text-primary">{staff.name}</h3>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <span className="text-[10px] uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold">{staff.department}</span>
-                                                <span className="text-xs text-text-tertiary">• {staff.role}</span>
+                                                <span className="text-xs text-text-tertiary">• {staff.designation}</span>
                                                 {staff.isVerified && <Badge variant="success" className="text-[8px] h-4">Verified</Badge>}
                                                 {staff.verificationRequested && <Badge variant="warning" className="text-[8px] h-4">Requested</Badge>}
                                             </div>

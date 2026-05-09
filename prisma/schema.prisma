@@ -467,9 +467,9 @@ model Staff {
 
   department   Department
   designation  String
-  contractType String?    @default("Full-Time Permanent")
-  workShift    String?    @default("Morning (06:00 - 14:00)")
-  managerName  String?    @default("Michael Scott")
+  contractType String?
+  workShift    String?
+  managerName  String?
 
   // Compensation
   baseSalary    Float

@@ -299,18 +299,55 @@ export default function RestaurantAnalysisPage() {
                         </div>
                     </div>
                     <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={barData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-                                <XAxis dataKey="name" stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#6b7280" fontSize={10} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: '12px' }}
-                                    itemStyle={{ fontSize: '12px' }}
-                                />
-                                <Bar dataKey="units" fill="#2563eb" radius={[6, 6, 0, 0]} barSize={40} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {barData.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center bg-[#0d1117]/40 rounded-2xl border border-dashed border-white/[0.05]">
+                                <BarChart3 className="w-10 h-10 text-text-tertiary/30 mb-3" />
+                                <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest">No Analysis Data</h4>
+                                <p className="text-[10px] text-gray-600 font-medium mt-1">Awaiting restaurant orders to begin calculating.</p>
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#4A9EFF" stopOpacity={0.8} />
+                                            <stop offset="100%" stopColor="#4A9EFF" stopOpacity={0.1} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        stroke="#475569" 
+                                        fontSize={10} 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        dy={10}
+                                        fontFamily="inherit"
+                                        fontWeight={600}
+                                    />
+                                    <YAxis 
+                                        stroke="#475569" 
+                                        fontSize={10} 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        fontFamily="inherit"
+                                        fontWeight={600}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 8 }}
+                                        contentStyle={{ 
+                                            backgroundColor: '#161b22', 
+                                            border: '1px solid rgba(255,255,255,0.08)', 
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)' 
+                                        }}
+                                        itemStyle={{ fontSize: '12px', color: '#fff', fontWeight: 600 }}
+                                        labelStyle={{ fontSize: '10px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}
+                                    />
+                                    <Bar dataKey="units" fill="url(#salesGradient)" radius={[8, 8, 0, 0]} barSize={32} animationDuration={1500} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 
@@ -318,17 +355,43 @@ export default function RestaurantAnalysisPage() {
                     <h3 className="text-lg font-bold text-white mb-1">Revenue by Category</h3>
                     <p className="text-xs text-text-tertiary mb-8">Contribution to total sales.</p>
                     <div className="h-[250px] relative">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                    {pieData.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#161b22', border: '1px solid #30363d', borderRadius: '12px' }}
-                                />
-                                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        {pieData.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center bg-[#0d1117]/40 rounded-2xl border border-dashed border-white/[0.05]">
+                                <TrendingUp className="w-8 h-8 text-text-tertiary/30 mb-3" />
+                                <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest">No Data</h4>
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie 
+                                        data={pieData} 
+                                        innerRadius={65} 
+                                        outerRadius={85} 
+                                        paddingAngle={6} 
+                                        dataKey="value"
+                                        stroke="none"
+                                        animationDuration={1200}
+                                    >
+                                        {pieData.map((_: any, i: number) => <Cell key={`cell-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} cornerRadius={4} />)}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ 
+                                            backgroundColor: '#161b22', 
+                                            border: '1px solid rgba(255,255,255,0.08)', 
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)' 
+                                        }}
+                                        itemStyle={{ color: '#fff', fontWeight: 600, fontSize: '12px' }}
+                                    />
+                                    <Legend 
+                                        verticalAlign="bottom" 
+                                        height={36} 
+                                        iconType="circle" 
+                                        wrapperStyle={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }} 
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
             </div>
