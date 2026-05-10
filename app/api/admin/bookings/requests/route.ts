@@ -155,6 +155,17 @@ export async function PATCH(request: NextRequest) {
                         approvedById: session.user.id
                     }
                 })
+
+                // 📱 Notify the Requesting Guest that it was APPROVED!
+                await tx.inAppNotification.create({
+                    data: {
+                        userId: existing.requestedById,
+                        title: `✅ ${existing.type} Approved!`,
+                        description: `Your request for ${existing.type === 'UPGRADE' ? 'a room upgrade' : 'an extended stay'} has been accepted and finalized.`,
+                        type: 'INFO',
+                        isRead: false
+                    }
+                })
             })
 
             return NextResponse.json({ success: true, message: 'Request approved and booking updated' })
@@ -165,6 +176,17 @@ export async function PATCH(request: NextRequest) {
                     status: 'REJECTED',
                     rejectedById: session.user.id,
                     rejectionReason: rejectionReason || 'No reason provided'
+                }
+            })
+
+            // 📱 Notify the Requesting Guest that it was REJECTED!
+            await prisma.inAppNotification.create({
+                data: {
+                    userId: existing.requestedById,
+                    title: `❌ ${existing.type} Declined`,
+                    description: `Your request for ${existing.type.toLowerCase()} could not be approved at this time. Reason: ${rejectionReason || 'Standard policy'}`,
+                    type: 'ALERT',
+                    isRead: false
                 }
             })
 
