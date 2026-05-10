@@ -102,8 +102,8 @@ function KpiSection({ stats, requests }: { stats: any, requests: any[] }) {
         { label: 'Pending Approval', value: stats.pending, color: 'text-amber-500', icon: Clock },
         { label: 'Active Work', value: stats.active, color: 'text-blue-500', icon: AlertTriangle },
         { label: 'Critical SLA', value: stats.overdue, color: 'text-rose-500', icon: AlertTriangle },
-        { 
-            label: 'Completed Today', 
+        {
+            label: 'Completed Today',
             value: (requests || []).filter((r: any) => {
                 if (r.status !== 'COMPLETED') return false;
                 const dateToUse = r.completedAt || r.updatedAt || r.createdAt;
@@ -111,11 +111,11 @@ function KpiSection({ stats, requests }: { stats: any, requests: any[] }) {
                 const completedDate = new Date(dateToUse);
                 const today = new Date();
                 return completedDate.getDate() === today.getDate() &&
-                       completedDate.getMonth() === today.getMonth() &&
-                       completedDate.getFullYear() === today.getFullYear();
-            }).length, 
-            color: 'text-emerald-500', 
-            icon: CheckCircle2 
+                    completedDate.getMonth() === today.getMonth() &&
+                    completedDate.getFullYear() === today.getFullYear();
+            }).length,
+            color: 'text-emerald-500',
+            icon: CheckCircle2
         },
     ];
 
@@ -143,7 +143,7 @@ export default function ServicesPage() {
     const [typeFilter, setTypeFilter] = useState('ALL');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [staffFilter, setStaffFilter] = useState('ALL');
-    
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [showSettingsModal, setShowSettingsModal] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -162,7 +162,7 @@ export default function ServicesPage() {
     const [isSavingConfig, setIsSavingConfig] = useState(false);
 
     const { data: session } = useSession();
-    
+
     const currentPropertyId = useMemo(() => {
         if (session?.user?.role === 'SUPER_ADMIN') return getAdminContext().propertyId;
         return session?.user?.propertyId;
@@ -170,21 +170,21 @@ export default function ServicesPage() {
 
     const fetcher = (url: string) => fetch(url).then(res => res.json()).then(json => json?.data ?? json);
 
-    const { 
-        data: requests = [], 
-        isLoading: reqLoading, 
-        mutate: mutateRequests 
+    const {
+        data: requests = [],
+        isLoading: reqLoading,
+        mutate: mutateRequests
     } = useSWR(currentPropertyId ? buildContextUrl('/api/admin/services', { status: 'ALL' }) : null, fetcher, {
         refreshInterval: 10000
     });
 
     const { data: rooms = [] } = useSWR(
-        currentPropertyId ? buildContextUrl('/api/admin/rooms') : null, 
+        currentPropertyId ? buildContextUrl('/api/admin/rooms') : null,
         fetcher
     );
 
     const { data: serviceConfigs = [], mutate: mutateConfigs } = useSWR(
-        currentPropertyId ? buildContextUrl('/api/admin/service-configs') : null, 
+        currentPropertyId ? buildContextUrl('/api/admin/service-configs') : null,
         fetcher
     );
 
@@ -349,20 +349,20 @@ export default function ServicesPage() {
                                 <tr><td colSpan={6} className="py-20 text-center text-gray-500">No requests found matching filters</td></tr>
                             ) : (
                                 filtered.map((req: any) => (
-                                <tr key={req.id} onClick={() => router.push(`/admin/services/${req.id}`)} className="group cursor-pointer border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors relative">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-lg", getServiceColor(req.type))}>{getServiceIcon(req.type)}</div>
-                                            <div><p className="text-[15px] font-bold text-white leading-tight">{req.title}</p><p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{req.type.toLowerCase().replace('_', ' ')}</p></div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5"><span className="text-lg font-bold text-white">{req.room}</span></td>
-                                    <td className="px-6 py-5 text-[14px] font-bold text-gray-300">{req.guest}</td>
-                                    <td className="px-6 py-5"><div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold border", req.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : getSLAPrecent(req.requestTime, req.slaLimit) > 75 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20')}><Clock className="w-3.5 h-3.5" />{getElapsedTime(req.requestTime)}</div></td>
-                                    <td className="px-6 py-5">{req.assignedTo ? (<div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center overflow-hidden border border-blue-500/30">{req.assignedTo.photo ? <img src={req.assignedTo.photo} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-blue-400" />}</div><span className="text-[13px] font-bold text-gray-300">{req.assignedTo.name || 'Staff Member'}</span></div>) : (<div className="flex items-center gap-3 text-gray-600"><div className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center"><Users className="w-4 h-4" /></div><span className="text-[13px] font-medium">Unassigned</span></div>)}</td>
-                                    <td className="px-4 py-5 text-right pr-10"><span className={cn('px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-full border', getStatusStyle(req.status))}>{req.status === 'ACCEPTED' ? 'OPEN' : req.status.replace('_', ' ')}</span></td>
-                                </tr>
-                            )))}
+                                    <tr key={req.id} onClick={() => router.push(`/admin/services/${req.id}`)} className="group cursor-pointer border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors relative">
+                                        <td className="px-8 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-lg", getServiceColor(req.type))}>{getServiceIcon(req.type)}</div>
+                                                <div><p className="text-[15px] font-bold text-white leading-tight">{req.title}</p><p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{req.type.toLowerCase().replace('_', ' ')}</p></div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5"><span className="text-lg font-bold text-white">{req.room}</span></td>
+                                        <td className="px-6 py-5 text-[14px] font-bold text-gray-300">{req.guest}</td>
+                                        <td className="px-6 py-5"><div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold border", req.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : getSLAPrecent(req.requestTime, req.slaLimit) > 75 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20')}><Clock className="w-3.5 h-3.5" />{getElapsedTime(req.requestTime)}</div></td>
+                                        <td className="px-6 py-5">{req.assignedTo ? (<div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center overflow-hidden border border-blue-500/30">{req.assignedTo.photo ? <img src={req.assignedTo.photo} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-blue-400" />}</div><span className="text-[13px] font-bold text-gray-300">{req.assignedTo.name || 'Staff Member'}</span></div>) : (<div className="flex items-center gap-3 text-gray-600"><div className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center"><Users className="w-4 h-4" /></div><span className="text-[13px] font-medium">Unassigned</span></div>)}</td>
+                                        <td className="px-4 py-5 text-right pr-10"><span className={cn('px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-full border', getStatusStyle(req.status))}>{req.status === 'ACCEPTED' ? 'OPEN' : req.status.replace('_', ' ')}</span></td>
+                                    </tr>
+                                )))}
                         </tbody>
                     </table>
                 </div>

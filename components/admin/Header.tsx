@@ -107,7 +107,9 @@ export default function Header({ onMenuClick }: HeaderProps) {
       router.push('/admin/staff?tab=verification')
     } else if (combined.includes('leave') || combined.includes('absent')) {
       router.push('/admin/leaves')
-    } else if (combined.includes('booking') || combined.includes('reservation') || combined.includes('upgrade') || combined.includes('extension')) {
+    } else if (combined.includes('upgrade') || combined.includes('extension') || combined.includes('extend')) {
+      router.push('/admin/approvals')
+    } else if (combined.includes('booking') || combined.includes('reservation')) {
       router.push('/admin/bookings')
     } else if (combined.includes('payroll') || combined.includes('salary') || combined.includes('paid')) {
       router.push('/admin/payroll')
