@@ -53,7 +53,8 @@ export async function POST(
                     select: { ownerIds: true, name: true }
                 },
                 room: { select: { roomNumber: true } },
-                assignedTo: { include: { user: { select: { name: true } } } }
+                assignedTo: { include: { user: { select: { name: true } } } },
+                guest: { select: { phone: true } }
             }
         })
 
@@ -72,6 +73,26 @@ export async function POST(
                 })
             } catch (noteErr) {
                 console.error('Failed to notify admins:', noteErr)
+            }
+        }
+
+        // 🚀 NEW: Notify the Guest too via in-app notification!
+        if (updated.guest?.phone) {
+            try {
+                const guestUser = await prisma.user.findUnique({ where: { phone: updated.guest.phone }, select: { id: true } });
+                if (guestUser) {
+                    await prisma.inAppNotification.create({
+                        data: {
+                            userId: guestUser.id,
+                            title: '✓ Request Completed',
+                            description: `Good news! Your request for "${updated.title}" has been completed. Enjoy your stay!`,
+                            type: 'SYSTEM',
+                            isRead: false
+                        }
+                    });
+                }
+            } catch (gNoteErr) {
+                console.error('Failed to notify guest on task completion:', gNoteErr);
             }
         }
 

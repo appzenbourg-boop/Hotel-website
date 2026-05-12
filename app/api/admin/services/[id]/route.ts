@@ -68,8 +68,64 @@ export async function PATCH(
         const body = await request.json()
         const updated = await prisma.serviceRequest.update({
             where: { id: params.id },
-            data: body
+            data: body,
+            include: { guest: { select: { phone: true } } }
         })
+
+        // 🚀 Notify Guest automatically when administration updates request status
+        if (body.status) {
+            try {
+                let targetPhone = updated.guest?.phone;
+                
+                // 🛡️ Fallback: If Guest relation is null, lookup active checkout linked by room
+                if (!targetPhone && updated.roomId) {
+                   const activeBooking = await prisma.booking.findFirst({
+                       where: { roomId: updated.roomId, status: 'CHECKED_IN' },
+                       include: { guest: { select: { phone: true } } }
+                   });
+                   if (activeBooking?.guest?.phone) {
+                       targetPhone = activeBooking.guest.phone;
+                   }
+                }
+
+                if (targetPhone) {
+                    const cleanPhone = targetPhone.replace('+91', '');
+                    const possiblePhones = [
+                        targetPhone,
+                        cleanPhone,
+                        `+91${cleanPhone}`
+                    ];
+
+                    const guestUser = await prisma.user.findFirst({
+                        where: { 
+                            role: 'GUEST',
+                            phone: { in: possiblePhones } 
+                        },
+                        select: { id: true }
+                    });
+
+                    if (guestUser) {
+                        let verb = 'updated';
+                        if (body.status === 'ACCEPTED') verb = 'accepted and is scheduled';
+                        if (body.status === 'IN_PROGRESS') verb = 'started by our staff';
+                        if (body.status === 'COMPLETED') verb = 'successfully completed';
+                        if (body.status === 'CANCELLED') verb = 'cancelled';
+
+                        await prisma.inAppNotification.create({
+                            data: {
+                                userId: guestUser.id,
+                                title: body.status === 'COMPLETED' ? '✓ Request Complete' : 'Service Update',
+                                description: `Your request for "${updated.title}" has been ${verb}.`,
+                                type: 'SYSTEM',
+                                isRead: false
+                            }
+                        });
+                    }
+                }
+            } catch (notifyErr) {
+                console.error('[NOTIFICATION_ERR]', notifyErr);
+            }
+        }
 
         return NextResponse.json(updated)
     } catch (error) {

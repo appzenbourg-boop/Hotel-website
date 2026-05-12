@@ -75,6 +75,62 @@ export async function POST(request: Request) {
             console.error('Failed to send SMS notification:', smsErr);
         }
 
+        // 🚀 NEW & ROBUST: Dispatch IN-APP notification to GUEST Device
+        if (status) {
+            try {
+                let targetPhone = updated.guest?.phone;
+                
+                // 🛡️ Fallback: If Guest object was not directly linked to Service Request,
+                // dynamically detect current active guest from the Room's Checked-In Booking!
+                if (!targetPhone && updated.roomId) {
+                   const activeBooking = await prisma.booking.findFirst({
+                       where: { roomId: updated.roomId, status: 'CHECKED_IN' },
+                       include: { guest: { select: { phone: true } } }
+                   });
+                   if (activeBooking?.guest?.phone) {
+                       targetPhone = activeBooking.guest.phone;
+                   }
+                }
+
+                if (targetPhone) {
+                    const cleanPhone = targetPhone.replace('+91', '');
+                    const possiblePhones = [
+                        targetPhone,
+                        cleanPhone,
+                        `+91${cleanPhone}`
+                    ];
+
+                    // Find user with resilient phone matching
+                    const guestUser = await prisma.user.findFirst({
+                        where: {
+                            role: 'GUEST',
+                            phone: { in: possiblePhones }
+                        },
+                        select: { id: true }
+                    });
+
+                    if (guestUser) {
+                        let verb = 'updated';
+                        if (status === 'COMPLETED') verb = 'successfully completed';
+                        if (status === 'IN_PROGRESS') verb = 'started by our staff';
+                        if (status === 'ACCEPTED') verb = 'accepted and is scheduled';
+                        
+                        await prisma.inAppNotification.create({
+                            data: {
+                                userId: guestUser.id,
+                                title: status === 'COMPLETED' ? '✓ Request Complete' : 'Service Update',
+                                description: `Your request for "${updated.title}" has been ${verb}.`,
+                                type: 'SYSTEM',
+                                isRead: false
+                            }
+                        });
+                    }
+                }
+            } catch (gErr) {
+                console.error('Guest In-App notify fail:', gErr);
+            }
+        }
+
         // NEW: Create In-App Notification for Staff
         if (assignedToId && (status === 'ACCEPTED' || !status)) {
             try {

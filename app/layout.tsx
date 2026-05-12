@@ -37,7 +37,6 @@ export const viewport = {
 
 import { Providers } from './providers'
 import dynamic from 'next/dynamic'
-const GuestPWAInstall = dynamic(() => import('@/components/common/GuestPWAInstall'), { ssr: false })
 
 // ... imports
 
@@ -56,7 +55,6 @@ export default function RootLayout({
         />
         <Providers>
           {children}
-          <GuestPWAInstall />
           <Toaster 
             position="bottom-center" 
             richColors 

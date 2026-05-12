@@ -32,6 +32,12 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // HYDRATION FALLBACK: Fix token missing 'phone' field from cloud to prevent Prisma explosions
+        if (!user.phone && user.id) {
+            const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { phone: true } });
+            if (dbUser) user.phone = dbUser.phone;
+        }
+
         // Find guest by user phone
         const guest = await prisma.guest.findUnique({
             where: { phone: user.phone },
@@ -93,6 +99,12 @@ export async function POST(request: NextRequest) {
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
+        }
+
+        // HYDRATION FALLBACK: Fix token missing 'phone' field from cloud to prevent Prisma explosions
+        if (!user.phone && user.id) {
+            const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { phone: true } });
+            if (dbUser) user.phone = dbUser.phone;
         }
 
         const body = await request.json();
@@ -183,18 +195,57 @@ export async function POST(request: NextRequest) {
             console.error('Failed to send request confirmation SMS:', smsErr);
         }
 
-        // AUTO-ASSIGN immediately
-        await performAutoAssignment(propertyId, 0);
+        // AUTO-ASSIGN immediately (Guarded in try/catch to prevent internal crashes)
+        try {
+            await performAutoAssignment(propertyId, 0);
+        } catch (autoAssignErr) {
+            console.error('[AUTO-ASSIGN CRASH]', autoAssignErr);
+        }
+
+        // 🚀 BROADCAST TO ADMIN PANEL (Triggers active alert dashboard logic & Sound)
+        try {
+            const property = await prisma.property.findUnique({
+                where: { id: propertyId },
+                select: { ownerIds: true }
+            });
+            const admins = await prisma.user.findMany({
+                where: {
+                    OR: [
+                        { id: { in: property?.ownerIds || [] } },
+                        { role: { in: ['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER'] }, workplaceId: propertyId }
+                    ]
+                },
+                select: { id: true }
+            });
+            if (admins.length > 0) {
+                await prisma.inAppNotification.createMany({
+                    data: admins.map(admin => ({
+                        userId: admin.id,
+                        title: `New Service Request`,
+                        description: `${title} from Room ${serviceRequest.room?.roomNumber || 'N/A'}`,
+                        type: 'TASK',
+                        isRead: false
+                    }))
+                });
+            }
+        } catch(broadcastErr) {
+            console.error('Failed to broadcast admin alerts:', broadcastErr);
+        }
 
         return NextResponse.json({
             success: true,
             serviceRequest,
             message: 'Service request created successfully',
         });
-    } catch (error) {
-        console.error('Create service request error:', error);
+    } catch (error: any) {
+        console.error('Create service request error FATAL:', error);
+        // Return the REAL exception to the user screen for debugging!
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { 
+                error: 'Internal server error (DEBUG)', 
+                details: error?.message || 'Unknown error',
+                stack: error?.stack?.split('\n').slice(0, 3)
+            },
             { status: 500 }
         );
     }

@@ -56,12 +56,31 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const prevUnreadRef = useRef<number | null>(null)
+
+  const playAlertSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'; osc.frequency.value = 523.25; gain.gain.value = 0.1
+      osc.connect(gain); gain.connect(ctx.destination)
+      osc.start(); osc.stop(ctx.currentTime + 0.2)
+      setTimeout(() => {
+        const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
+        o2.type = 'sine'; o2.frequency.value = 659.25; g2.gain.value = 0.1
+        o2.connect(g2); g2.connect(ctx.destination)
+        o2.start(); o2.stop(ctx.currentTime + 0.3)
+      }, 150)
+    } catch(e){}
+  }
 
   const fetchNotifications = async () => {
     try {
       const res = await fetch('/api/admin/notifications')
       if (res.ok) {
         const data = await res.json()
+        const nCnt = data.unreadCount ?? 0
         const formatted = (data.notifications ?? []).map((n: any) => ({
           id: n.id,
           message: n.description || n.title,
@@ -70,8 +89,22 @@ export default function Header({ onMenuClick }: HeaderProps) {
           unread: !n.isRead,
           type: n.type,
         }))
+
+        if (prevUnreadRef.current !== null && nCnt > prevUnreadRef.current) {
+            const newest = formatted.filter(x => x.unread).slice(0, nCnt - prevUnreadRef.current)
+            newest.forEach(nx => {
+              toast.info(nx.title || 'New System Alert', {
+                  description: nx.message,
+                  duration: 10000,
+                  action: { label: 'Open', onClick: () => handleNotifClick(nx) }
+              })
+            })
+            playAlertSound()
+        }
+
         setNotifications(formatted)
-        setUnreadCount(data.unreadCount ?? 0)
+        setUnreadCount(nCnt)
+        prevUnreadRef.current = nCnt
       }
     } catch (e) { console.error(e) }
   }

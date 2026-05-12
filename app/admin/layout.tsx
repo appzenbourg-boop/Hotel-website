@@ -72,67 +72,62 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const isAuthPage = AUTH_PATHS.includes(pathname)
 
-  if (!mounted) {
-    return (
-      <div className="flex h-screen overflow-hidden bg-background">
-        <div className="flex-1 flex flex-col md:ml-60 ml-0 overflow-hidden w-full relative">
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 w-full">
-            {children}
-          </main>
-        </div>
-      </div>
-    )
-  }
-
   if (isAuthPage) {
     return <>{children}</>
   }
 
+  // UNIFIED STRUCTURE: We return ONE structural skeleton to prevent ALL Next.js hydration mismatches!
   return (
     <div className="flex h-screen overflow-hidden bg-background relative">
-      <AnimatePresence>
-        {isNavigating && (
-          <motion.div
-            initial={{ width: '0%', opacity: 1 }}
-            animate={{ width: '90%' }}
-            exit={{ width: '100%', opacity: 0 }}
-            transition={{ 
-              width: { duration: 10, ease: "easeOut" },
-              opacity: { duration: 0.2 }
-            }}
-            className="fixed top-0 left-0 h-[2px] bg-primary z-[9999] shadow-[0_0_10px_rgba(74,158,255,0.5)]"
-          />
-        )}
-      </AnimatePresence>
+      {mounted && (
+        <AnimatePresence>
+          {isNavigating && (
+            <motion.div
+              initial={{ width: '0%', opacity: 1 }}
+              animate={{ width: '90%' }}
+              exit={{ width: '100%', opacity: 0 }}
+              transition={{ 
+                width: { duration: 10, ease: "easeOut" },
+                opacity: { duration: 0.2 }
+              }}
+              className="fixed top-0 left-0 h-[2px] bg-primary z-[9999] shadow-[0_0_10px_rgba(74,158,255,0.5)]"
+            />
+          )}
+        </AnimatePresence>
+      )}
 
-      {sidebarOpen && (
+      {mounted && sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden animate-fade-in"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {mounted && <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
 
       <div className="flex-1 flex flex-col md:ml-60 ml-0 overflow-hidden w-full relative">
-        <Header onMenuClick={() => setSidebarOpen(true)} />
+        {mounted && <Header onMenuClick={() => setSidebarOpen(true)} />}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 w-full custom-scrollbar relative">
-          <AnimatePresence>
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          {mounted ? (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          ) : (
+            children
+          )}
         </main>
       </div>
 
-      <MobileNav />
-      <OnboardingTour />
+      {mounted && <MobileNav />}
+      {mounted && <OnboardingTour />}
     </div>
   )
 }

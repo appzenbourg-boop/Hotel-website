@@ -32,6 +32,12 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // HYDRATION FALLBACK: Fix token missing 'phone' field from cloud to prevent Prisma explosions
+        if (!user.phone && user.id) {
+            const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { phone: true } });
+            if (dbUser) user.phone = dbUser.phone;
+        }
+
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
 
@@ -120,6 +126,12 @@ export async function POST(request: NextRequest) {
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
+        }
+
+        // HYDRATION FALLBACK: Fix token missing 'phone' field from cloud to prevent Prisma explosions
+        if (!user.phone && user.id) {
+            const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { phone: true } });
+            if (dbUser) user.phone = dbUser.phone;
         }
 
         const body = await request.json();
@@ -249,6 +261,12 @@ export async function PATCH(request: NextRequest) {
                 { error: 'Unauthorized' },
                 { status: 401 }
             );
+        }
+
+        // HYDRATION FALLBACK: Fix token missing 'phone' field from cloud to prevent Prisma explosions
+        if (!user.phone && user.id) {
+            const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { phone: true } });
+            if (dbUser) user.phone = dbUser.phone;
         }
 
         const body = await request.json();

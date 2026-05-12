@@ -275,7 +275,7 @@ export default function ServicesPage() {
     }, [requests, search, typeFilter, statusFilter, staffFilter]);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#101922] overflow-hidden">
+        <div className="flex flex-col bg-[#101922] w-full min-h-screen animate-fade-in pb-20">
             <div className="shrink-0 p-6 sm:px-8 bg-[#101922] border-b border-white/[0.06]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div>
@@ -330,7 +330,7 @@ export default function ServicesPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto noscrollbar">
+                <div className="w-full">
                     <table className="w-full text-left border-collapse">
                         <thead className="sticky top-0 bg-[#0f1115] z-20 border-b border-white/[0.06]">
                             <tr>
