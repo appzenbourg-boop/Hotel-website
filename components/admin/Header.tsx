@@ -91,8 +91,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
         }))
 
         if (prevUnreadRef.current !== null && nCnt > prevUnreadRef.current) {
-            const newest = formatted.filter(x => x.unread).slice(0, nCnt - prevUnreadRef.current)
-            newest.forEach(nx => {
+            const newest = formatted.filter((x: any) => x.unread).slice(0, nCnt - prevUnreadRef.current)
+            newest.forEach((nx: any) => {
               toast.info(nx.title || 'New System Alert', {
                   description: nx.message,
                   duration: 10000,
