@@ -152,3 +152,36 @@ export async function sendMarketingBlast(opts: {
       </div>`,
     })
 }
+
+export async function sendEnterpriseQuoteApproval(opts: {
+    to: string | string[]
+    name: string
+    hotelName: string
+    quoteAmount: number
+    dashboardUrl: string
+}) {
+    return sendEmail({
+        to: opts.to,
+        subject: `Zenbourg Enterprise Quote Approved – ${opts.hotelName}`,
+        html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:32px;background:#0B0F19;color:#ffffff;border-radius:16px;border:1px solid #1F2937">
+        <div style="text-align:center;margin-bottom:24px">
+          <h1 style="color:#9333EA;margin:0;font-size:28px">Zenbourg</h1>
+          <p style="color:#9CA3AF;font-size:14px;margin-top:4px">Enterprise Tier Approved</p>
+        </div>
+        <h2 style="color:#ffffff;font-size:20px;border-bottom:1px solid #374151;padding-bottom:12px">Greetings ${opts.name},</h2>
+        <p style="color:#D1D5DB;line-height:1.6">We are pleased to inform you that your customized Enterprise Quote for <strong>${opts.hotelName}</strong> has been reviewed and officially approved by our corporate administration.</p>
+        <div style="background:rgba(147,51,234,0.1);border:1px solid rgba(147,51,234,0.2);border-radius:12px;padding:24px;margin:24px 0;text-align:center">
+          <p style="color:#9CA3AF;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px 0">Annual Enterprise Subscription</p>
+          <div style="font-size:36px;font-weight:800;color:#ffffff">₹${opts.quoteAmount.toLocaleString('en-IN')}</div>
+          <p style="color:#A78BFA;font-size:12px;margin:8px 0 0 0">+18% GST Applied At Checkout</p>
+        </div>
+        <p style="color:#D1D5DB;line-height:1.6">To unlock full capabilities including Multi-property Dashboards, White-label portals, and advanced analytics, please proceed to checkout by clicking below:</p>
+        <div style="text-align:center;margin:32px 0">
+          <a href="${opts.dashboardUrl}" style="background:#9333EA;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:bold;display:inline-block;box-shadow:0 4px 14px 0 rgba(147,51,234,0.39)">Proceed to Secure Checkout</a>
+        </div>
+        <p style="color:#9CA3AF;font-size:12px;text-align:center;margin-top:32px;border-top:1px solid #374151;padding-top:16px">If you did not request this or need adjustments, contact corporate-sales@zenbourg.com</p>
+      </div>`,
+    })
+}
+

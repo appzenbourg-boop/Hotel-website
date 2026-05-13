@@ -30,7 +30,8 @@ import {
   X,
   Lock,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Crown
 } from 'lucide-react'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 import { type PlanTier } from '@/lib/plan-features'
@@ -226,6 +227,55 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-0.5 custom-scrollbar">
+        {userRole === 'SUPER_ADMIN' && (
+          <div className="mb-4 px-1 space-y-2 border-b border-white/[0.05] pb-4">
+            <p className="text-[10px] font-extrabold tracking-[0.2em] text-purple-400/80 uppercase flex items-center gap-1.5 mb-2 ml-2">
+              <Crown className="w-3 h-3" /> Super Admin Console
+            </p>
+            <Link
+              href="/admin/properties"
+              onClick={() => { if (window.innerWidth < 768) onClose() }}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 border relative group overflow-hidden shadow-sm',
+                pathname === '/admin/properties'
+                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/30 shadow-purple-500/5 font-bold'
+                  : 'border-white/5 text-gray-300 hover:bg-white/[0.03] hover:border-white/10'
+              )}
+            >
+              <span className={cn(
+                'shrink-0 transition-colors p-1.5 rounded-lg',
+                pathname === '/admin/properties' ? 'bg-purple-500/20 text-purple-300' : 'bg-white/[0.02] text-gray-400 group-hover:text-purple-400'
+              )}>
+                <Building2 className="w-3.5 h-3.5" />
+              </span>
+              <span className="text-[12.5px] font-medium">Manage Portfolio</span>
+            </Link>
+
+            <Link
+              href="/admin/subscription-plans"
+              onClick={() => { if (window.innerWidth < 768) onClose() }}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 border relative group overflow-hidden shadow-sm',
+                pathname === '/admin/subscription-plans'
+                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/30 shadow-purple-500/5 font-bold'
+                  : 'border-white/5 text-gray-300 hover:bg-white/[0.03] hover:border-white/10'
+              )}
+            >
+              <span className={cn(
+                'shrink-0 transition-colors p-1.5 rounded-lg',
+                pathname === '/admin/subscription-plans' ? 'bg-purple-500/20 text-purple-300' : 'bg-white/[0.02] text-gray-400 group-hover:text-purple-400'
+              )}>
+                <Sparkles className="w-3.5 h-3.5" />
+              </span>
+              <span className="text-[12.5px] font-medium">Pricing Plan Designer</span>
+            </Link>
+
+            <div className="pt-2 px-2">
+              <p className="text-[9px] text-gray-500 uppercase tracking-wider font-bold mb-1 mt-2">System Operations</p>
+            </div>
+          </div>
+        )}
+
         {itemsWithMeta.map(item => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
 

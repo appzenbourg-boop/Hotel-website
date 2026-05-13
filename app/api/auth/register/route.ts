@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
             plan,
             trialPeriod,
             upiId,
+            description
         } = body
 
         if (!name || !email || !phone || !password) {
@@ -73,7 +74,10 @@ export async function POST(req: NextRequest) {
                         email: email.toLowerCase().trim(),
                         latitude: latitude ?? null,
                         longitude: longitude ?? null,
+                        description: description || null,
                         plan: (plan === 'BASE' || plan === 'ENTERPRISE') ? plan : 'BASE',
+                        customQuoteStatus: plan === 'ENTERPRISE' ? 'PENDING' : 'NONE',
+                        customQuoteAmount: null,
                         planExpiresAt: null,
                         isTrialActive: false,
                         isAutopayActive: false,

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter, Outfit, Cormorant_Garamond } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
+import 'leaflet/dist/leaflet.css'
 import { Toaster } from 'sonner'
 import { cn } from '@/lib/utils'
 

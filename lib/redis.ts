@@ -25,5 +25,19 @@ export const redis = {
   async keys(pattern: string) {
     try { return await rawRedis.keys(pattern); }
     catch (e) { console.error(`[Redis Error] KEYS ${pattern}:`, e); return []; }
+  },
+  async incr(key: string) {
+    try { return await rawRedis.incr(key); }
+    catch (e) { 
+      console.error(`[Redis Error] INCR ${key}:`, e); 
+      return 1; // Fallback: treat as first request to allow flow when Redis is offline
+    }
+  },
+  async expire(key: string, seconds: number) {
+    try { return await rawRedis.expire(key, seconds); }
+    catch (e) { 
+      console.error(`[Redis Error] EXPIRE ${key}:`, e); 
+      return 0; 
+    }
   }
 } as any;

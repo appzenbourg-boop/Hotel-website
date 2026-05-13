@@ -4,8 +4,8 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import {
     Plus, ChevronDown, ChevronRight, Building2, UserCircle, Users,
-    Mail, MapPin, Sparkles, CheckCircle2, Zap, Star, Crown, Lock,
-    Phone, Edit2, Save, X, Loader2
+    Mail, MapPin, Sparkles, CheckCircle2, Zap, Star, Crown, Lock, Clock,
+    Phone, Edit2, Save, X, Loader2, DollarSign, ShieldAlert, Send, RefreshCw
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -30,6 +30,9 @@ interface PropertyData {
     description?: string; owners: Owner[]; staff: StaffMember[]
     plan: string; features: string[]
     planExpiresAt?: string | null
+    customQuoteStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'PAID' | null
+    customQuoteAmount?: number | null
+    customQuoteAllowsTrial?: boolean
 }
 
 const PLAN_META: Record<string, { icon: React.ElementType; color: string; bg: string; border: string; label: string }> = {
@@ -64,6 +67,12 @@ export default function PropertiesPage() {
         name: '', email: '', phone: '', address: '', description: '', latitude: '', longitude: '',
         trialPeriod: true, upiId: ''
     })
+    
+    // Quoting states
+    const [quoteAmounts, setQuoteAmounts] = useState<Record<string, string>>({})
+    const [sendEmails, setSendEmails] = useState<Record<string, boolean>>({})
+    const [quoteAllowsTrial, setQuoteAllowsTrial] = useState<Record<string, boolean>>({})
+    const [quotingProperty, setQuotingProperty] = useState<string | null>(null)
 
     const { data: properties = [], mutate, isValidating: loading } = useSWR<PropertyData[]>(
         '/api/admin/properties/hierarchy', fetcher,
@@ -134,6 +143,40 @@ export default function PropertiesPage() {
         } catch { toast.error('Connection error') }
     }
 
+    const handleAssignQuote = async (propertyId: string) => {
+        const amountStr = quoteAmounts[propertyId]
+        const amount = parseFloat(amountStr || '0')
+        if (!amount || amount <= 0) {
+            return toast.error('Please specify a valid annual enterprise quote amount.')
+        }
+
+        setQuotingProperty(propertyId)
+        try {
+            const res = await fetch('/api/admin/properties/quote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    propertyId,
+                    quoteAmount: amount,
+                    shouldSendEmail: sendEmails[propertyId] ?? true,
+                    allowsTrial: quoteAllowsTrial[propertyId] ?? true
+                })
+            })
+
+            if (res.ok) {
+                toast.success('Enterprise Quote successfully applied and approved!')
+                mutate()
+            } else {
+                const d = await res.json()
+                toast.error(d.error || 'Failed to approve quote')
+            }
+        } catch {
+            toast.error('Failed to communicate with the quotation module.')
+        } finally {
+            setQuotingProperty(null)
+        }
+    }
+
     if (loading && properties.length === 0) return (
         <div className="space-y-4 animate-pulse">
             <div className="flex justify-between items-center">
@@ -191,6 +234,21 @@ export default function PropertiesPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
+                                    {property.customQuoteStatus === 'PENDING' && (
+                                        <span className="animate-pulse flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400">
+                                            <ShieldAlert className="w-3 h-3" /> Pending Quote
+                                        </span>
+                                    )}
+                                    {property.customQuoteStatus === 'APPROVED' && (
+                                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400">
+                                            <Clock className="w-3 h-3" /> Quote Unpaid
+                                        </span>
+                                    )}
+                                    {property.customQuoteStatus === 'PAID' && (
+                                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                                            <CheckCircle2 className="w-3 h-3" /> Quote Paid
+                                        </span>
+                                    )}
                                     {/* Plan badge */}
                                     <span className={cn('flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border', planMeta.bg, planMeta.color, planMeta.border)}>
                                         <PlanIcon className="w-3 h-3" />{planMeta.label}
@@ -273,6 +331,157 @@ export default function PropertiesPage() {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Enterprise Pricing Quotation Workflow */}
+                                    {plan === 'ENTERPRISE' && (
+                                        <div className="border-t border-border pt-6 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-2">
+                                                        <Crown className="w-3.5 h-3.5" /> Enterprise Quotation Desk
+                                                    </h4>
+                                                    <p className="text-xs text-text-tertiary mt-0.5">
+                                                        Configure and approve custom contract rates for high-scale workspaces.
+                                                    </p>
+                                                </div>
+                                                {property.customQuoteStatus && (
+                                                    <span className={cn(
+                                                        'text-[10px] font-bold px-2.5 py-1 rounded-full border tracking-wide',
+                                                        (property.customQuoteStatus === 'PENDING' || property.customQuoteStatus === 'NONE') && 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                                                        property.customQuoteStatus === 'APPROVED' && 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                                        property.customQuoteStatus === 'PAID' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                    )}>
+                                                        Status: {property.customQuoteStatus === 'NONE' ? 'PENDING' : property.customQuoteStatus}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-purple-500/5 via-transparent to-transparent border border-purple-500/10 p-5 rounded-2xl space-y-5">
+                                                {/* Real User Telemetry Intake Details */}
+                                                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col gap-2">
+                                                    <p className="text-[10px] font-extrabold text-purple-400/80 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                                                        <Sparkles className="w-3 h-3" /> Client Onboarding Profile Scale
+                                                    </p>
+                                                    <p className="text-sm font-medium text-white/90 leading-relaxed">
+                                                        {property.description || "📋 Custom Enterprise License Request · Awaiting detailed inventory mapping."}
+                                                    </p>
+                                                </div>
+
+                                                {/* Scenario 1: Fully Paid */}
+                                                {property.customQuoteStatus === 'PAID' && (
+                                                    <div className="flex items-center gap-3 text-sm text-emerald-400">
+                                                        <CheckCircle2 className="w-5 h-5 shrink-0" />
+                                                        <div>
+                                                            <p className="font-semibold">Enterprise Lifecycle Settled</p>
+                                                            <p className="text-xs text-text-secondary mt-0.5">
+                                                                The contract has been funded at <span className="text-white font-bold">₹{(property.customQuoteAmount || 0).toLocaleString('en-IN')}/year</span>. Fully functional dashboard unlocked.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Scenario 2: Pending Assignment */}
+                                                {(!property.customQuoteStatus || property.customQuoteStatus === 'PENDING' || property.customQuoteStatus === 'NONE') && (
+                                                    <div className="space-y-4 border-t border-white/[0.05] pt-4">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                                            <div className="space-y-1.5">
+                                                                <label className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Set Annual Price (INR)</label>
+                                                                <div className="relative">
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary font-semibold">₹</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="e.g. 249999"
+                                                                        className="w-full bg-surface border border-border focus:border-purple-500 rounded-xl pl-8 pr-4 py-2 text-sm text-white focus:outline-none placeholder:text-text-tertiary transition-colors"
+                                                                        value={quoteAmounts[property.id] || ''}
+                                                                        onChange={e => setQuoteAmounts({ ...quoteAmounts, [property.id]: e.target.value })}
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex flex-col gap-2 md:pb-1.5">
+                                                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={quoteAllowsTrial[property.id] ?? true}
+                                                                        onChange={e => setQuoteAllowsTrial({ ...quoteAllowsTrial, [property.id]: e.target.checked })}
+                                                                        className="w-4 h-4 rounded border-border bg-surface accent-purple-500"
+                                                                    />
+                                                                    <span className="text-xs text-purple-300 font-bold flex items-center gap-1">
+                                                                        <Sparkles className="w-3 h-3 text-purple-400" /> Allow 14-Day Free Trial (UPI Mandate Setup)
+                                                                    </span>
+                                                                </label>
+                                                                
+                                                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={sendEmails[property.id] ?? true}
+                                                                        onChange={e => setSendEmails({ ...sendEmails, [property.id]: e.target.checked })}
+                                                                        className="w-4 h-4 rounded border-border bg-surface accent-purple-500"
+                                                                    />
+                                                                    <span className="text-xs text-text-secondary flex items-center gap-1">
+                                                                        <Send className="w-3 h-3" /> Dispatch confirmation email to owners
+                                                                    </span>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between border-t border-purple-500/5 pt-4 mt-2">
+                                                            <p className="text-[11px] text-text-tertiary max-w-md">
+                                                                Approving this quotation will instantly unblock the client&apos;s enterprise trap, prompting them with a secure Razorpay portal mapped to this customized billing scale.
+                                                            </p>
+                                                            <Button
+                                                                onClick={() => handleAssignQuote(property.id)}
+                                                                loading={quotingProperty === property.id}
+                                                                className="bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 gap-2 border-0"
+                                                            >
+                                                                <Crown className="w-4 h-4" /> Approve & Release Quote
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Scenario 3: Approved, Awaiting Checkout */}
+                                                {property.customQuoteStatus === 'APPROVED' && (
+                                                    <div className="space-y-4">
+                                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs text-text-secondary flex items-center gap-1">
+                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" /> Approved Quote Active (Awaiting Payment)
+                                                                </p>
+                                                                <p className="text-2xl font-extrabold text-white mt-1 tracking-tight">
+                                                                    ₹{(property.customQuoteAmount || 0).toLocaleString('en-IN')}<span className="text-sm text-text-tertiary font-normal">/year</span>
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="relative w-40">
+                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xs font-semibold">₹</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        placeholder="Revise quote..."
+                                                                        className="w-full bg-surface border border-border focus:border-purple-500 rounded-xl pl-6 pr-3 py-2 text-xs text-white focus:outline-none transition-colors"
+                                                                        value={quoteAmounts[property.id] || ''}
+                                                                        onChange={e => setQuoteAmounts({ ...quoteAmounts, [property.id]: e.target.value })}
+                                                                    />
+                                                                </div>
+                                                                <Button
+                                                                    onClick={() => handleAssignQuote(property.id)}
+                                                                    loading={quotingProperty === property.id}
+                                                                    variant="secondary"
+                                                                    className="text-xs h-[34px] gap-1.5"
+                                                                >
+                                                                    <RefreshCw className="w-3 h-3" /> Update Quote & Re-notify
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-[11px] text-text-secondary flex items-center gap-2 mt-2">
+                                                            <Mail className="w-3.5 h-3.5 text-blue-400" />
+                                                            <span>The client is currently presented with this quote at their gateway. Next update will trigger an automated email recalculation.</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Subscription Plan */}
                                     <div className="border-t border-border pt-6">

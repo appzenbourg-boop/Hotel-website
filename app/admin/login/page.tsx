@@ -174,7 +174,7 @@ export default function AdminLoginPage() {
           <div className="mt-6 text-center">
             <p className="text-sm text-text-secondary">
               New to Zenbourg?{' '}
-              <Link href="/admin/register" className="text-primary hover:text-primary-hover font-medium">
+              <Link href="/?register=true" className="text-primary hover:text-primary-hover font-medium">
                 Create Hotel Account
               </Link>
             </p>

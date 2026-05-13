@@ -13,7 +13,7 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/common/Avatar'
 import { cn, formatCurrency } from '@/lib/utils'
 import {
-  LogIn, LogOut, BedDouble, Plus, Bell, Search, Send, MoreHorizontal, MessageSquare, Sparkles, BarChart3, IndianRupee
+  LogIn, LogOut, BedDouble, Plus, Bell, Search, Send, MoreHorizontal, MessageSquare, Sparkles, BarChart3, IndianRupee, Crown, Building2
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -158,6 +158,38 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      
+      {/* Super Admin Context Warning/Shortcut Widget */}
+      {session?.user?.role === 'SUPER_ADMIN' && (
+        <div className="bg-gradient-to-r from-[#4A9EFF]/10 to-purple-500/10 border border-[#4A9EFF]/20 shadow-xl shadow-[#4A9EFF]/5 rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#4A9EFF]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#4A9EFF] to-purple-500 flex items-center justify-center text-white shadow-lg">
+              <Crown className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-extrabold text-white">Super Admin Workspace Activated</h3>
+              <p className="text-sm text-text-secondary mt-1 leading-relaxed max-w-2xl">
+                You are currently viewing the <span className="text-[#4A9EFF] font-bold">Global Network Context</span>. Operations, rooms, and analytics for specific hotels will appear here once you select a hotel using the **Property Switcher** in the top navigation bar.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full md:w-auto">
+            <button 
+              onClick={() => router.push('/admin/properties')}
+              className="w-full md:w-auto px-5 py-2.5 bg-white text-black hover:bg-gray-100 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
+            >
+              <Building2 className="w-4 h-4" /> Manage & Quote Properties
+            </button>
+            <button 
+              onClick={() => router.push('/admin/subscription-plans')}
+              className="w-full md:w-auto px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md active:scale-95"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" /> Plan Designer
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ===== 4 KPI CARDS ===== */}
       <div data-tour="stats-grid" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">

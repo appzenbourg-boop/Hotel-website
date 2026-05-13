@@ -145,6 +145,10 @@ model Property {
   planExpiresAt      DateTime?
   isTrialActive      Boolean          @default(false)
   isAutopayActive    Boolean          @default(false)
+  customQuoteAmount  Float?
+  customQuoteStatus  String?          @default("NONE") // NONE, PENDING, APPROVED, PAID
+  customQuoteAllowsTrial Boolean          @default(false)
+
 
   latitude    Float?
   longitude   Float?
@@ -1062,8 +1066,8 @@ enum SubscriptionPlan {
 model SupportTicket {
   id String @id @default(auto()) @map("_id") @db.ObjectId
 
-  guestId String @db.ObjectId
-  guest   Guest  @relation(fields: [guestId], references: [id])
+  guestId String? @db.ObjectId
+  guest   Guest?  @relation(fields: [guestId], references: [id])
 
   propertyId String?   @db.ObjectId
   property   Property? @relation("PropertyToSupportTicket", fields: [propertyId], references: [id])

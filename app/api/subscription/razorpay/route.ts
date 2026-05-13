@@ -26,21 +26,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Plan is required' }, { status: 400 })
         }
 
-        const price = trialPeriod ? 2 : PLAN_PRICES[plan]
-        if (price === undefined) {
-            return NextResponse.json({ error: 'Invalid plan selected' }, { status: 400 })
-        }
-
-        // ENTERPRISE is free / custom — no payment needed
-        if (price === 0 && !trialPeriod) {
-            return NextResponse.json({ error: 'Enterprise plan requires manual setup. Contact us.' }, { status: 400 })
-        }
-
-        // Auth: either a valid session OR a just-registered userId+propertyId pair
+        // 1. Authorization: resolve propertyId first (either from body or active session)
         let targetPropertyId = propertyId
 
         if (!targetPropertyId) {
-            // Try session-based auth
             const authResult = await requireAuth(req, ['HOTEL_ADMIN', 'SUPER_ADMIN'])
             if (authResult instanceof NextResponse) return authResult
             targetPropertyId = authResult.user.propertyId
@@ -50,7 +39,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Property ID required' }, { status: 400 })
         }
 
-        // If userId provided (registration flow), verify the user owns this property
+        // 2. Authenticate ownership / existence
         if (userId) {
             const property = await prisma.property.findUnique({
                 where: { id: targetPropertyId },
@@ -60,15 +49,49 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
             }
         } else {
-            // Session flow — verify property exists
             const property = await prisma.property.findUnique({ where: { id: targetPropertyId } })
             if (!property) {
                 return NextResponse.json({ error: 'Property not found' }, { status: 404 })
             }
         }
 
+        // 3. Dynamically calculate pricing
+        let activePrice = 0
+
+        if (trialPeriod) {
+            activePrice = 2 // Standard verification fee for UPI Autopay Mandates
+        } else if (plan === 'ENTERPRISE') {
+            // Custom Enterprise pricing desk resolution
+            const prop = await prisma.property.findUnique({
+                where: { id: targetPropertyId },
+                select: { customQuoteAmount: true, customQuoteStatus: true }
+            })
+            
+            if (!prop?.customQuoteAmount) {
+                return NextResponse.json({ 
+                    error: 'No active custom pricing amount found. Your workspace requires manual pricing approval from the Super Admin.' 
+                }, { status: 400 })
+            }
+            if (prop.customQuoteStatus !== 'APPROVED') {
+                return NextResponse.json({ 
+                    error: 'Your bespoke enterprise quotation is still awaiting Super Admin authorization.' 
+                }, { status: 400 })
+            }
+            activePrice = prop.customQuoteAmount
+        } else {
+            // Standard plan resolution
+            const standardPrice = PLAN_PRICES[plan]
+            if (standardPrice === undefined) {
+                return NextResponse.json({ error: 'Invalid subscription plan selected' }, { status: 400 })
+            }
+            if (standardPrice === 0) {
+                return NextResponse.json({ error: 'Standard plan cannot be initialized with zero fee.' }, { status: 400 })
+            }
+            activePrice = standardPrice
+        }
+
         const order = await razorpay.orders.create({
-            amount: price * 100, // paise
+            amount: Math.round(activePrice * 100), // paise
             currency: 'INR',
             receipt: `sub_${targetPropertyId.slice(-10)}_${Date.now()}`,
             notes: { propertyId: targetPropertyId, plan, type: 'SUBSCRIPTION_UPGRADE' }

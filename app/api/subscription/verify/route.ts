@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
                 planExpiresAt: expiresAt,
                 isTrialActive: trialPeriod ? true : false,
                 isAutopayActive: trialPeriod ? true : false,
+                customQuoteStatus: plan === 'ENTERPRISE' ? 'PAID' : 'NONE',
             } as any
         })
 
