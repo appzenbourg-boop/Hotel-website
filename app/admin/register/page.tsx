@@ -43,7 +43,7 @@ export default function AdminRegisterPage() {
             color: 'text-slate-400',
             bg: 'bg-slate-500/10',
             border: 'border-slate-500/20',
-            features: ['Core PMS & Reservations', 'Digital Check-in', 'Up to 30 rooms']
+            features: ['Core PMS & Reservations', 'Front Desk Terminal', 'Digital Check-in & Check-out', 'Up to 30 rooms']
         },
         {
             id: 'STARTER',
@@ -53,7 +53,7 @@ export default function AdminRegisterPage() {
             color: 'text-blue-400',
             bg: 'bg-blue-500/10',
             border: 'border-blue-500/20',
-            features: ['Everything in Base', 'Staff App & Management', 'Marketing Tools', 'Up to 75 rooms']
+            features: ['Everything in Base', 'Staff app, housekeeping & maintenance dispatch', 'Marketing tools & loyalty module', 'Up to 75 rooms']
         },
         {
             id: 'STANDARD',
@@ -63,7 +63,7 @@ export default function AdminRegisterPage() {
             color: 'text-amber-400',
             bg: 'bg-amber-500/10',
             border: 'border-amber-500/20',
-            features: ['Everything in Starter', 'Advanced Analytics', 'F&B & Spa Integration', 'Up to 150 rooms']
+            features: ['Everything in Starter', 'IoT room controls & advanced analytics', 'F&B and spa integration, upsell engine', 'Multi-language Guest Portal', 'Up to 150 rooms']
         },
         {
             id: 'ENTERPRISE',
@@ -73,7 +73,7 @@ export default function AdminRegisterPage() {
             color: 'text-purple-400',
             bg: 'bg-purple-500/10',
             border: 'border-purple-500/20',
-            features: ['Everything in Standard', 'Multi-property Admin', 'Unlimited rooms', 'Dedicated Support']
+            features: ['Everything in Standard', 'Multi-property super admin & custom integrations', 'Dedicated success manager', 'White-label Guest Portal', 'SLA-backed uptime, unlimited rooms', 'Custom pricing']
         },
     ]
 

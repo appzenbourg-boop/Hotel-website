@@ -39,67 +39,65 @@ const PLANS = [
   {
     id: 'base',
     name: 'Base',
-    tagline: 'Essential operational layer for independent boutique hotels.',
-    priceMonthly: 499,
-    priceAnnual: 449,
-    discountLabel: '10% off for 3 months',
+    tagline: 'For independent properties getting started.',
+    priceMonthly: 9999,
+    priceAnnual: 8999,
+    discountLabel: 'Save 10% on Annual',
     cta: 'Start a trial',
     accentColor: 'from-blue-500 to-cyan-400',
     features: [
-      'Up to 30 active rooms',
-      'Core Property Management Hub',
-      'Digital Guest self check-in portal',
-      'Basic real-time bookings tracking',
-      'Role-based staff permissions presets'
+      'Core PMS, Front Desk & Reservations',
+      'Digital Guest Check-in & Check-out',
+      'Room Status & Housekeeping Pipeline',
+      'Limit of 30 Active Rooms'
     ]
   },
   {
     id: 'starter',
     name: 'Starter',
-    tagline: 'Elevate guest experience with rich mobile app-like controls.',
-    priceMonthly: 1499,
-    priceAnnual: 1349,
+    tagline: 'Designed for growth-stage hotels and boutique resorts.',
+    priceMonthly: 15999,
+    priceAnnual: 14399,
     cta: 'Start a trial',
     accentColor: 'from-indigo-500 to-purple-500',
     features: [
-      'Up to 100 active rooms',
-      'Integrated Guest Web App Platform',
-      'Real-time staff service request pipeline',
-      'Loyalty Referral engine automation',
-      'Standard Razorpay platform support'
+      'Complete Employee Mobile App',
+      'Housekeeping & Maintenance Dispatch',
+      'Growth Marketing & Loyalty Module',
+      'Limit of 75 Active Rooms'
     ]
   },
   {
     id: 'standard',
     name: 'Standard',
-    tagline: 'Complete command center for high-yield hospitality groups.',
-    priceMonthly: 3499,
-    priceAnnual: 3149,
+    tagline: 'Perfect for full-service hotels seeking maximum performance.',
+    priceMonthly: 29999,
+    priceAnnual: 26999,
     discountLabel: 'Best Value',
     cta: 'Start a trial',
     accentColor: 'from-blue-600 via-indigo-500 to-teal-400',
     features: [
-      'Unlimited rooms & staff accounts',
-      'Unified Guest Wallet & Cashbacks Engine',
-      'Dynamic Shift Scheduling & Leave Management',
-      'Custom property Razorpay API override',
-      'Predictive Yield & ADR analytics dashboard'
+      'Smart IoT Room Hardware Controls',
+      'Predictive Analytics & Advanced Reporting',
+      'F&B Point of Sale & Spa Integrations',
+      'Multi-language Guest Portal',
+      'Limit of 150 Active Rooms'
     ]
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    tagline: 'Bespoke secure deployments for global resort networks.',
-    priceMonthly: 'Let\'s Talk',
-    priceAnnual: 'Let\'s Talk',
+    tagline: 'Tailored for multi-property groups and luxury brands.',
+    priceMonthly: 'Custom pricing',
+    priceAnnual: 'Custom pricing',
     cta: 'Contact sales',
     accentColor: 'from-emerald-500 to-teal-400',
     features: [
-      'Multi-property Single Sign-On (SSO)',
-      'Hardware System Node Monitoring',
-      'Dedicated secure isolated infrastructure',
-      '24/7 VIP Architectural SLA support',
-      'Fully White-labeled Guest mobile experience'
+      'Multi-property Super Admin Center',
+      'Custom Integrations & API Access',
+      'White-label Guest Applications',
+      'Dedicated Success Manager & VIP Support',
+      'SLA-backed Uptime & Unlimited Rooms'
     ]
   }
 ]
@@ -803,7 +801,7 @@ export default function LandingPage() {
               href="/admin/login"
               className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-full hover:bg-white hover:text-black hover:border-white transition-all duration-500"
             >
-              Admin Login
+              Login
             </Link>
           </div>
 
@@ -1273,7 +1271,7 @@ export default function LandingPage() {
               onClick={() => setMobileMenuOpen(false)}
               className="w-full py-5 bg-[#4A9EFF] text-white text-center rounded-2xl text-xs font-bold uppercase tracking-[0.3em] shadow-xl"
             >
-              Admin Login
+              Login
             </Link>
           </motion.div>
         )}
