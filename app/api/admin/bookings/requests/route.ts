@@ -117,33 +117,58 @@ export async function PATCH(request: NextRequest) {
 
         const existing = await prisma.bookingRequest.findUnique({
             where: { id: requestId },
-            include: { booking: true }
+            include: { 
+                booking: {
+                    include: { guest: true }
+                } 
+            }
         })
 
         if (!existing) return notFound('Booking Request')
         if (existing.status !== 'PENDING') return badRequest('Request is already processed')
+
+        // Resolve the actual GUEST'S User account using their registered phone
+        let guestUserId = existing.requestedById; // Fallback to the creator staff ID
+        try {
+            if (existing.booking?.guest?.phone) {
+                const guestUser = await prisma.user.findFirst({
+                    where: { phone: existing.booking.guest.phone },
+                    select: { id: true }
+                });
+                if (guestUser) {
+                    guestUserId = guestUser.id;
+                }
+            }
+        } catch (err) {
+            console.error('[BookingApproval] Guest user lookup error:', err);
+        }
 
         if (action === 'APPROVE') {
             const details = existing.details as any
             
             // Execute the change in a transaction
             await prisma.$transaction(async (tx) => {
+                const bookingData = existing.booking as any;
+                const isFinalAmountSet = bookingData?.finalAmount !== null && bookingData?.finalAmount !== undefined;
+
                 if (existing.type === 'UPGRADE') {
-                    // Update booking room and total amount
+                    // Update booking room and total/final amounts
                     await tx.booking.update({
                         where: { id: existing.bookingId },
                         data: {
                             roomId: details.newRoomId,
-                            totalAmount: { increment: details.extraCharge || 0 }
+                            totalAmount: { increment: details.extraCharge || 0 },
+                            finalAmount: isFinalAmountSet ? { increment: details.extraCharge || 0 } : undefined
                         }
                     })
                 } else if (existing.type === 'EXTENSION') {
-                    // Update booking check-out and total amount
+                    // Update booking check-out and total/final amounts
                     await tx.booking.update({
                         where: { id: existing.bookingId },
                         data: {
                             checkOut: new Date(details.newCheckOut),
-                            totalAmount: { increment: details.extraCharge || 0 }
+                            totalAmount: { increment: details.extraCharge || 0 },
+                            finalAmount: isFinalAmountSet ? { increment: details.extraCharge || 0 } : undefined
                         }
                     })
                 }
@@ -156,10 +181,10 @@ export async function PATCH(request: NextRequest) {
                     }
                 })
 
-                // 📱 Notify the Requesting Guest that it was APPROVED!
+                // 📱 Notify the ACTUAL Guest in-app that it was APPROVED!
                 await tx.inAppNotification.create({
                     data: {
-                        userId: existing.requestedById,
+                        userId: guestUserId,
                         title: `✅ ${existing.type} Approved!`,
                         description: `Your request for ${existing.type === 'UPGRADE' ? 'a room upgrade' : 'an extended stay'} has been accepted and finalized.`,
                         type: 'INFO',
@@ -179,10 +204,10 @@ export async function PATCH(request: NextRequest) {
                 }
             })
 
-            // 📱 Notify the Requesting Guest that it was REJECTED!
+            // 📱 Notify the ACTUAL Guest in-app that it was REJECTED!
             await prisma.inAppNotification.create({
                 data: {
-                    userId: existing.requestedById,
+                    userId: guestUserId,
                     title: `❌ ${existing.type} Declined`,
                     description: `Your request for ${existing.type.toLowerCase()} could not be approved at this time. Reason: ${rejectionReason || 'Standard policy'}`,
                     type: 'ALERT',
