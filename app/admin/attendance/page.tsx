@@ -65,10 +65,14 @@ export default function AttendancePage() {
 
                 // Update stats
                 const present = data.attendances.filter((a: any) => a.status === 'PRESENT').length
+                const late = data.attendances.filter((a: any) => a.status === 'LATE').length
+                const absent = data.attendances.filter((a: any) => a.status === 'ABSENT').length
+                const onLeave = data.attendances.filter((a: any) => a.status === 'ON_LEAVE').length
+                
                 setStats({
                     present,
-                    late: 0, // Placeholder for late logic
-                    onLeave: 0, // Placeholder
+                    late,
+                    onLeave: absent + onLeave,
                     total: data.attendances.length
                 })
 

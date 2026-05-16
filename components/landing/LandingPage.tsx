@@ -5,13 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Building2, 
-  ShieldCheck, 
-  ChevronRight, 
-  Download, 
-  LayoutDashboard, 
-  Users, 
+import {
+  Building2,
+  ShieldCheck,
+  ChevronRight,
+  Download,
+  LayoutDashboard,
+  Users,
   Menu,
   X,
   ArrowRight,
@@ -151,13 +151,13 @@ const FEATURES_SLIDER = [
 /* ───────────────────────────────────────────────────────────────
    GOOGLE WORKSPACE STYLE SIGNUP WIZARD
 ─────────────────────────────────────────────────────────────── */
-function RegistrationWizard({ 
-  selectedPlanId, 
-  onClose, 
-  isAnnual, 
-  userCount 
-}: { 
-  selectedPlanId: string, 
+function RegistrationWizard({
+  selectedPlanId,
+  onClose,
+  isAnnual,
+  userCount
+}: {
+  selectedPlanId: string,
   onClose: () => void,
   isAnnual: boolean,
   userCount: number
@@ -166,7 +166,7 @@ function RegistrationWizard({
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  
+
   const [formData, setFormData] = useState({
     businessName: '',
     roomsRange: '1-30',
@@ -183,11 +183,11 @@ function RegistrationWizard({
 
   const planUpper = selectedPlanId.toUpperCase() as 'BASE' | 'STARTER' | 'STANDARD' | 'ENTERPRISE'
   const planData = PLANS.find(p => p.id === selectedPlanId)
-  
-  const calculatedPrice = planData 
-    ? (typeof planData.priceMonthly === 'string' 
-        ? planData.priceMonthly 
-        : ((isAnnual ? planData.priceAnnual : planData.priceMonthly) as number) * userCount)
+
+  const calculatedPrice = planData
+    ? (typeof planData.priceMonthly === 'string'
+      ? planData.priceMonthly
+      : ((isAnnual ? planData.priceAnnual : planData.priceMonthly) as number) * userCount)
     : 0
 
   const formatPrice = (val: number | string) => {
@@ -210,7 +210,7 @@ function RegistrationWizard({
     setLoading(true)
     try {
       // Format custom intake description for Super Admin review
-      const telemetryDescription = planUpper === 'ENTERPRISE' 
+      const telemetryDescription = planUpper === 'ENTERPRISE'
         ? `🏢 Enterprise Intake: ${userCount} Hotel(s) · 🔑 Scale: ${formData.roomsRange} rooms/property · 📍 Region: ${formData.region}`
         : `🏢 Boutique Property · 🔑 Scale: ${formData.roomsRange} rooms/property · 📍 Region: ${formData.region}`
 
@@ -244,8 +244,8 @@ function RegistrationWizard({
       // 2. Razorpay Autopay flow
       if (planUpper !== 'BASE' && planUpper !== 'ENTERPRISE') {
         try {
-          const statusText = formData.trialPeriod 
-            ? 'Initializing UPI Autopay verification mandate...' 
+          const statusText = formData.trialPeriod
+            ? 'Initializing UPI Autopay verification mandate...'
             : `Initializing payment for ${planUpper} plan...`
           toast.loading(statusText)
 
@@ -272,8 +272,8 @@ function RegistrationWizard({
                 amount: order.amount,
                 currency: order.currency,
                 name: 'Zenbourg OS',
-                description: formData.trialPeriod 
-                  ? '14-Day Trial Autopay Mandate Setup' 
+                description: formData.trialPeriod
+                  ? '14-Day Trial Autopay Mandate Setup'
                   : `${planUpper} Subscription`,
                 order_id: order.orderId,
                 handler: async (response: any) => {
@@ -332,7 +332,7 @@ function RegistrationWizard({
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -340,14 +340,14 @@ function RegistrationWizard({
     >
       {/* Left: Form Container */}
       <div className="w-full lg:w-1/2 flex flex-col relative bg-[#05070A] overflow-y-auto custom-scrollbar h-full">
-        
+
         {/* Top Floating Nav */}
         <div className="h-16 shrink-0 px-8 flex items-center justify-between border-b border-white/[0.03]">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-full bg-[#4A9EFF] shadow-[0_0_10px_rgba(74,158,255,0.5)]" />
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white">Zenbourg OS Setup</span>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-white/5 text-white/50 hover:text-white transition-colors"
           >
@@ -357,7 +357,7 @@ function RegistrationWizard({
 
         {/* Far Left Floating Back Button (Google style) */}
         {step > 1 && (
-          <button 
+          <button
             onClick={prevStep}
             className="absolute left-4 top-24 lg:left-8 w-10 h-10 rounded-full bg-white/[0.02] border border-white/10 flex items-center justify-center hover:bg-white/5 transition-colors group text-white"
           >
@@ -366,7 +366,7 @@ function RegistrationWizard({
         )}
 
         <div className="flex-grow flex flex-col justify-center max-w-md mx-auto w-full px-6 py-12">
-          
+
           {/* Page Headings based on Step */}
           <AnimatePresence mode="wait">
             <motion.div
@@ -387,10 +387,10 @@ function RegistrationWizard({
                   <div className="space-y-4 pt-4">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Hotel / Business Name</label>
-                      <input 
+                      <input
                         type="text"
                         value={formData.businessName}
-                        onChange={e => setFormData({...formData, businessName: e.target.value})}
+                        onChange={e => setFormData({ ...formData, businessName: e.target.value })}
                         placeholder="e.g. Grand Heights Resort"
                         className="w-full px-4 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-white outline-none focus:border-[#4A9EFF] focus:ring-1 focus:ring-[#4A9EFF] transition-all placeholder:text-white/20"
                       />
@@ -403,13 +403,13 @@ function RegistrationWizard({
                         { val: '30-100', label: '2-5 Branch Portfolio (30-100 Rooms)' },
                         { val: '100+', label: 'Enterprise Group (100+ Rooms)' }
                       ].map(opt => (
-                        <label 
+                        <label
                           key={opt.val}
-                          onClick={() => setFormData({...formData, roomsRange: opt.val})}
+                          onClick={() => setFormData({ ...formData, roomsRange: opt.val })}
                           className={cn(
                             "flex items-center gap-3 p-3.5 border rounded-xl cursor-pointer transition-all",
-                            formData.roomsRange === opt.val 
-                              ? "bg-[#4A9EFF]/5 border-[#4A9EFF] text-white" 
+                            formData.roomsRange === opt.val
+                              ? "bg-[#4A9EFF]/5 border-[#4A9EFF] text-white"
                               : "bg-white/[0.01] border-white/[0.05] hover:bg-white/[0.03] text-white/60"
                           )}
                         >
@@ -426,9 +426,9 @@ function RegistrationWizard({
 
                     <div className="space-y-1 pt-2">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Region</label>
-                      <select 
+                      <select
                         value={formData.region}
-                        onChange={e => setFormData({...formData, region: e.target.value})}
+                        onChange={e => setFormData({ ...formData, region: e.target.value })}
                         className="w-full px-4 py-3 bg-[#0A0D14] border border-white/10 rounded-xl text-white outline-none appearance-none cursor-pointer focus:border-[#4A9EFF] transition-all"
                       >
                         <option value="India">India (₹ INR Checkout)</option>
@@ -449,10 +449,10 @@ function RegistrationWizard({
                   <div className="space-y-4 pt-4">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Full Name</label>
-                      <input 
+                      <input
                         type="text"
                         value={formData.name}
-                        onChange={e => setFormData({...formData, name: e.target.value})}
+                        onChange={e => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Administrative Lead"
                         className="w-full px-4 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-white outline-none focus:border-[#4A9EFF] transition-all placeholder:text-white/20"
                       />
@@ -460,10 +460,10 @@ function RegistrationWizard({
 
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Phone Number</label>
-                      <input 
+                      <input
                         type="tel"
                         value={formData.phone}
-                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="+91 "
                         className="w-full px-4 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-white outline-none focus:border-[#4A9EFF] transition-all placeholder:text-white/20"
                       />
@@ -471,10 +471,10 @@ function RegistrationWizard({
 
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Email Address</label>
-                      <input 
+                      <input
                         type="email"
                         value={formData.email}
-                        onChange={e => setFormData({...formData, email: e.target.value})}
+                        onChange={e => setFormData({ ...formData, email: e.target.value })}
                         placeholder="exec@hotel.com"
                         className="w-full px-4 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-white outline-none focus:border-[#4A9EFF] transition-all placeholder:text-white/20"
                       />
@@ -483,14 +483,14 @@ function RegistrationWizard({
                     <div className="space-y-1 relative">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Password</label>
                       <div className="relative">
-                        <input 
+                        <input
                           type={showPassword ? 'text' : 'password'}
                           value={formData.password}
-                          onChange={e => setFormData({...formData, password: e.target.value})}
+                          onChange={e => setFormData({ ...formData, password: e.target.value })}
                           placeholder="At least 8 characters"
                           className="w-full px-4 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-white outline-none focus:border-[#4A9EFF] transition-all placeholder:text-white/20 pr-12"
                         />
-                        <button 
+                        <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"
@@ -513,10 +513,10 @@ function RegistrationWizard({
                   <div className="space-y-4 pt-4">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Street Address</label>
-                      <input 
+                      <input
                         type="text"
                         value={formData.hotelAddress}
-                        onChange={e => setFormData({...formData, hotelAddress: e.target.value})}
+                        onChange={e => setFormData({ ...formData, hotelAddress: e.target.value })}
                         placeholder="City center, Street line..."
                         className="w-full px-4 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-white outline-none focus:border-[#4A9EFF] transition-all placeholder:text-white/20"
                       />
@@ -525,10 +525,10 @@ function RegistrationWizard({
                     <div className="space-y-1 pt-2">
                       <label className="text-xs font-semibold text-white/50 uppercase tracking-wider block mb-1">Point on Map</label>
                       <div className="h-48 rounded-xl border border-white/10 overflow-hidden relative shadow-inner">
-                        <MapPicker 
+                        <MapPicker
                           latitude={formData.latitude}
                           longitude={formData.longitude}
-                          onChange={(lat, lng) => setFormData({...formData, latitude: lat, longitude: lng})}
+                          onChange={(lat, lng) => setFormData({ ...formData, latitude: lat, longitude: lng })}
                         />
                       </div>
                       <span className="text-[10px] text-white/30">Drag pin to calibrate coordinate synchronization.</span>
@@ -564,10 +564,10 @@ function RegistrationWizard({
                     {planUpper !== 'BASE' && planUpper !== 'ENTERPRISE' && (
                       <div className="bg-[#0a1625] border border-[#4A9EFF]/20 rounded-2xl p-4 space-y-4 shadow-[0_10px_30px_rgba(74,158,255,0.05)]">
                         <label className="flex items-start gap-3.5 cursor-pointer">
-                          <input 
+                          <input
                             type="checkbox"
                             checked={formData.trialPeriod}
-                            onChange={e => setFormData({...formData, trialPeriod: e.target.checked})}
+                            onChange={e => setFormData({ ...formData, trialPeriod: e.target.checked })}
                             className="w-4 h-4 text-[#4A9EFF] border-white/20 bg-transparent rounded focus:ring-[#4A9EFF] mt-0.5"
                           />
                           <div>
@@ -586,14 +586,14 @@ function RegistrationWizard({
           {/* CTA Buttons Bar */}
           <div className="pt-8 w-full flex justify-end">
             {step < 4 ? (
-              <button 
+              <button
                 onClick={nextStep}
                 className="w-32 py-3.5 bg-[#4A9EFF] hover:bg-[#4A9EFF]/90 text-white rounded-full text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(74,158,255,0.3)] transition-all duration-300"
               >
                 Next <ArrowRight size={14} />
               </button>
             ) : (
-              <button 
+              <button
                 disabled={loading}
                 onClick={handleFinalSubmit}
                 className="w-full py-4 bg-[#4A9EFF] hover:bg-[#4A9EFF]/90 disabled:bg-white/10 disabled:text-white/20 text-white rounded-full text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(74,158,255,0.4)] transition-all duration-300"
@@ -607,7 +607,7 @@ function RegistrationWizard({
         {/* Footer dots */}
         <div className="h-16 border-t border-white/[0.03] shrink-0 flex justify-center items-center gap-2">
           {[1, 2, 3, 4].map(i => (
-            <div 
+            <div
               key={i}
               className={cn(
                 "h-1.5 rounded-full transition-all duration-300",
@@ -622,12 +622,12 @@ function RegistrationWizard({
       {/* Right: Google-like Graphic Illustration & Info */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center bg-gradient-to-br from-[#0B1018] to-[#05080C] p-16 relative overflow-hidden border-l border-white/[0.03]">
         <div className="absolute top-0 left-0 w-[300px] h-[300px] bg-[#4A9EFF]/5 blur-[120px] -z-10" />
-        
+
         <div className="max-w-md flex flex-col items-center text-center mx-auto">
-          
+
           {/* Visual Card Deck using framer motion to represent Getting Ready */}
           <div className="relative w-64 h-48 mb-12 flex items-center justify-center scale-105">
-            <motion.div 
+            <motion.div
               animate={{ rotate: -6, y: -10 }}
               className="absolute w-44 h-28 bg-white/[0.01] border border-white/10 rounded-2xl backdrop-blur-md shadow-2xl flex flex-col p-4 items-start justify-between text-left"
             >
@@ -640,7 +640,7 @@ function RegistrationWizard({
               <div className="h-1.5 w-12 bg-white/5 rounded" />
             </motion.div>
 
-            <motion.div 
+            <motion.div
               animate={{ rotate: 4, y: 10, x: 10 }}
               className="absolute w-44 h-28 bg-gradient-to-br from-[#4A9EFF]/20 to-transparent border border-[#4A9EFF]/40 rounded-2xl backdrop-blur-md shadow-[0_20px_50px_-10px_rgba(74,158,255,0.1)] flex flex-col p-4 justify-between text-left"
             >
@@ -659,9 +659,9 @@ function RegistrationWizard({
 
           <div className="w-full text-left border-t border-white/5 pt-8 space-y-6">
             <p className="text-[10px] font-bold text-[#4A9EFF] uppercase tracking-[0.25em]">INCLUDED CAPABILITIES</p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-              
+
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-white">
                   <LayoutDashboard size={14} className="text-[#4A9EFF]" />
@@ -730,7 +730,7 @@ export default function LandingPage() {
   const [isAnnual, setIsAnnual] = useState(true)
   const [userCount, setUserCount] = useState(1)
   const [activeSlide, setActiveSlide] = useState(0)
-  
+
   // Interactive selection & registration wizard state
   const [selectedPlanId, setSelectedPlanId] = useState('standard')
   const [isRegistering, setIsRegistering] = useState(false)
@@ -770,26 +770,26 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-[#D1D1D1] selection:bg-[#4A9EFF]/30 font-sans tracking-tight overflow-x-hidden relative">
-      
+
       {/* Header Navigation */}
       <nav className={cn(
         "fixed top-0 inset-x-0 z-[100] transition-all duration-700",
-        scrolled 
-          ? "bg-[#050505]/90 backdrop-blur-3xl border-b border-white/[0.03] py-4" 
+        scrolled
+          ? "bg-[#050505]/90 backdrop-blur-3xl border-b border-white/[0.03] py-4"
           : "bg-transparent py-8"
       )}>
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center group-hover:border-[#4A9EFF] transition-colors duration-500 shadow-[0_0_15px_rgba(74,158,255,0.1)]">
-               <div className="w-1.5 h-1.5 bg-white rounded-full group-hover:bg-[#4A9EFF] transition-all duration-500" />
+              <div className="w-1.5 h-1.5 bg-white rounded-full group-hover:bg-[#4A9EFF] transition-all duration-500" />
             </div>
             <span className="text-xl font-bold tracking-[0.2em] uppercase text-white font-outfit">Zenbourg</span>
           </Link>
 
           <div className="hidden lg:flex items-center gap-10 text-[10px] font-bold uppercase tracking-[0.3em] text-white/40">
             {['Ecosystem', 'Pricing', 'Comparison', 'Security'].map((item) => (
-              <a 
-                key={item} 
+              <a
+                key={item}
                 href={`#${item.toLowerCase()}`}
                 className="hover:text-white transition-colors duration-300"
               >
@@ -797,7 +797,7 @@ export default function LandingPage() {
               </a>
             ))}
             <div className="h-4 w-px bg-white/10" />
-            <Link 
+            <Link
               href="/admin/login"
               className="px-6 py-2.5 bg-white/5 border border-white/10 rounded-full hover:bg-white hover:text-black hover:border-white transition-all duration-500"
             >
@@ -805,7 +805,7 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <button 
+          <button
             className="lg:hidden p-2 text-white/60 hover:text-white"
             onClick={() => setMobileMenuOpen(true)}
           >
@@ -815,13 +815,13 @@ export default function LandingPage() {
       </nav>
 
       <main className="pt-28 pb-20">
-        
+
         {/* Upper Summary Slider */}
         <section id="ecosystem" className="max-w-[1400px] mx-auto px-6 md:px-12 pt-12 pb-20 text-center relative overflow-hidden">
           <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-[#4A9EFF]/5 blur-[120px] -z-10 pointer-events-none" />
-          
+
           <AnimatePresence mode="wait">
-            <motion.div 
+            <motion.div
               key={activeSlide}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -836,20 +836,20 @@ export default function LandingPage() {
                 </span>
                 <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#4A9EFF]">{FEATURES_SLIDER[activeSlide].badge}</span>
               </div>
-              
+
               <h2 className="text-4xl md:text-6xl font-semibold tracking-tighter text-white mb-6 leading-[1.1] font-outfit max-w-3xl">
                 {FEATURES_SLIDER[activeSlide].title}
               </h2>
-              
+
               <p className="text-base md:text-lg text-white/50 font-light max-w-2xl leading-relaxed mb-10">
                 {FEATURES_SLIDER[activeSlide].subtitle}
               </p>
 
-              <button 
+              <button
                 onClick={() => {
                   setSelectedPlanId('standard')
                   setIsRegistering(true)
-                }} 
+                }}
                 className="group inline-flex items-center gap-3 px-8 py-4 bg-[#4A9EFF] text-white font-semibold rounded-full shadow-[0_10px_25px_-5px_rgba(74,158,255,0.4)] hover:shadow-[0_15px_35px_-5px_rgba(74,158,255,0.6)] hover:scale-[1.01] transition-all duration-500 text-sm cursor-pointer"
               >
                 Get Started Instantly
@@ -880,14 +880,14 @@ export default function LandingPage() {
               <label className="text-xs font-bold tracking-wider text-white/50 uppercase">Properties / Hubs</label>
             </div>
             <div className="flex items-center border border-white/10 rounded-xl bg-black overflow-hidden shadow-inner">
-              <button 
+              <button
                 onClick={() => setUserCount(Math.max(1, userCount - 1))}
                 className="px-4 py-2 hover:bg-white/5 text-white border-r border-white/10 transition-colors"
               >
                 -
               </button>
               <span className="px-6 py-2 text-sm font-bold text-white font-mono">{userCount}</span>
-              <button 
+              <button
                 onClick={() => setUserCount(Math.min(20, userCount + 1))}
                 className="px-4 py-2 hover:bg-white/5 text-white border-l border-white/10 transition-colors"
               >
@@ -901,14 +901,14 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-4 bg-white/[0.01] border border-white/[0.05] py-2.5 px-5 rounded-2xl">
             <span className={cn("text-xs font-bold tracking-widest transition-colors", !isAnnual ? "text-white" : "text-white/20")}>MONTHLY</span>
-            <button 
+            <button
               onClick={() => setIsAnnual(!isAnnual)}
               className={cn(
                 "w-14 h-7 rounded-full p-1 flex relative items-center cursor-pointer transition-all duration-300 border",
                 isAnnual ? "bg-[#4A9EFF] border-[#4A9EFF]" : "bg-white/5 border-white/15"
               )}
             >
-              <motion.div 
+              <motion.div
                 className="w-4.5 h-4.5 bg-white rounded-full shadow-md"
                 layout
                 animate={{ x: isAnnual ? 28 : 0 }}
@@ -926,7 +926,7 @@ export default function LandingPage() {
         <section className="max-w-[1400px] mx-auto px-6 md:px-12 mb-24 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 items-stretch">
           {PLANS.map((plan, idx) => {
             const isSelected = selectedPlanId === plan.id
-            
+
             return (
               <motion.div
                 key={plan.id}
@@ -937,17 +937,17 @@ export default function LandingPage() {
                 onClick={() => setSelectedPlanId(plan.id)}
                 className={cn(
                   "relative rounded-[2.5rem] flex flex-col bg-white/[0.02] backdrop-blur-md cursor-pointer transition-all duration-500 group overflow-hidden",
-                  isSelected 
-                    ? "ring-2 ring-[#4A9EFF] scale-[1.03] bg-white/[0.05] shadow-[0_30px_60px_-10px_rgba(74,158,255,0.15)]" 
+                  isSelected
+                    ? "ring-2 ring-[#4A9EFF] scale-[1.03] bg-white/[0.05] shadow-[0_30px_60px_-10px_rgba(74,158,255,0.15)]"
                     : "border border-white/[0.06] hover:border-white/20 hover:bg-white/[0.04] scale-100 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.5)]"
                 )}
               >
                 {/* Top accent gradient banner */}
                 <div className={cn(
-                  "absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r opacity-80 group-hover:opacity-100 transition-opacity", 
+                  "absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r opacity-80 group-hover:opacity-100 transition-opacity",
                   plan.accentColor
                 )} />
-                
+
                 <div className="p-8 flex flex-col flex-grow">
                   <div className="mb-6 flex items-start justify-between">
                     <div>
@@ -974,7 +974,7 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedPlanId(plan.id)
@@ -982,8 +982,8 @@ export default function LandingPage() {
                     }}
                     className={cn(
                       "w-full py-4 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] flex items-center justify-center transition-all duration-500 mb-10 border cursor-pointer",
-                      isSelected 
-                        ? "bg-[#4A9EFF] text-white border-[#4A9EFF] hover:bg-[#4A9EFF]/90 shadow-[0_10px_30px_rgba(74,158,255,0.3)]" 
+                      isSelected
+                        ? "bg-[#4A9EFF] text-white border-[#4A9EFF] hover:bg-[#4A9EFF]/90 shadow-[0_10px_30px_rgba(74,158,255,0.3)]"
                         : "bg-transparent text-white border-white/10 hover:bg-white hover:text-black hover:border-white"
                     )}
                   >
@@ -992,14 +992,14 @@ export default function LandingPage() {
 
                   <div className="space-y-6 pt-8 border-t border-white/[0.05]">
                     <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white/30 flex items-center gap-2">
-                      {plan.id === 'base' ? 'CORE BUNDLE INCLUDES:' : `ALL ${PLANS[idx-1]?.name.toUpperCase()}, PLUS:`}
+                      {plan.id === 'base' ? 'CORE BUNDLE INCLUDES:' : `ALL ${PLANS[idx - 1]?.name.toUpperCase()}, PLUS:`}
                     </div>
-                    
+
                     <ul className="space-y-5">
                       {plan.features.map((feat, fIdx) => (
                         <li key={fIdx} className="flex items-start gap-4 text-sm text-white/50 font-light leading-snug">
                           <div className={cn(
-                            "mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors", 
+                            "mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors",
                             isSelected ? "border-[#4A9EFF]/30 text-[#4A9EFF]" : "border-white/20"
                           )}>
                             <Check size={10} />
@@ -1026,7 +1026,7 @@ export default function LandingPage() {
         {/* Full Feature Table Component - Flattened Full Detail Format */}
         <section className="max-w-[1400px] mx-auto px-6 md:px-12 overflow-x-auto pb-20">
           <div className="min-w-[900px] border border-white/[0.05] rounded-3xl bg-[#0A0A0A]/80 overflow-hidden backdrop-blur-3xl shadow-2xl">
-            
+
             {/* Table Header sticky top */}
             <div className="grid grid-cols-12 bg-black/50 border-b border-white/[0.05] p-6 sticky top-0 z-30 backdrop-blur-2xl items-center">
               <div className="col-span-4 text-sm font-bold uppercase tracking-[0.3em] text-white/30">All System Features</div>
@@ -1041,8 +1041,8 @@ export default function LandingPage() {
             {/* Flattened single-level detail row iterating */}
             <div className="divide-y divide-white/[0.04]">
               {FEATURES_MATRIX.map((feat, rIdx) => (
-                <div 
-                  key={rIdx} 
+                <div
+                  key={rIdx}
                   className="grid grid-cols-12 p-6 items-center hover:bg-white/[0.03] transition-colors group"
                 >
                   <div className="col-span-4 flex items-center gap-2.5 pr-4">
@@ -1100,25 +1100,25 @@ export default function LandingPage() {
         {/* Bottom CTA Banner - Modern Premium Grid Format */}
         <section className="max-w-[1400px] mx-auto px-6 md:px-12 mb-24">
           <div className="relative rounded-[3.5rem] overflow-hidden border border-white/[0.05] bg-gradient-to-r from-[#0A0C10] to-[#05070A] p-10 md:p-20 group shadow-3xl">
-            
+
             {/* Atmospheric Background Glows */}
             <div className="absolute -top-24 -right-24 w-[350px] h-[350px] bg-[#4A9EFF]/10 blur-[120px] -z-10 group-hover:bg-[#4A9EFF]/15 transition-colors duration-1000" />
             <div className="absolute -bottom-24 -left-24 w-[350px] h-[350px] bg-indigo-500/5 blur-[120px] -z-10" />
-            
+
             <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              
+
               {/* Left Column: Content */}
               <div className="lg:col-span-7 space-y-6 text-left">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#4A9EFF]/10 border border-[#4A9EFF]/20">
                   <Sparkles size={10} className="text-[#4A9EFF]" />
                   <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#4A9EFF]">Zero Setup Fees</span>
                 </div>
-                
+
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05] font-outfit text-white">
                   Take Complete Control <br />
                   <span className="bg-gradient-to-r from-white via-white to-white/40 bg-clip-text text-transparent">Of Your Hotel Today</span>
                 </h2>
-                
+
                 <p className="text-sm md:text-base text-white/40 font-normal max-w-xl leading-relaxed">
                   Instantly streamline frontdesk workflows, coordinate housekeeping squads, and empower guests with our unified platform.
                 </p>
@@ -1127,14 +1127,14 @@ export default function LandingPage() {
               {/* Right Column: Floating Action Card */}
               <div className="lg:col-span-5">
                 <div className="bg-white/[0.02] border border-white/[0.06] backdrop-blur-xl rounded-3xl p-8 flex flex-col items-center space-y-6 shadow-2xl relative group-hover:border-white/10 transition-colors">
-                  
+
                   <div className="text-center">
                     <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">Ready to onboard?</p>
                     <p className="text-2xl font-bold text-white font-outfit mt-1">Get Started Instantly</p>
                   </div>
 
                   <div className="w-full flex flex-col gap-3">
-                    <button 
+                    <button
                       onClick={() => {
                         setSelectedPlanId('standard')
                         setIsRegistering(true)
@@ -1143,8 +1143,8 @@ export default function LandingPage() {
                     >
                       Start Free Trial
                     </button>
-                    
-                    <Link 
+
+                    <Link
                       href="/staff/login"
                       className="w-full py-4 bg-white/[0.03] border border-white/10 rounded-2xl text-xs font-bold uppercase tracking-[0.25em] text-white text-center hover:bg-white/[0.06] hover:border-white/20 transition-all"
                     >
@@ -1174,13 +1174,13 @@ export default function LandingPage() {
       <footer className="py-24 bg-[#030303] border-t border-white/[0.03]">
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-16 mb-20">
-            
+
             <div className="xl:col-span-2 space-y-8">
               <div className="flex items-center gap-3">
-                 <div className="w-6 h-6 rounded-full border-2 border-[#4A9EFF] flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 bg-[#4A9EFF] rounded-full" />
-                 </div>
-                 <span className="text-xl font-extrabold tracking-[0.1em] text-white uppercase font-outfit">Zenbourg</span>
+                <div className="w-6 h-6 rounded-full border-2 border-[#4A9EFF] flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 bg-[#4A9EFF] rounded-full" />
+                </div>
+                <span className="text-xl font-extrabold tracking-[0.1em] text-white uppercase font-outfit">Zenbourg</span>
               </div>
               <p className="text-sm text-white/30 font-light leading-relaxed max-w-xs">
                 &quot;Delivering operational clarity and administration high-definition precision for hospitality portfolios.&quot;
@@ -1226,12 +1226,12 @@ export default function LandingPage() {
           </div>
 
           <div className="pt-10 border-t border-white/[0.03] flex flex-col md:flex-row justify-between items-center gap-6">
-             <div className="text-[9px] font-bold tracking-[0.4em] text-white/10 uppercase">&copy; 2026 ZENBOURG CORE. ALL RIGHTS RESERVED.</div>
-             <div className="flex gap-8 text-[9px] font-bold tracking-[0.3em] text-white/20 uppercase">
-                <Link href="#" className="hover:text-[#4A9EFF]">Vault</Link>
-                <Link href="#" className="hover:text-[#4A9EFF]">Identity</Link>
-                <Link href="#" className="hover:text-[#4A9EFF]">Trust</Link>
-             </div>
+            <div className="text-[9px] font-bold tracking-[0.4em] text-white/10 uppercase">&copy; 2026 ZENBOURG CORE. ALL RIGHTS RESERVED.</div>
+            <div className="flex gap-8 text-[9px] font-bold tracking-[0.3em] text-white/20 uppercase">
+              <Link href="#" className="hover:text-[#4A9EFF]">Vault</Link>
+              <Link href="#" className="hover:text-[#4A9EFF]">Identity</Link>
+              <Link href="#" className="hover:text-[#4A9EFF]">Trust</Link>
+            </div>
           </div>
         </div>
       </footer>
@@ -1239,34 +1239,34 @@ export default function LandingPage() {
       {/* Mobile Navigation Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed inset-0 z-[200] bg-[#050505] p-10 flex flex-col items-start justify-center gap-12"
           >
-            <button 
+            <button
               className="absolute top-8 right-8 p-2 text-white/40 hover:text-white"
               onClick={() => setMobileMenuOpen(false)}
             >
               <X size={30} />
             </button>
-            
+
             <div className="flex flex-col gap-8">
-               {['Ecosystem', 'Pricing', 'Comparison', 'Security'].map((link) => (
-                 <a 
-                   key={link} 
-                   href={`#${link.toLowerCase()}`}
-                   onClick={() => setMobileMenuOpen(false)}
-                   className="text-4xl font-bold text-white uppercase tracking-tight font-outfit"
-                 >
-                   {link}
-                 </a>
-               ))}
+              {['Ecosystem', 'Pricing', 'Comparison', 'Security'].map((link) => (
+                <a
+                  key={link}
+                  href={`#${link.toLowerCase()}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-4xl font-bold text-white uppercase tracking-tight font-outfit"
+                >
+                  {link}
+                </a>
+              ))}
             </div>
-            
-            <Link 
+
+            <Link
               href="/admin/login"
               onClick={() => setMobileMenuOpen(false)}
               className="w-full py-5 bg-[#4A9EFF] text-white text-center rounded-2xl text-xs font-bold uppercase tracking-[0.3em] shadow-xl"
@@ -1280,9 +1280,9 @@ export default function LandingPage() {
       {/* Google Workspace Style Registration Wizard Overlay */}
       <AnimatePresence>
         {isRegistering && (
-          <RegistrationWizard 
-            selectedPlanId={selectedPlanId} 
-            onClose={() => setIsRegistering(false)} 
+          <RegistrationWizard
+            selectedPlanId={selectedPlanId}
+            onClose={() => setIsRegistering(false)}
             isAnnual={isAnnual}
             userCount={userCount}
           />

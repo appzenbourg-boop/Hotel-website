@@ -168,7 +168,8 @@ export default function ContentManagementPage() {
                 setIsModalOpen(false)
                 fetchData()
             } else {
-                toast.error('Failed to save')
+                const data = await res.json().catch(() => ({}))
+                toast.error(data.error || 'Failed to save')
             }
         } catch { toast.error('Error saving') }
         finally { setSaving(false) }

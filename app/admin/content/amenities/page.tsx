@@ -227,8 +227,8 @@ export default function AmenitiesPage() {
         setEditingId(null)
         setFormData({ ...EMPTY_FORM })
       } else {
-        const err = await res.json().catch(() => ({}))
-        toast.error(err?.error ?? 'Failed to save')
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to save amenity')
       }
     } catch { toast.error('Connection error') } finally { setSaving(false) }
   }
@@ -290,7 +290,8 @@ export default function AmenitiesPage() {
         setShowServiceForm(false)
         setEditingId(null)
       } else {
-        toast.error('Failed to save')
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to save service')
       }
     } catch { toast.error('Connection error') } finally { setSaving(false) }
   }

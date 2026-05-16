@@ -52,6 +52,15 @@ export async function POST(req: Request) {
 
         if (!propertyId) return new NextResponse('Missing propertyId', { status: 400 })
 
+        // Check for duplicates
+        const existing = await prisma.dashboardService.findFirst({
+            where: { propertyId, name: { equals: name, mode: 'insensitive' } }
+        })
+
+        if (existing) {
+            return NextResponse.json({ error: 'A service with this name already exists' }, { status: 400 })
+        }
+
         const service = await prisma.dashboardService.create({
             data: { 
                 name, 

@@ -53,6 +53,15 @@ export async function POST(req: Request) {
             })
             return NextResponse.json(updated)
         } else {
+            // Check for duplicates
+            const existing = await prisma.amenity.findFirst({
+                where: { propertyId, name: { equals: name, mode: 'insensitive' } }
+            })
+
+            if (existing) {
+                return NextResponse.json({ error: 'An amenity with this name already exists' }, { status: 400 })
+            }
+
             const amenity = await prisma.amenity.create({
                 data: { name, icon, description, category, propertyId, isActive: isActive ?? true, options }
             })
