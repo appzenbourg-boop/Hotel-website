@@ -3179,36 +3179,32 @@ export default function LandingPage() {
             <div className="space-y-4 text-left">
               <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Product</h5>
               <div className="flex flex-col gap-3 text-xs text-white/35 font-light">
-                <a href="#ecosystem" className="hover:text-white transition-colors">Dashboard</a>
-                <a href="#features" className="hover:text-white transition-colors">Interactive Calendar</a>
-                <a href="#features" className="hover:text-white transition-colors">Room Settings</a>
+                <a href="#ecosystem" className="hover:text-white transition-colors">Ecosystem</a>
+                <a href="#features" className="hover:text-white transition-colors">Features</a>
               </div>
             </div>
 
             <div className="space-y-4 text-left">
-              <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Features</h5>
+              <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Company</h5>
               <div className="flex flex-col gap-3 text-xs text-white/35 font-light">
-                <a href="#features" className="hover:text-white transition-colors">Housekeeping Dispatch</a>
-                <a href="#features" className="hover:text-white transition-colors">Staff Shifts & Rota</a>
-                <a href="#features" className="hover:text-white transition-colors">Gourmet Food Menu</a>
+                <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+                <a href="#testimonials" className="hover:text-white transition-colors">Stories</a>
               </div>
             </div>
 
             <div className="space-y-4 text-left">
-              <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Pricing</h5>
+              <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Portals</h5>
               <div className="flex flex-col gap-3 text-xs text-white/35 font-light">
-                <a href="#comparison" className="hover:text-white transition-colors">Compare Plans</a>
-                <a href="#pricing" className="hover:text-white transition-colors">Start Free Trial</a>
-                <a href="#testimonials" className="hover:text-white transition-colors">Client Stories</a>
+                <Link href="/admin/login" className="hover:text-white transition-colors">Admin</Link>
+                <Link href="/staff/login" className="hover:text-white transition-colors">Staff</Link>
               </div>
             </div>
 
             <div className="space-y-4 text-left">
-              <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Support & Legal</h5>
+              <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Legal</h5>
               <div className="flex flex-col gap-3 text-xs text-white/35 font-light">
-                <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-                <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-                <a href="#" className="hover:text-white transition-colors">Contact Support</a>
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
               </div>
             </div>
           </div>
