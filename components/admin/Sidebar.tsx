@@ -209,13 +209,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Brand */}
       <div className="px-5 pt-5 pb-4 border-b border-white/[0.06] flex items-center justify-between">
         <div className="flex flex-col">
-          <div className="flex items-center gap-2.5 mb-0.5">
-            <div className="w-6 h-6 bg-[#4A9EFF] rounded-md flex items-center justify-center shrink-0">
-              <Building2 className="w-3.5 h-3.5 text-white" />
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="w-7 h-7 rounded-full overflow-hidden border border-amber-400/20 bg-white/10 p-0.5 shadow-sm flex items-center justify-center">
+              <img src="/images/image copy.png" alt="StayIn Logo" className="w-full h-full object-contain rounded-full" />
             </div>
-            <span className="text-[15px] font-bold text-white tracking-tight">Zenbourg</span>
+            <span className="text-[15px] font-bold text-white tracking-tight">StayIn</span>
           </div>
-          <p className="text-[10px] text-gray-500 font-medium ml-[34px]">Hotel Operations</p>
+          <p className="text-[10px] text-gray-500 font-medium ml-[36px]">Hotel Operations</p>
         </div>
         <button
           onClick={onClose}

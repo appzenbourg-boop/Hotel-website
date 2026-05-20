@@ -159,117 +159,7 @@ export default function PayrollPage() {
         }
     }
 
-    const handleRazorpayPayment = async (payroll: any) => {
-        try {
-            // 0. Guard: Check Razorpay SDK is loaded in window
-            if (typeof (window as any).Razorpay === 'undefined') {
-                toast.error('Razorpay SDK not loaded', {
-                    description: 'Please refresh the page and try again. Ensure you have internet access.',
-                })
-                return
-            }
 
-            // 0b. Guard: Razorpay rejects zero-amount orders
-            const netSalary = payroll.netSalary || 0
-            if (netSalary <= 0) {
-                toast.error('Cannot process payment', {
-                    description: `Net salary is ₹0. Please run payroll calculation first (click "Run Payroll" for this month) to compute actual salary amounts.`,
-                    duration: 7000,
-                })
-                return
-            }
-
-            toast.loading('Creating payment order...')
-
-            // 1. Create Razorpay Order via backend
-            const orderRes = await fetch('/api/payroll/razorpay', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    payrollId: payroll.id
-                })
-            })
-
-            toast.dismiss()
-
-            if (!orderRes.ok) {
-                const errData = await orderRes.json().catch(() => ({}))
-                throw new Error(errData.error || `Order creation failed (${orderRes.status})`)
-            }
-
-            const order = await orderRes.json()
-
-            if (!order.orderId) {
-                throw new Error('Invalid order response from server')
-            }
-
-            // 2. Open Razorpay Checkout modal
-            const options = {
-                key: order.key,
-                amount: order.amount,
-                currency: order.currency || 'INR',
-                name: 'Zenbourg Group',
-                description: `Salary Payment — ${payroll.staff?.name || 'Employee'}`,
-                order_id: order.orderId,
-                handler: async function (response: any) {
-                    // 3. Payment successful — verify and mark as paid
-                    toast.loading('Verifying payment...')
-                    try {
-                        const verifyRes = await fetch('/api/payroll/razorpay/verify', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                ...response,
-                                payrollId: payroll.id
-                            })
-                        })
-
-                        const verifyResult = await verifyRes.json()
-                        toast.dismiss()
-
-                        if (verifyResult.success) {
-                            toast.success('Payment verified and recorded successfully!')
-                            fetchPayroll()
-                        } else {
-                            toast.error(verifyResult.error || 'Payment verification failed')
-                        }
-                    } catch (err) {
-                        toast.dismiss()
-                        toast.error('Error verifying payment')
-                    }
-                },
-                modal: {
-                    ondismiss: () => {
-                        toast.info('Payment cancelled')
-                    }
-                },
-                prefill: {
-                    name: payroll.staff?.name || '',
-                    email: payroll.staff?.email || '',
-                    contact: payroll.staff?.phone || ''
-                },
-                theme: { color: '#6366f1' }
-            }
-
-            const rzp = new (window as any).Razorpay(options)
-
-            // Handle payment failures from within Razorpay modal
-            rzp.on('payment.failed', function (response: any) {
-                toast.error('Payment failed', {
-                    description: response.error?.description || 'The payment was declined. Please try again.',
-                })
-            })
-
-            rzp.open()
-
-        } catch (error: any) {
-            toast.dismiss()
-            console.error('[RAZORPAY_PAYMENT_ERROR]', error)
-            toast.error('Payment initialization failed', {
-                description: error.message || 'Please check your connection and try again.',
-            })
-        }
-    }
 
     const handleExport = () => {
         if (filteredPayroll.length === 0) {
@@ -501,8 +391,8 @@ export default function PayrollPage() {
                             <div className="relative z-10">
                                 <div className="flex justify-between items-start mb-8">
                                     <div>
-                                        <h3 className="text-2xl font-bold text-text-primary">ZENBOURG</h3>
-                                        <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest">Grand Hotel & Resorts</p>
+                                        <h3 className="text-2xl font-bold text-text-primary">STAYIN</h3>
+                                        <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest">Luxury Suites & Residences</p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xs font-bold text-text-primary">Slip #{selectedPayroll.id.slice(-6).toUpperCase()}</p>
@@ -619,21 +509,14 @@ export default function PayrollPage() {
                             />
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex pt-2">
                             <Button
                                 onClick={() => handleMarkAsPaid(payingPayroll)}
-                                variant="secondary"
-                                className="flex-1 text-sm py-2 font-bold uppercase"
+                                variant="primary"
+                                disabled={!manualTxId.trim()}
+                                className="w-full text-sm py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed font-bold uppercase tracking-wider"
                             >
                                 Mark Manual Paid
-                            </Button>
-                            <Button
-                                onClick={() => handleRazorpayPayment(payingPayroll)}
-                                variant="primary"
-                                className="flex-1 text-sm py-2 bg-emerald-600 hover:bg-emerald-500 font-bold uppercase"
-                                leftIcon={<CreditCard className="w-4 h-4" />}
-                            >
-                                Pay via Razorpay
                             </Button>
                         </div>
                     </div>

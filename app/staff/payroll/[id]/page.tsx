@@ -50,7 +50,7 @@ export default function StaffSalarySlipPage() {
 
             const staffName = payroll.staff?.user?.name || 'Employee'
             const hotelName = (payroll.staff?.property?.name || 'Hotel').toUpperCase()
-            const slipId = `PAY-${payroll.id.substring(payroll.id.length - 6).toUpperCase()}`
+            const slipId = `SI-PAY-${payroll.id.substring(payroll.id.length - 6).toUpperCase()}`
 
             const indigo  = [99, 102, 241] as [number, number, number]
             const dark    = [15, 23, 42]   as [number, number, number]
@@ -127,7 +127,7 @@ export default function StaffSalarySlipPage() {
                     isPaidStatus ? emerald[2] : dark[2],
                 )
                 doc.setFont('helvetica', 'bold')
-                doc.text(value, 160, y2)
+                doc.text(value, 196, y2, { align: 'right' })
                 y2 += 6
             })
 
@@ -226,7 +226,7 @@ export default function StaffSalarySlipPage() {
 
     const staffName = payroll.staff?.user?.name || 'Employee'
     const hotelName = payroll.staff?.property?.name || 'Hotel'
-    const slipId = `PAY-${payroll.id.substring(payroll.id.length - 6).toUpperCase()}`
+    const slipId = `SI-PAY-${payroll.id.substring(payroll.id.length - 6).toUpperCase()}`
 
     return (
         <div className="min-h-screen bg-[#0d1117] text-gray-300 pb-20 font-sans p-4 md:p-8">

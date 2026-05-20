@@ -88,10 +88,54 @@ export async function POST(req: NextRequest) {
             }
         })
 
+        // Instantly recalculate and sync pending payroll record
+        await syncPayroll(staffId, month, parseInt(year))
+
         return NextResponse.json({ success: true, data: adjustment }, { status: 201 })
     } catch (error) {
         return serverError(error, 'STAFF_ADJUSTMENTS_POST')
     }
+}
+
+/**
+ * Syncs any additions or deletions with existing pending payroll records
+ */
+async function syncPayroll(staffId: string, month: string, year: number) {
+    const payroll = await prisma.payroll.findFirst({
+        where: {
+            staffId,
+            month,
+            year
+        }
+    })
+
+    if (!payroll || payroll.status !== 'PENDING') return
+
+    const adjustments = await prisma.staffFinancialAdjustment.findMany({
+        where: {
+            staffId,
+            month,
+            year
+        }
+    })
+
+    const incentives = adjustments.filter(a => a.type === 'INCENTIVE').reduce((s, a) => s + a.amount, 0)
+    const bonuses = adjustments.filter(a => a.type === 'BONUS').reduce((s, a) => s + a.amount, 0)
+    const allowances = adjustments.filter(a => a.type === 'ALLOWANCE').reduce((s, a) => s + a.amount, 0)
+    const deductions = adjustments.filter(a => a.type === 'DEDUCTION').reduce((s, a) => s + a.amount, 0)
+
+    const totalAdjustments = incentives + bonuses + allowances - deductions
+    const netSalary = payroll.baseSalary + payroll.overtimePay + totalAdjustments
+
+    await prisma.payroll.update({
+        where: { id: payroll.id },
+        data: {
+            incentives: incentives + allowances,
+            bonuses,
+            deductions,
+            netSalary
+        }
+    })
 }
 
 /**
@@ -107,9 +151,17 @@ export async function DELETE(req: NextRequest) {
         const id = searchParams.get('id')
         if (!id) return badRequest('ID required')
 
+        const existing = await prisma.staffFinancialAdjustment.findUnique({
+            where: { id }
+        })
+        if (!existing) return badRequest('Adjustment not found')
+
         await prisma.staffFinancialAdjustment.delete({
             where: { id }
         })
+
+        // Instantly recalculate and sync pending payroll record
+        await syncPayroll(existing.staffId, existing.month, existing.year)
 
         return NextResponse.json({ success: true, message: 'Adjustment deleted' })
     } catch (error) {

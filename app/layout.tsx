@@ -15,13 +15,13 @@ const cormorant = Cormorant_Garamond({
 })
 
 export const metadata: Metadata = {
-  title: 'Zenbourg - Hotel Management System',
+  title: 'StayIn - Hotel Management System',
   description: 'All-in-one hotel operations platform for admins and staff',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Zenbourg',
+    title: 'StayIn',
   },
   formatDetection: {
     telephone: false,

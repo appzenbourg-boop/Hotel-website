@@ -45,7 +45,11 @@ export default function SalarySlipPage() {
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
             const staffName = payroll.staff?.user?.name || payroll.staff?.name || 'Employee'
-            const slipId = `ZB-PAY-${payroll.id.substring(payroll.id.length - 6).toUpperCase()}`
+            const slipId = `SI-PAY-${payroll.id.substring(payroll.id.length - 6).toUpperCase()}`
+
+            const formatPDFCurrency = (amount: number) => {
+                return `Rs. ${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+            }
 
             // ── Colors ──
             const indigo = [99, 102, 241] as [number, number, number]
@@ -60,7 +64,7 @@ export default function SalarySlipPage() {
             doc.setFillColor(...indigo)
             doc.rect(0, 0, 210, 36, 'F')
 
-            const hotelName = (payroll.staff?.property?.name || 'ZENBOURG').toUpperCase()
+            const hotelName = (payroll.staff?.property?.name || 'STAYIN').toUpperCase()
             const hotelAddress = payroll.staff?.property?.address || 'Hotel Address'
 
             doc.setTextColor(...white)
@@ -135,7 +139,7 @@ export default function SalarySlipPage() {
                     payroll.status === 'PAID' && label === 'Payment Status' ? emerald[1] : slate900[1],
                     payroll.status === 'PAID' && label === 'Payment Status' ? emerald[2] : slate900[2])
                 doc.setFont('helvetica', 'bold')
-                doc.text(value, 155, y2)
+                doc.text(value, 196, y2, { align: 'right' })
                 y2 += 5
             })
 
@@ -183,7 +187,7 @@ export default function SalarySlipPage() {
                 }
                 doc.setFont('helvetica', 'bold')
                 doc.text(
-                    `${isBonus && Number(amount) > 0 ? '+' : ''}${formatCurrency(Number(amount))}`,
+                    `${isBonus && Number(amount) > 0 ? '+' : ''}${formatPDFCurrency(Number(amount))}`,
                     192, y + 6, { align: 'right' }
                 )
                 y += 9
@@ -198,7 +202,7 @@ export default function SalarySlipPage() {
             doc.text('Deductions (Taxes / Leaves)', 18, y + 6)
             doc.setTextColor(239, 68, 68)
             doc.setFont('helvetica', 'bold')
-            doc.text(`-${formatCurrency(payroll.deductions || 0)}`, 192, y + 6, { align: 'right' })
+            doc.text(`-${formatPDFCurrency(payroll.deductions || 0)}`, 192, y + 6, { align: 'right' })
             y += 9
 
             // Net Payable
@@ -209,7 +213,7 @@ export default function SalarySlipPage() {
             doc.setFont('helvetica', 'bold')
             doc.text('NET PAYABLE AMOUNT', 18, y + 9)
             doc.setFontSize(13)
-            doc.text(formatCurrency(payroll.netSalary), 192, y + 9, { align: 'right' })
+            doc.text(formatPDFCurrency(payroll.netSalary), 192, y + 9, { align: 'right' })
             y += 13
 
             // ── Footer ──
@@ -226,7 +230,7 @@ export default function SalarySlipPage() {
             doc.setFontSize(7)
             doc.setFont('helvetica', 'normal')
             doc.text('AUTHORIZED SIGNATURE', 14, y - 2)
-            doc.text('Zenbourg Grand HR Dept.', 18, y + 16)
+            doc.text('StayIn HR Department', 18, y + 16)
 
             // System note
             doc.setTextColor(...slate400)
@@ -281,13 +285,13 @@ export default function SalarySlipPage() {
                             <Building2 className="w-10 h-10" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">{payroll.staff?.property?.name || 'Zenbourg'}</h1>
+                            <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">{payroll.staff?.property?.name || 'StayIn'}</h1>
                             <p className="text-slate-500 font-medium">{payroll.staff?.property?.address || 'Employee Pay Slip'} • {payroll.month} {payroll.year}</p>
                         </div>
                     </div>
                     <div className="text-right">
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Receipt No.</p>
-                        <p className="text-xl font-mono font-bold text-slate-700">ZB-PAY-{payroll.id.substring(payroll.id.length - 6).toUpperCase()}</p>
+                        <p className="text-xl font-mono font-bold text-slate-700">SI-PAY-{payroll.id.substring(payroll.id.length - 6).toUpperCase()}</p>
                         {payroll.status === 'PAID' && (
                             <div className="flex items-center justify-end gap-1 mt-2 text-emerald-600">
                                 <CheckCircle className="w-4 h-4" />
@@ -391,7 +395,7 @@ export default function SalarySlipPage() {
                     <div className="space-y-1">
                         <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Employer Signature</p>
                         <div className="w-48 h-12 border-b-2 border-slate-200 bg-slate-50/50 rounded-t-lg" />
-                        <p className="text-xs font-bold text-slate-600">Zenbourg Grand HR Dept.</p>
+                        <p className="text-xs font-bold text-slate-600">StayIn HR Department</p>
                     </div>
                     <div className="text-right text-slate-400 space-y-1">
                         <p className="text-[10px] font-bold">This is a system-generated document.</p>

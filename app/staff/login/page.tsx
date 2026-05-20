@@ -27,7 +27,7 @@ export default function StaffLoginPage() {
             if (result?.error) {
                 toast.error(result.error === 'CredentialsSignin' ? 'Invalid credentials' : result.error)
             } else {
-                toast.success('Welcome to Zenbourg Operations')
+                toast.success('Welcome to StayIn Operations')
                 router.refresh()
                 setTimeout(() => {
                     router.push('/staff')
@@ -52,7 +52,7 @@ export default function StaffLoginPage() {
                     <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-blue-600/20 mb-6 group hover:rotate-6 transition-transform">
                         <ShieldCheck className="w-8 h-8 text-white" />
                     </div>
-                    <h1 className="text-3xl font-black text-white tracking-tighter ">ZENBOURG</h1>
+                    <h1 className="text-3xl font-black text-white tracking-tighter ">STAYIN</h1>
                     <div className="flex items-center justify-center gap-2 mt-2">
                         <div className="h-[1px] w-4 bg-blue-500/40"></div>
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-500 ">Staff Login</p>

@@ -318,7 +318,7 @@ export default function StaffPerksPage() {
                             required
                             options={[
                                 { value: '', label: 'Select Employee...' },
-                                ...staffList.map(s => ({ value: s.id, label: s.name }))
+                                ...staffList.map(s => ({ value: s.id, label: `${s.name} (${s.department})` }))
                             ]}
                         />
                         <div className="grid grid-cols-2 gap-4">
