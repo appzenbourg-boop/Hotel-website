@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
                 booking: {
                     include: {
                         guest: { select: { name: true } },
-                        room: { select: { roomNumber: true, type: true } }
+                        room: { select: { roomNumber: true, type: true, basePrice: true } }
                     }
                 },
                 requestedBy: { select: { name: true } }
@@ -96,7 +96,37 @@ export async function GET(request: NextRequest) {
             orderBy: { createdAt: 'desc' }
         })
 
-        return NextResponse.json({ success: true, data: requests })
+        // Enrich requests with calculated extraCharge if it's missing/zero
+        const enriched = await Promise.all(requests.map(async (req) => {
+            const details = req.details as any;
+            if ((details?.extraCharge || 0) > 0) return req;
+
+            // Recalculate
+            let calculatedCharge = 0;
+            const booking = req.booking as any;
+            const currentPrice = booking?.room?.basePrice || 0;
+
+            if (req.type === 'EXTENSION' && details?.newCheckOut && booking) {
+                const currentCheckOut = new Date(booking.checkOut);
+                const newCheckOut = new Date(details.newCheckOut);
+                const extraNights = Math.max(0, Math.ceil((newCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24)));
+                calculatedCharge = extraNights * currentPrice;
+            } else if (req.type === 'UPGRADE' && details?.newRoomId) {
+                const newRoom = await prisma.room.findUnique({ where: { id: details.newRoomId }, select: { basePrice: true } });
+                const priceDiff = Math.max(0, (newRoom?.basePrice || 0) - currentPrice);
+                const checkIn = new Date(booking.checkIn);
+                const checkOut = new Date(booking.checkOut);
+                const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+                calculatedCharge = priceDiff * nights;
+            }
+
+            return {
+                ...req,
+                details: { ...details, extraCharge: calculatedCharge, _calculated: true }
+            };
+        }))
+
+        return NextResponse.json({ success: true, data: enriched })
     } catch (error) {
         return serverError(error, 'BOOKING_REQUEST_LIST')
     }
@@ -119,7 +149,7 @@ export async function PATCH(request: NextRequest) {
             where: { id: requestId },
             include: { 
                 booking: {
-                    include: { guest: true }
+                    include: { guest: true, room: { select: { basePrice: true } } }
                 } 
             }
         })
@@ -145,30 +175,47 @@ export async function PATCH(request: NextRequest) {
 
         if (action === 'APPROVE') {
             const details = existing.details as any
+            const bookingData = existing.booking as any;
+            const currentRoomPrice = bookingData?.room?.basePrice || 0;
+
+            // Recalculate extraCharge if it was stored as 0 (legacy bug fix)
+            let extraCharge = details.extraCharge || 0;
+            if (extraCharge === 0) {
+                if (existing.type === 'EXTENSION' && details.newCheckOut) {
+                    const currentCheckOut = new Date(bookingData.checkOut);
+                    const newCheckOut = new Date(details.newCheckOut);
+                    const extraNights = Math.max(0, Math.ceil((newCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24)));
+                    extraCharge = extraNights * currentRoomPrice;
+                } else if (existing.type === 'UPGRADE' && details.newRoomId) {
+                    const newRoom = await prisma.room.findUnique({ where: { id: details.newRoomId }, select: { basePrice: true } });
+                    const priceDiff = Math.max(0, (newRoom?.basePrice || 0) - currentRoomPrice);
+                    const checkIn = new Date(bookingData.checkIn);
+                    const checkOut = new Date(bookingData.checkOut);
+                    const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+                    extraCharge = priceDiff * nights;
+                }
+            }
             
             // Execute the change in a transaction
             await prisma.$transaction(async (tx) => {
-                const bookingData = existing.booking as any;
                 const isFinalAmountSet = bookingData?.finalAmount !== null && bookingData?.finalAmount !== undefined;
 
                 if (existing.type === 'UPGRADE') {
-                    // Update booking room and total/final amounts
                     await tx.booking.update({
                         where: { id: existing.bookingId },
                         data: {
                             roomId: details.newRoomId,
-                            totalAmount: { increment: details.extraCharge || 0 },
-                            finalAmount: isFinalAmountSet ? { increment: details.extraCharge || 0 } : undefined
+                            totalAmount: { increment: extraCharge },
+                            finalAmount: isFinalAmountSet ? { increment: extraCharge } : undefined
                         }
                     })
                 } else if (existing.type === 'EXTENSION') {
-                    // Update booking check-out and total/final amounts
                     await tx.booking.update({
                         where: { id: existing.bookingId },
                         data: {
                             checkOut: new Date(details.newCheckOut),
-                            totalAmount: { increment: details.extraCharge || 0 },
-                            finalAmount: isFinalAmountSet ? { increment: details.extraCharge || 0 } : undefined
+                            totalAmount: { increment: extraCharge },
+                            finalAmount: isFinalAmountSet ? { increment: extraCharge } : undefined
                         }
                     })
                 }
