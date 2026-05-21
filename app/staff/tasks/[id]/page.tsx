@@ -58,6 +58,9 @@ export default function TaskDetailsPage() {
             if (res.ok) {
                 const data = await res.json()
                 setTask(data)
+                if (data.attachments && data.attachments.length > 0) {
+                    setAttachments(data.attachments)
+                }
             } else {
                 toast.error('Task not found')
                 router.push('/staff/tasks')
@@ -101,6 +104,7 @@ export default function TaskDetailsPage() {
                     description: 'Live photo uploaded and attached to report.'
                 })
             }
+            e.target.value = ''
         } catch (error) {
             console.error(error)
             toast.error('Failed to capture and upload photo')
@@ -215,7 +219,7 @@ export default function TaskDetailsPage() {
                               <span className="text-[10px] font-bold uppercase tracking-[0.2em] ">Zenbourg Hotel & Resort</span>
                             </div>
                         </div>
-                        <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40 rotate-12 group-hover:rotate-0 transition-all duration-500">
+                        <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40">
                             <Building2 className="w-8 h-8 text-black" />
                         </div>
                     </div>
@@ -287,63 +291,7 @@ export default function TaskDetailsPage() {
 
             {/* Communication & Team Messages */}
             <div className="bg-[#161b22] border border-white/[0.05] rounded-[40px] p-8 space-y-8 shadow-3xl">
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-600 shadow-xl shadow-blue-500/20 flex items-center justify-center border border-blue-400/20">
-                                <MessageSquare className="w-5 h-5 text-white" />
-                            </div>
-                            <span className="text-xs font-black text-white uppercase tracking-[0.2em] ">Internal Team Chat</span>
-                        </div>
-                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-                    </div>
-                    
-                    <div className="max-h-64 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
-                        {task.messages?.length === 0 ? (
-                            <div className="py-12 text-center opacity-20 flex flex-col items-center gap-3">
-                                <MessageSquare className="w-8 h-8 text-blue-500" />
-                                <p className="text-[10px] font-black uppercase tracking-widest">No team messages yet</p>
-                            </div>
-                        ) : (
-                            task.messages?.map((msg: any) => (
-                                <div key={msg.id} className={cn(
-                                    "p-5 rounded-[24px] text-[12px] font-semibold transition-all relative group",
-                                    msg.senderId === task.assignedTo?.userId 
-                                        ? "bg-blue-600/10 text-blue-100 border border-blue-500/20 ml-10 rounded-tr-none" 
-                                        : "bg-white/[0.02] text-gray-500 border border-white/[0.05] mr-10 rounded-tl-none"
-                                )}>
-                                    <p className="leading-relaxed">{msg.content}</p>
-                                    <div className="flex items-center gap-2 mt-3 opacity-40 group-hover:opacity-100 transition-opacity">
-                                        <span className="text-[8px] font-black uppercase tracking-widest">
-                                            {msg.senderId === task.assignedTo?.userId ? 'Staff Member' : 'Front Desk'}
-                                        </span>
-                                        <div className="w-1 h-1 rounded-full bg-gray-600"></div>
-                                        <span className="text-[8px] font-black uppercase tracking-widest">{formatDistanceToNow(new Date(msg.createdAt))} ago</span>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
 
-                    <div className="flex gap-3 bg-black/40 p-2 rounded-[24px] border border-white/[0.05] shadow-inner">
-                        <input
-                            id="chat-input"
-                            type="text"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Type a message..."
-                            className="flex-1 bg-transparent px-5 py-3 text-xs text-white outline-none font-bold placeholder:text-gray-700"
-                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                        />
-                        <button 
-                            onClick={handleSendMessage}
-                            disabled={sendingMessage || !message.trim()}
-                            className="w-12 h-12 bg-white text-blue-600 rounded-2xl flex items-center justify-center shadow-2xl transition-all active:scale-95 disabled:opacity-20"
-                        >
-                            {sendingMessage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-                        </button>
-                    </div>
-                </div>
 
                 {/* Final Completion Notes */}
                 <div className="space-y-4 pt-2">
@@ -368,7 +316,7 @@ export default function TaskDetailsPage() {
                     "w-full h-20 rounded-[35px] flex items-center justify-center gap-4 transition-all active:scale-[0.97] shadow-3xl group mb-8 border relative overflow-hidden",
                     completing 
                         ? "bg-gray-800 text-gray-700 border-white/5" 
-                        : "bg-white text-blue-600 shadow-blue-500/20 border-white hover:bg-blue-50"
+                        : "bg-[#161b22] text-blue-500 shadow-blue-500/10 border-white/[0.05] hover:border-blue-500/30"
                 )}
             >
                 {completing ? (

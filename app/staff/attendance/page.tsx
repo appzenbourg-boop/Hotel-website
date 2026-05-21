@@ -49,17 +49,23 @@ export default function AttendancePage() {
     }, [allRecords, filterMonth])
 
     // ── Stats (on filtered set) ───────────────────────────────────────────────
-    const stats = useMemo(() => ({
-        present: filtered.filter(a => a.status === 'PRESENT').length,
-        late:    filtered.filter(a => a.status === 'LATE').length,
-        absent:  filtered.filter(a => a.status === 'ABSENT').length,
-        totalHours: filtered.reduce((sum, a) => {
-            if (a.hours && a.hours !== '-') {
-                return sum + parseFloat(a.hours)
-            }
-            return sum
-        }, 0),
-    }), [filtered])
+    const stats = useMemo(() => {
+        const uniqueDays = (status: string) => {
+            return new Set(filtered.filter(a => a.status === status).map(a => format(new Date(a.date), 'yyyy-MM-dd'))).size;
+        };
+
+        return {
+            present: uniqueDays('PRESENT'),
+            late:    uniqueDays('LATE'),
+            absent:  uniqueDays('ABSENT'),
+            totalHours: filtered.reduce((sum, a) => {
+                if (a.hours && a.hours !== '-') {
+                    return sum + parseFloat(a.hours)
+                }
+                return sum
+            }, 0),
+        };
+    }, [filtered])
 
     // ── Chart: last 7 records (reversed = oldest first) ──────────────────────
     const chartData = useMemo(() => {

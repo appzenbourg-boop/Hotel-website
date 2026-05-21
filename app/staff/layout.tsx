@@ -11,7 +11,14 @@ import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import useSWR from 'swr'
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+    const res = await fetch(url)
+    if (!res.ok) {
+        if (res.status === 401) throw new Error('Unauthorized')
+        throw new Error(`Error: ${res.status}`)
+    }
+    return res.json()
+}
 
 const PWAInstall = dynamic(() => import('@/components/common/PWAInstall'), { ssr: false })
 
@@ -25,14 +32,20 @@ export default function StaffLayout({
 }) {
     const pathname = usePathname()
     const router = useRouter()
-    const { data: session } = useSession()
+    const { data: session, status } = useSession()
     const { isInstallable, installPwa } = usePwaInstall()
     const [isNavigating, setIsNavigating] = useState(false)
 
-    const { data: staffData } = useSWR('/api/staff/me', fetcher, {
+    const { data: staffData, error } = useSWR(status === 'authenticated' ? '/api/staff/me' : null, fetcher, {
         revalidateOnFocus: true,
         refreshInterval: 5000 // Boosted frequency to 5s for super fast response
     })
+
+    useEffect(() => {
+        if (error?.message === 'Unauthorized' && pathname !== '/staff/login') {
+            router.push('/staff/login')
+        }
+    }, [error, pathname, router])
 
     const prevNoteCount = useRef<number | null>(null)
     const prevMsgCount = useRef<number | null>(null)
@@ -217,7 +230,7 @@ export default function StaffLayout({
                     <div className="relative">
                         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-[1px] shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
                             <div className="w-full h-full rounded-[15px] bg-[#0d1117] flex items-center justify-center overflow-hidden">
-                                <span className="font-black text-[12px] text-white  tracking-tighter">ZB</span>
+                                <Home className="w-4 h-4 text-white" />
                             </div>
                         </div>
                         <div className={cn(
@@ -225,9 +238,8 @@ export default function StaffLayout({
                             staffData?.isOnLeave ? "bg-amber-500 shadow-amber-500/50" : "bg-emerald-500 shadow-emerald-500/50"
                         )}></div>
                     </div>
-                    <div className="flex flex-col">
-                        <h1 className="font-black text-[14px] text-white tracking-tighter  leading-none">ZENBOURG <span className="text-blue-500 not- ml-0.5">STAFF</span></h1>
-                        <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest mt-1 ">Operations Portal</span>
+                    <div className="flex flex-col justify-center">
+                        <h1 className="font-black text-[15px] text-white tracking-tighter leading-none">Stayin <span className="text-blue-500 ml-0.5">Staff</span></h1>
                     </div>
                 </Link>
 

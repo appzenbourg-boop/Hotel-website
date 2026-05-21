@@ -394,13 +394,11 @@ export default function StaffDashboard() {
                                 <span className="text-gray-600">Shift Progress</span>
                                 <span className="text-gray-400">Est. End: {end}</span>
                             </div>
-                            <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/[0.08] shadow-inner p-[1px]">
+                            <div className="h-2 w-full bg-[#161b22] rounded-full overflow-hidden border border-white/[0.05]">
                                 <div 
-                                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-400 to-blue-500 rounded-full transition-all duration-1000 relative shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+                                    className="h-full bg-blue-600 rounded-full transition-all duration-1000"
                                     style={{ width: `${progress}%` }}
-                                >
-                                    <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.4)_50%,transparent_100%)] w-20 animate-shimmer-fast"></div>
-                                </div>
+                                />
                             </div>
                             <p className="text-center text-[9px] font-black text-blue-500 uppercase tracking-[0.4em] opacity-60">{Math.floor(progress)}% shift completed</p>
                         </div>
