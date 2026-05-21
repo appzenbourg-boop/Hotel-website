@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
                 select: {
                     id: true,
                     title: true,
+                    description: true,
                     amount: true,
                     createdAt: true,
                     ratings: {
@@ -88,27 +89,49 @@ export async function GET(req: NextRequest) {
         let totalCovers = 0
 
         ordersRaw.forEach(order => {
-            const title = (order.title || 'Unknown').toLowerCase().trim()
-            
-            // If tab is selected, only process items in that category
-            const menuItem = menuMap.get(title)
-            if (tab !== 'All Day' && menuItem?.category !== tab) return
-
             totalRevenue += order.amount || 0
             totalCovers++
 
-            if (!itemStats.has(title)) {
-                itemStats.set(title, { units: 0, revenue: 0, totalRating: 0, ratingCount: 0 })
+            // Try to extract items from description (e.g. "Order: French Fries, Mixed Fruit Juice")
+            // Fallback to title if description is empty
+            const textToParse = (order.description || order.title || '').toLowerCase()
+            let items: string[] = []
+
+            if (textToParse.includes('order:')) {
+                const afterOrder = textToParse.split('order:')[1]
+                items = afterOrder.split(',').map(i => i.trim()).filter(Boolean)
+            } else if (textToParse.includes(',')) {
+                items = textToParse.split(',').map(i => i.trim()).filter(Boolean)
+            } else {
+                items = [textToParse.trim()].filter(Boolean)
             }
 
-            const stats = itemStats.get(title)!
-            stats.units++
-            stats.revenue += order.amount || 0
-            
-            if (order.ratings?.length > 0) {
-                stats.totalRating += order.ratings[0].rating
-                stats.ratingCount++
-            }
+            if (items.length === 0) items = ['unknown']
+
+            // Process each individual item found in the order
+            items.forEach(itemName => {
+                const menuItem = menuMap.get(itemName)
+                
+                // Skip if filtering by a specific tab category and it doesn't match
+                if (tab !== 'All Day' && menuItem?.category !== tab) return
+
+                if (!itemStats.has(itemName)) {
+                    itemStats.set(itemName, { units: 0, revenue: 0, totalRating: 0, ratingCount: 0 })
+                }
+
+                const stats = itemStats.get(itemName)!
+                stats.units++
+                
+                // If we know the exact item price, assign it to this item's revenue.
+                // Otherwise evenly distribute the total order amount across all items.
+                const itemRevenue = menuItem?.price || ((order.amount || 0) / items.length)
+                stats.revenue += itemRevenue
+                
+                if (order.ratings?.length > 0) {
+                    stats.totalRating += order.ratings[0].rating
+                    stats.ratingCount++
+                }
+            })
         })
 
         // 4. Transform to Performance Matrix
