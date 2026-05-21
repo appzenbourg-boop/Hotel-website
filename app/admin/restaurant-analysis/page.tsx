@@ -425,7 +425,7 @@ export default function RestaurantAnalysisPage() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-lg bg-surface-light flex items-center justify-center text-[10px] font-bold text-primary border border-border">
-                                                {item.id}
+                                                {item.name?.substring(0, 2).toUpperCase() || 'IT'}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-white">{item.name}</p>
