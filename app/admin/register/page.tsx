@@ -39,6 +39,7 @@ export default function AdminRegisterPage() {
             id: 'BASE',
             name: 'Base',
             price: '₹9,999',
+            originalPrice: '₹15,000',
             icon: Building2,
             color: 'text-slate-400',
             bg: 'bg-slate-500/10',
@@ -49,6 +50,7 @@ export default function AdminRegisterPage() {
             id: 'STARTER',
             name: 'Starter',
             price: '₹15,999',
+            originalPrice: '₹30,000',
             icon: Zap,
             color: 'text-blue-400',
             bg: 'bg-blue-500/10',
@@ -59,6 +61,7 @@ export default function AdminRegisterPage() {
             id: 'STANDARD',
             name: 'Standard',
             price: '₹29,999',
+            originalPrice: '₹55,000',
             icon: Star,
             color: 'text-amber-400',
             bg: 'bg-amber-500/10',
@@ -344,7 +347,10 @@ export default function AdminRegisterPage() {
                                                 </div>
                                                 <div>
                                                     <h4 className="font-semibold text-white text-[14px]">{plan.name}</h4>
-                                                    <p className="text-[11px] text-text-tertiary">{plan.price}/month</p>
+                                                    <p className="text-[11px] text-text-tertiary">
+                                                        {plan.originalPrice && <span className="line-through decoration-2 decoration-white/40 text-white/50 font-bold mr-1.5">{plan.originalPrice}</span>}
+                                                        <span className="font-medium text-white/90">{plan.price}</span>/month
+                                                    </p>
                                                 </div>
                                             </div>
                                             {formData.plan === plan.id && (

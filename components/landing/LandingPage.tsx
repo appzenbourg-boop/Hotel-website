@@ -60,7 +60,9 @@ const PLANS = [
     name: 'Base',
     tagline: 'For independent properties getting started.',
     priceMonthly: 9999,
+    originalPriceMonthly: 15000,
     priceAnnual: 8999,
+    originalPriceAnnual: 13500,
     discountLabel: 'Save 10% on Annual',
     cta: 'Start a trial',
     accentColor: 'from-blue-500 to-cyan-400',
@@ -76,7 +78,9 @@ const PLANS = [
     name: 'Starter',
     tagline: 'Designed for growth-stage hotels and boutique resorts.',
     priceMonthly: 15999,
+    originalPriceMonthly: 30000,
     priceAnnual: 14399,
+    originalPriceAnnual: 27000,
     cta: 'Start a trial',
     accentColor: 'from-indigo-500 to-purple-500',
     features: [
@@ -91,7 +95,9 @@ const PLANS = [
     name: 'Standard',
     tagline: 'Perfect for full-service hotels seeking maximum performance.',
     priceMonthly: 29999,
+    originalPriceMonthly: 55000,
     priceAnnual: 26999,
+    originalPriceAnnual: 49500,
     discountLabel: 'Best Value',
     cta: 'Start a trial',
     accentColor: 'from-blue-600 via-indigo-500 to-teal-400',
@@ -2748,14 +2754,19 @@ export default function LandingPage() {
                       <p className="text-[10px] text-white/30 font-medium mt-1 leading-normal">{plan.tagline}</p>
                     </div>
 
-                    <div className="h-16 flex flex-col justify-end">
+                    <div className="h-[88px] flex flex-col justify-end">
+                      {plan.originalPriceMonthly && (
+                        <div className="text-lg text-white/50 line-through decoration-white/40 decoration-2 font-black mb-0.5">
+                          {formatPrice(isAnnual && plan.originalPriceAnnual ? plan.originalPriceAnnual : plan.originalPriceMonthly)}
+                        </div>
+                      )}
                       <div className={cn(
-                        "text-3xl font-extrabold tracking-tight font-outfit",
+                        "text-3xl font-extrabold tracking-tight font-outfit leading-none",
                         isStandard ? "text-[#C5A880]" : "text-white"
                       )}>
-                        {formatPrice(plan.priceMonthly)}
+                        {formatPrice(isAnnual && typeof plan.priceAnnual === 'number' ? plan.priceAnnual : plan.priceMonthly)}
                       </div>
-                      <div className="text-[8px] text-white/35 font-bold tracking-wider uppercase mt-1">
+                      <div className="text-[8px] text-white/35 font-bold tracking-wider uppercase mt-2">
                         {typeof plan.priceMonthly === 'string' ? 'Global Custom Setup' : '/ property / month'}
                       </div>
                     </div>
