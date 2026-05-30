@@ -3214,8 +3214,10 @@ export default function LandingPage() {
             <div className="space-y-4 text-left">
               <h5 className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-white">Legal</h5>
               <div className="flex flex-col gap-3 text-xs text-white/35 font-light">
-                <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-                <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                <Link href="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link>
+                <Link href="/refundpolicy" className="hover:text-white transition-colors">Refund & Cancellation</Link>
+                <Link href="/contactus" className="hover:text-white transition-colors">Contact Us</Link>
               </div>
             </div>
           </div>
@@ -3223,9 +3225,10 @@ export default function LandingPage() {
           <div className="pt-8 border-t border-white/[0.03] flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-[8px] font-bold tracking-[0.35em] text-white/10 uppercase">&copy; 2026 STAYIN CORE. ALL RIGHTS RESERVED.</div>
             <div className="flex gap-6 text-[8px] font-bold tracking-[0.25em] text-white/20 uppercase">
-              <a href="#" className="hover:text-[#3B82F6] transition-colors">Privacy</a>
-              <a href="#" className="hover:text-[#3B82F6] transition-colors">Terms</a>
-              <a href="#" className="hover:text-[#3B82F6] transition-colors">Support</a>
+              <Link href="/privacy" className="hover:text-[#3B82F6] transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-[#3B82F6] transition-colors">Terms</Link>
+              <Link href="/refundpolicy" className="hover:text-[#3B82F6] transition-colors">Refunds</Link>
+              <Link href="/contactus" className="hover:text-[#3B82F6] transition-colors">Contact</Link>
             </div>
           </div>
         </div>
