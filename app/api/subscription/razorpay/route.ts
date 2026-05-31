@@ -98,8 +98,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (trialPeriod) {
-            orderPayload.amount = 0; // MUST be 0 for UPI Autopay mandates
-            orderPayload.method = 'upi'; // Explicitly trigger UPI Autopay flow
+            orderPayload.amount = 200; // Charge explicitly 2 INR
+            orderPayload.method = 'emandate'; // Correct tokenization method required by Razorpay
             orderPayload.payment_capture = 1;
             // Need a Razorpay Customer for mandates
             let resolvedUserId = userId
