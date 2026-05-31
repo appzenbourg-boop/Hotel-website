@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
                     orderPayload.token = {
                         max_amount: 5000000, // 50,000 INR max auto-debit capability
                         expire_at: Math.floor(Date.now() / 1000) + (10 * 365 * 24 * 60 * 60), // 10 years
-                        frequency: 'as_and_when'
+                        frequency: 'as_presented'
                     }
                 }
             }

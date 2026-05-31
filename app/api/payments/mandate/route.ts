@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
                 auth_type: 'pin', // or 'otp'
                 max_amount: 500000, // Max allowed for future deductions (5k INR in paisa?) No, 5L paisa = 5k. 
                 expire_at: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // 1 year
-                frequency: 'as_and_when'
+                frequency: 'as_presented'
             },
             notes: {
                 userId: user.id,
