@@ -118,7 +118,6 @@ export async function POST(req: NextRequest) {
                         contact: user.phone
                     })
                     
-                    orderPayload.method = 'emandate'
                     orderPayload.customer_id = customer.id
                     orderPayload.token = {
                         max_amount: 5000000, // 50,000 INR max auto-debit capability
