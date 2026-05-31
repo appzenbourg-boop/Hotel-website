@@ -98,6 +98,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (trialPeriod) {
+            orderPayload.amount = 0; // Strictly ensure amount is zero
+            orderPayload.payment_capture = 1; // Required by Razorpay for mandates
             // Need a Razorpay Customer for mandates
             let resolvedUserId = userId
             if (!resolvedUserId) {
