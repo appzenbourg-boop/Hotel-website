@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
         }
 
         const orderPayload: any = {
-            amount: Math.round(activePrice * 100), // paise
+            amount: trialPeriod ? 0 : Math.round(activePrice * 100), // paise
             currency: 'INR',
             receipt: `sub_${targetPropertyId.slice(-10)}_${Date.now()}`,
             notes: { propertyId: targetPropertyId, plan, type: 'SUBSCRIPTION_UPGRADE' }
