@@ -90,12 +90,44 @@ export async function POST(req: NextRequest) {
             activePrice = standardPrice
         }
 
-        const order = await razorpay.orders.create({
+        const orderPayload: any = {
             amount: Math.round(activePrice * 100), // paise
             currency: 'INR',
             receipt: `sub_${targetPropertyId.slice(-10)}_${Date.now()}`,
             notes: { propertyId: targetPropertyId, plan, type: 'SUBSCRIPTION_UPGRADE' }
-        })
+        }
+
+        if (trialPeriod) {
+            // Need a Razorpay Customer for mandates
+            let resolvedUserId = userId
+            if (!resolvedUserId) {
+                const authResult = await requireAuth(req, ['HOTEL_ADMIN', 'SUPER_ADMIN'])
+                if (!(authResult instanceof NextResponse)) {
+                    resolvedUserId = authResult.user.id
+                }
+            }
+
+            if (resolvedUserId) {
+                const user = await prisma.user.findUnique({ where: { id: resolvedUserId } })
+                if (user) {
+                    const customer = await razorpay.customers.create({
+                        name: user.name,
+                        email: user.email,
+                        contact: user.phone
+                    })
+                    
+                    orderPayload.method = 'emandate'
+                    orderPayload.customer_id = customer.id
+                    orderPayload.token = {
+                        max_amount: 5000000, // 50,000 INR max auto-debit capability
+                        expire_at: Math.floor(Date.now() / 1000) + (10 * 365 * 24 * 60 * 60), // 10 years
+                        frequency: 'as_and_when'
+                    }
+                }
+            }
+        }
+
+        const order = await razorpay.orders.create(orderPayload)
 
         return NextResponse.json({
             success: true,

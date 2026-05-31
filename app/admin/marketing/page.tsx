@@ -36,15 +36,7 @@ const SEGMENTS = [
     { id: 'DIRECT',   label: 'Direct Bookings',     filter: (g: Guest) => g.source === 'DIRECT' || g.source === 'WALK_IN' },
 ]
 
-// Fallback Mock Guests to ensure page is NEVER blank and has realistic targets
-const MOCK_GUESTS: Guest[] = [
-    { id: 'mock-1', name: 'Aditya Sharma', email: 'aditya.sharma@gmail.com', phone: '9876543210', totalStays: 8, status: 'CHECKED_OUT', source: 'DIRECT' },
-    { id: 'mock-2', name: 'Meera Sen', email: 'meera.sen@outlook.com', phone: '9123456789', totalStays: 6, status: 'CHECKED_IN', source: 'DIRECT' },
-    { id: 'mock-3', name: 'Karan Malhotra', email: 'karan.m@yahoo.com', phone: '8877665544', totalStays: 4, status: 'CHECKED_OUT', source: 'WALK_IN' },
-    { id: 'mock-4', name: 'Priya Patel', email: 'priya.patel@gmail.com', phone: '9988776655', totalStays: 3, status: 'CHECKED_OUT', source: 'DIRECT' },
-    { id: 'mock-5', name: 'Rahul Verma', email: 'rahul.verma@gmail.com', phone: '7766554433', totalStays: 1, status: 'CHECKED_IN', source: 'OTA' },
-    { id: 'mock-6', name: 'Anjali Gupta', email: 'anjali.g@gmail.com', phone: '9900112233', totalStays: 5, status: 'CHECKED_OUT', source: 'DIRECT' },
-]
+
 
 // Historical campaign mock data for rich analytics graph
 const CHART_DATA = [
@@ -84,15 +76,14 @@ export default function MarketingPage() {
             const json = await res.json()
             const data: Guest[] = Array.isArray(json) ? json : (json?.data ?? [])
             
-            // If API returns no guests, fallback to MOCK_GUESTS to make page rich
             if (data.length === 0) {
-                setGuests(MOCK_GUESTS)
+                setGuests([])
             } else {
                 setGuests(data)
             }
         } catch {
-            setGuests(MOCK_GUESTS)
-            toast.error('Could not fetch guests. Seeding beautiful fallback marketing profiles.')
+            setGuests([])
+            toast.error('Could not fetch guests.')
         } finally {
             setLoading(false)
         }
@@ -380,9 +371,6 @@ export default function MarketingPage() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <p className="text-xs font-semibold text-white truncate">{guest.name}</p>
-                                                {guest.id.startsWith('mock-') && (
-                                                    <span className="text-[7.5px] font-extrabold uppercase bg-amber-400/10 border border-amber-400/20 text-amber-400 px-1.5 py-0.2 rounded-full tracking-wider leading-none">Mock</span>
-                                                )}
                                             </div>
                                             <div className="flex items-center gap-3 mt-1">
                                                 <span className="text-[10px] text-white/30 flex items-center gap-1 font-mono">
@@ -530,7 +518,6 @@ export default function MarketingPage() {
                         <ul className="text-[10px] text-white/40 space-y-1.5 list-none font-light leading-relaxed">
                             <li>• <strong className="text-white/70">WhatsApp blast</strong> opens active WhatsApp API tabs automatically (no TWILIO gateway charge).</li>
                             <li>• <strong className="text-white/70">SMS blast</strong> dispatches high-conversion templates immediately using default Twilio SMS route configurations.</li>
-                            <li>• Mock guest profiles are provided automatically to seed the workspace with direct conversion targets during initial setups.</li>
                         </ul>
                     </div>
                 </div>
