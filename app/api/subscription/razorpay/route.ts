@@ -98,8 +98,9 @@ export async function POST(req: NextRequest) {
         }
 
         if (trialPeriod) {
-            orderPayload.amount = 200; // Charge exactly 2 INR upfront as requested
-            orderPayload.payment_capture = 1; // Required by Razorpay for mandates
+            orderPayload.amount = 0; // MUST be 0 for UPI Autopay mandates
+            orderPayload.method = 'upi'; // Explicitly trigger UPI Autopay flow
+            orderPayload.payment_capture = 1;
             // Need a Razorpay Customer for mandates
             let resolvedUserId = userId
             if (!resolvedUserId) {
