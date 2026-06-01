@@ -99,7 +99,6 @@ export async function POST(req: NextRequest) {
 
         if (trialPeriod) {
             orderPayload.amount = 0; // MUST be 0 for Razorpay recurring mandates
-            orderPayload.method = 'emandate'; // Razorpay's master code for all mandates (including UPI)
             orderPayload.payment_capture = 1;
             // Need a Razorpay Customer for mandates
             let resolvedUserId = userId
@@ -119,16 +118,22 @@ export async function POST(req: NextRequest) {
                         contact: user.phone
                     })
                     
+                    orderPayload.method = 'upi'; // MUST be 'upi' for UPI Autopay
                     orderPayload.customer_id = customer.id
                     orderPayload.token = {
                         max_amount: 5000000, // 50,000 INR max auto-debit capability
                         expire_at: Math.floor(Date.now() / 1000) + (10 * 365 * 24 * 60 * 60), // 10 years
                         frequency: 'as_presented'
                     }
+                } else {
+                    throw new Error('User not found in DB - cannot create mandate token')
                 }
+            } else {
+                throw new Error('resolvedUserId is missing - cannot create mandate token')
             }
         }
 
+        console.log('[RAZORPAY_ORDER_PAYLOAD]', JSON.stringify(orderPayload, null, 2))
         const order = await razorpay.orders.create(orderPayload)
 
         return NextResponse.json({
