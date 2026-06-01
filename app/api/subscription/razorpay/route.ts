@@ -98,8 +98,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (trialPeriod) {
-            orderPayload.amount = 200; // UPI Autopay requires a nominal charge (>= INR 1) for mandate registration
-            orderPayload.method = 'upi'; // Use 'upi' method to trigger UPI Autopay flow
+            orderPayload.amount = 0; // MUST be 0 for Razorpay tokenization
             orderPayload.payment_capture = 1;
             // Need a Razorpay Customer for mandates
             let resolvedUserId = userId
@@ -119,9 +118,10 @@ export async function POST(req: NextRequest) {
                         contact: user.phone
                     })
                     
-                    orderPayload.method = 'upi'; // MUST be 'upi' for UPI Autopay
+                    // Do NOT pass method here. The token object handles the intent.
                     orderPayload.customer_id = customer.id
                     orderPayload.token = {
+                        auth_type: 'upi', // Explicitly request UPI Autopay
                         max_amount: 5000000, // 50,000 INR max auto-debit capability
                         expire_at: Math.floor(Date.now() / 1000) + (10 * 365 * 24 * 60 * 60), // 10 years
                         frequency: 'as_presented'
