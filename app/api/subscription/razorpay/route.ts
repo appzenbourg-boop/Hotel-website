@@ -98,7 +98,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (trialPeriod) {
-            orderPayload.amount = 0; // MUST be 0 for Razorpay recurring mandates
+            orderPayload.amount = 200; // UPI Autopay requires a nominal charge (>= INR 1) for mandate registration
+            orderPayload.method = 'upi'; // Use 'upi' method to trigger UPI Autopay flow
             orderPayload.payment_capture = 1;
             // Need a Razorpay Customer for mandates
             let resolvedUserId = userId
