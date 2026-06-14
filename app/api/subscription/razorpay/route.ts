@@ -8,12 +8,12 @@ export const dynamic = 'force-dynamic'
 // Updated plan prices matching the new tier system
 const PLAN_PRICES: Record<string, number> = {
     'BASE':       9999,
-    'STARTER':    15999,
+    'STARTER':    14999,
     'STANDARD':   29999,
     'ENTERPRISE': 0,
     // Legacy names kept for backward compat
     'GOLD':       9999,
-    'PLATINUM':   15999,
+    'PLATINUM':   14999,
     'DIAMOND':    29999,
 }
 
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (trialPeriod) {
-            orderPayload.amount = 0; // MUST be 0 for Razorpay tokenization
+            orderPayload.amount = 100; // ₹1 INR for Razorpay tokenization (auto-refunded by Razorpay)
             orderPayload.payment_capture = 1;
             // Need a Razorpay Customer for mandates
             let resolvedUserId = userId
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
                         contact: user.phone
                     })
                     
-                    orderPayload.method = 'emandate'; // MUST be 'emandate' for ALL tokenizations
+                    // We DO NOT hardcode orderPayload.method so the checkout UI shows all options (UPI Autopay, Cards, Emandate)
                     orderPayload.customer_id = customer.id
                     orderPayload.token = {
                         max_amount: 1500000, // EXACTLY 15,000 INR: The absolute maximum limit allowed by NPCI for UPI Autopay. Any higher and UPI is hidden!
@@ -141,7 +141,8 @@ export async function POST(req: NextRequest) {
             orderId: order.id,
             amount: order.amount,
             currency: order.currency,
-            key: process.env.RAZORPAY_KEY_ID?.trim()
+            key: process.env.RAZORPAY_KEY_ID?.trim(),
+            customer_id: orderPayload.customer_id
         })
 
     } catch (error: any) {

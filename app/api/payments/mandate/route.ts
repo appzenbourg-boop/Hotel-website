@@ -36,16 +36,15 @@ export async function POST(req: NextRequest) {
 
         // 2. Create Order for Mandate (auth only or small amount for registration)
         const options = {
-            amount: amount * 100 || 0, // 0 for mandate registration in some flows, or small amount
+            amount: 100, // ₹1 for mandate registration (auto-refunded)
             currency: currency,
             payment_capture: 1,
-            method: 'emandate', // This tells Razorpay it's a mandate
+            // Removed hardcoded method so all recurring options (UPI Autopay, Cards, Netbanking) are available
             customer_id: customer.id,
             receipt: `mandate_${Date.now()}`,
             token: {
-                auth_type: 'pin', // or 'otp'
-                max_amount: 500000, // Max allowed for future deductions (5k INR in paisa?) No, 5L paisa = 5k. 
-                expire_at: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60), // 1 year
+                max_amount: 1500000, // Max allowed for future deductions 15k INR
+                expire_at: Math.floor(Date.now() / 1000) + (10 * 365 * 24 * 60 * 60), // 10 years
                 frequency: 'as_presented'
             },
             notes: {

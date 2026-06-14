@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
             await (prisma as any).planDefinition.createMany({
                 data: [
                     { plan: 'GOLD', price: 7999, features: ['BASIC_OPS', 'STAFF_MANAGEMENT'], description: 'Essential tools for small to mid-sized hotels.' },
-                    { plan: 'PLATINUM', price: 15999, features: ['BASIC_OPS', 'STAFF_MANAGEMENT', 'ADVANCED_PAYROLL', 'MARKETING_TOOLS'], description: 'Advanced operations and full staff automation.' },
+                    { plan: 'PLATINUM', price: 14999, features: ['BASIC_OPS', 'STAFF_MANAGEMENT', 'ADVANCED_PAYROLL', 'MARKETING_TOOLS'], description: 'Advanced operations and full staff automation.' },
                     { plan: 'DIAMOND', price: 31999, features: ['BASIC_OPS', 'STAFF_MANAGEMENT', 'ADVANCED_PAYROLL', 'MARKETING_TOOLS', 'ANALYTICS_REPORTING', 'IOT_INTEGRATION'], description: 'Full enterprise suite with IoT and multi-property oversight.' },
                 ]
             })

@@ -49,7 +49,7 @@ export default function AdminRegisterPage() {
         {
             id: 'STARTER',
             name: 'Starter',
-            price: '₹15,999',
+            price: '₹14,999',
             originalPrice: '₹30,000',
             icon: Zap,
             color: 'text-blue-400',
@@ -134,7 +134,7 @@ export default function AdminRegisterPage() {
                         toast.error('Payment failed to initialize. Your account is on the Base plan.', { duration: 5000 })
                     } else {
                         const rzpPromise = new Promise((resolve) => {
-                            const options = {
+                            const options: any = {
                                 key: order.key,
                                 amount: order.amount,
                                 currency: order.currency,
@@ -143,6 +143,7 @@ export default function AdminRegisterPage() {
                                     ? `14-Day Free Trial Autopay Setup` 
                                     : `Registration: ${formData.plan} Plan`,
                                 order_id: order.orderId,
+                                ...(formData.trialPeriod ? { recurring: '1', customer_id: order.customer_id } : {}),
                                 handler: async (response: any) => {
                                     const verifyRes = await fetch('/api/subscription/verify', {
                                         method: 'POST',

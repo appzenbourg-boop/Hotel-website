@@ -34,7 +34,7 @@ const DEFAULT_PLANS = [
         tagline: 'Ideal for Growth-stage hotels and boutique resorts',
         description: 'Everything in Base, plus: Staff app, housekeeping and maintenance dispatch. Marketing tools and loyalty module. Up to 75 rooms.',
         originalPrice: 30000,
-        discountedPrice: 15999,
+        discountedPrice: 14999,
         discountPercent: 46,
         maxRooms: 75,
         maxStaff: 40,

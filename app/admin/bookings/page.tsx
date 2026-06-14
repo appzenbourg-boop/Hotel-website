@@ -788,98 +788,114 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
 
   const handleDownloadPDF = async () => {
     try {
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Invoice ${invoiceNo}</title>
+            <style>
+              body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
+              .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px; }
+              .hotel-info h1 { margin: 0; font-size: 28px; }
+              .hotel-info p { margin: 5px 0; color: #666; }
+              .invoice-title { text-align: right; }
+              .invoice-title h2 { margin: 0; color: #4f46e5; font-size: 24px; }
+              .details-section { display: flex; justify-content: space-between; margin-top: 40px; }
+              .details-box h3 { font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+              .details-row { display: flex; margin-bottom: 5px; font-size: 14px; }
+              .label { font-weight: bold; width: 100px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+              th { background-color: #f8f8f8; text-align: left; padding: 12px; border-bottom: 2px solid #ddd; font-size: 14px; }
+              td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+              .totals { margin-top: 30px; text-align: right; }
+              .total-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+              .total-label { font-weight: bold; margin-right: 20px; width: 150px; }
+              .grand-total { font-size: 20px; font-weight: bold; color: #000; margin-top: 10px; border-top: 2px solid #000; padding-top: 10px; }
+              .discount-row { color: #ef4444; }
+              .footer { margin-top: 60px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="hotel-info">
+                <h1>${hotelName.toUpperCase()}</h1>
+                <p>Institutional Excellence in Hospitality</p>
+                <p>Generated: ${format(new Date(), 'dd MMM yyyy, hh:mm a')}</p>
+              </div>
+              <div class="invoice-title">
+                <h2>TAX INVOICE</h2>
+                <p>ID: #${invoiceNo}</p>
+                <p>Checkout Date: ${format(new Date(booking.checkOut), 'dd MMM yyyy')}</p>
+              </div>
+            </div>
 
-      const indigo = [99, 102, 241] as [number, number, number]
-      const dark   = [15, 23, 42]   as [number, number, number]
-      const mid    = [71, 85, 105]  as [number, number, number]
-      const light  = [148, 163, 184] as [number, number, number]
-      const white  = [255, 255, 255] as [number, number, number]
-      const red    = [239, 68, 68]  as [number, number, number]
-      const green  = [16, 185, 129] as [number, number, number]
+            <div class="details-section">
+              <div class="details-box">
+                <h3>GUEST DETAILS</h3>
+                <div class="details-row"><span class="label">Name:</span> ${guestName}</div>
+                <div class="details-row"><span class="label">Room:</span> ${roomNo}${roomType ? ' — ' + roomType : ''}</div>
+              </div>
+              <div class="details-box" style="text-align: right;">
+                <h3>STAY INFORMATION</h3>
+                <div class="details-row" style="justify-content: flex-end;"><span class="label">Arrival:</span> ${format(new Date(booking.checkIn), 'dd MMM yyyy')}</div>
+                <div class="details-row" style="justify-content: flex-end;"><span class="label">Departure:</span> ${format(new Date(booking.checkOut), 'dd MMM yyyy')}</div>
+                <div class="details-row" style="justify-content: flex-end;"><span class="label">Duration:</span> ${nights} Night(s)</div>
+              </div>
+            </div>
 
-      // Header
-      doc.setFillColor(...indigo)
-      doc.rect(0, 0, 210, 38, 'F')
-      doc.setTextColor(...white)
-      doc.setFontSize(20); doc.setFont('helvetica', 'bold')
-      doc.text(hotelName.toUpperCase(), 14, 16)
-      doc.setFontSize(9); doc.setFont('helvetica', 'normal')
-      doc.text('Guest Invoice', 14, 24)
-      doc.text(`Checkout: ${format(new Date(booking.checkOut), 'dd MMM yyyy')}`, 14, 30)
-      doc.setFont('helvetica', 'bold')
-      doc.text(invoiceNo, 196, 16, { align: 'right' })
-      doc.setFont('helvetica', 'normal')
-      doc.text(`Issued: ${format(new Date(), 'dd MMM yyyy')}`, 196, 24, { align: 'right' })
+            <table>
+              <thead>
+                <tr>
+                  <th>DESCRIPTION</th>
+                  <th style="text-align: right;">AMOUNT (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ₹${(base / nights).toFixed(0)})</td>
+                  <td style="text-align: right;">${base.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                </tr>
+                ${gstAmt > 0 ? `<tr><td>GST (${gstPct}%)</td><td style="text-align: right;">${gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+                ${scAmt > 0 ? `<tr><td>Service Charge (${scPct}%)</td><td style="text-align: right;">${scAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+                ${ltAmt > 0 ? `<tr><td>Luxury Tax (${ltPct}%)</td><td style="text-align: right;">${ltAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+                ${discAmt > 0 ? `<tr class="discount-row"><td>Discount (${discPct}%)</td><td style="text-align: right;">-${discAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+              </tbody>
+            </table>
 
-      // Guest + Room info
-      let y = 50
-      doc.setTextColor(...indigo); doc.setFontSize(8); doc.setFont('helvetica', 'bold')
-      doc.text('GUEST DETAILS', 14, y)
-      doc.setDrawColor(...indigo); doc.setLineWidth(0.3); doc.line(14, y + 1.5, 95, y + 1.5)
-      y += 7
-      const infoRows = [
-        ['Guest Name', guestName],
-        ['Room', `${roomNo}${roomType ? ' — ' + roomType : ''}`],
-        ['Check-in',  format(new Date(booking.checkIn),  'dd MMM yyyy')],
-        ['Check-out', format(new Date(booking.checkOut), 'dd MMM yyyy')],
-        ['Nights',    String(nights)],
-      ]
-      infoRows.forEach(([label, value]) => {
-        doc.setTextColor(...light); doc.setFont('helvetica', 'normal'); doc.text(label, 14, y)
-        doc.setTextColor(...dark);  doc.setFont('helvetica', 'bold');   doc.text(value, 60, y)
-        y += 6
-      })
+            <div class="totals">
+              <div class="total-row grand-total">
+                <span class="total-label">TOTAL AMOUNT:</span>
+                <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
 
-      // Charges table
-      y += 6
-      doc.setFillColor(...indigo); doc.rect(14, y, 182, 9, 'F')
-      doc.setTextColor(...white); doc.setFontSize(8); doc.setFont('helvetica', 'bold')
-      doc.text('DESCRIPTION', 18, y + 6)
-      doc.text('AMOUNT (₹)', 192, y + 6, { align: 'right' })
-      y += 9
+            <div class="footer">
+              <p>Thank you for staying with us. We hope to see you again!</p>
+              <p>This is a computer-generated document.</p>
+            </div>
+            <script>
+              window.onload = function() { 
+                setTimeout(function() {
+                  window.print(); 
+                  window.onafterprint = function(){ window.close(); };
+                }, 200);
+              };
+            </script>
+          </body>
+        </html>
+      `;
 
-      const rows: [string, number, string][] = [
-        [`Room Charges (${nights} night${nights > 1 ? 's' : ''} × ₹${(base / nights).toFixed(0)})`, base, 'normal'],
-        ...(gstAmt > 0 ? [[`GST (${gstPct}%)`, gstAmt, 'normal'] as [string, number, string]] : []),
-        ...(scAmt  > 0 ? [[`Service Charge (${scPct}%)`, scAmt, 'normal'] as [string, number, string]] : []),
-        ...(ltAmt  > 0 ? [[`Luxury Tax (${ltPct}%)`, ltAmt, 'normal'] as [string, number, string]] : []),
-        ...(discAmt > 0 ? [[`Discount (${discPct}%)`, -discAmt, 'discount'] as [string, number, string]] : []),
-      ]
-
-      rows.forEach(([label, amount, type], idx) => {
-        doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252)
-        doc.rect(14, y, 182, 9, 'F')
-        doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.2); doc.line(14, y + 9, 196, y + 9)
-        doc.setTextColor(...mid); doc.setFont('helvetica', 'normal'); doc.text(label, 18, y + 6)
-        if (type === 'discount') doc.setTextColor(...red)
-        else doc.setTextColor(...dark)
-        doc.setFont('helvetica', 'bold')
-        doc.text(`${type === 'discount' ? '-' : ''}₹${Math.abs(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, y + 6, { align: 'right' })
-        y += 9
-      })
-
-      // Total
-      doc.setFillColor(...indigo); doc.rect(14, y, 182, 13, 'F')
-      doc.setTextColor(...white); doc.setFontSize(10); doc.setFont('helvetica', 'bold')
-      doc.text('TOTAL AMOUNT', 18, y + 9)
-      doc.setFontSize(13)
-      doc.text(`₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, y + 9, { align: 'right' })
-      y += 20
-
-      // Footer
-      doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.5); doc.line(14, y, 196, y)
-      y += 8
-      doc.setTextColor(...light); doc.setFontSize(7); doc.setFont('helvetica', 'normal')
-      doc.text('Thank you for staying with us. We hope to see you again!', 14, y)
-      doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, 196, y, { align: 'right' })
-
-      doc.save(`Invoice_${guestName.replace(/\s+/g, '_')}_${invoiceNo}.pdf`)
-      toast.success('Invoice downloaded')
+      const printWindow = window.open('', '', 'width=800,height=800');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+      } else {
+        toast.error('Please allow popups to print invoices');
+      }
     } catch (err) {
       console.error(err)
-      toast.error('Failed to generate PDF')
+      toast.error('Failed to generate printable invoice')
     }
   }
 

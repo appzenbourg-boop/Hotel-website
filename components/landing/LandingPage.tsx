@@ -77,7 +77,7 @@ const PLANS = [
     id: 'starter',
     name: 'Starter',
     tagline: 'Designed for growth-stage hotels and boutique resorts.',
-    priceMonthly: 15999,
+    priceMonthly: 14999,
     originalPriceMonthly: 30000,
     priceAnnual: 14399,
     originalPriceAnnual: 27000,
