@@ -91,20 +91,23 @@ export const authOptions: NextAuthOptions = {
                     const property = await prisma.property.create({
                         data: {
                             name: `${user.name || 'My'} Hotel`,
+                            address: 'Pending Setup',
+                            phone: '',
+                            email: user.email?.trim().toLowerCase() || '',
                             ownerIds: [dbUser.id],
                             plan: 'BASE',
                         }
                     })
                     dbUser = await prisma.user.update({
                         where: { id: dbUser.id },
-                        data: { propertyId: property.id, ownedPropertyIds: [property.id] }
+                        data: { ownedPropertyIds: [property.id] } as any
                     })
                 }
                 
                 token.id = dbUser.id
                 token.role = dbUser.role
                 
-                let propertyId: string | null = dbUser.propertyId ?? null
+                let propertyId: string | null = dbUser.workplaceId ?? null
                 if (!propertyId && dbUser.ownedPropertyIds?.length > 0) {
                     propertyId = dbUser.ownedPropertyIds[0]
                 }
@@ -133,7 +136,7 @@ export const authOptions: NextAuthOptions = {
             
             // Fetch property plan for middleware feature gating
             const pid = token.propertyId
-            if (user || (account?.provider === 'google' && user?.email)) {
+            if (user) {
                 if (pid) {
                     try {
                         const prop = await prisma.property.findUnique({
