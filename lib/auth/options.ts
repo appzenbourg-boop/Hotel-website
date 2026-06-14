@@ -1,5 +1,6 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
 import { prisma } from '@/lib/db'
 import { compare } from 'bcryptjs'
 
@@ -12,6 +13,10 @@ export const authOptions: NextAuthOptions = {
         signIn: '/admin/login',
     },
     providers: [
+        GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID || '',
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+        }),
         CredentialsProvider({
             name: 'Credentials',
             credentials: {
@@ -66,19 +71,73 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user, trigger }) {
-            if (user) {
+        async jwt({ token, user, account, trigger }) {
+            if (account?.provider === 'google' && user?.email) {
+                // Google Login - Find or Create User
+                let dbUser = await prisma.user.findFirst({
+                    where: { email: { equals: user.email.trim(), mode: 'insensitive' } }
+                })
+                
+                if (!dbUser) {
+                    dbUser = await prisma.user.create({
+                        data: {
+                            email: user.email.trim().toLowerCase(),
+                            name: user.name || 'Google User',
+                            role: 'HOTEL_ADMIN',
+                            password: '', // OAuth users have no password
+                            phone: '', // Google Auth does not provide phone number
+                        }
+                    })
+                    const property = await prisma.property.create({
+                        data: {
+                            name: `${user.name || 'My'} Hotel`,
+                            ownerIds: [dbUser.id],
+                            plan: 'BASE',
+                        }
+                    })
+                    dbUser = await prisma.user.update({
+                        where: { id: dbUser.id },
+                        data: { propertyId: property.id, ownedPropertyIds: [property.id] }
+                    })
+                }
+                
+                token.id = dbUser.id
+                token.role = dbUser.role
+                
+                let propertyId: string | null = dbUser.propertyId ?? null
+                if (!propertyId && dbUser.ownedPropertyIds?.length > 0) {
+                    propertyId = dbUser.ownedPropertyIds[0]
+                }
+                token.propertyId = propertyId
+                
+                let department: string | null = null
+                if (['STAFF', 'MANAGER', 'RECEPTIONIST'].includes(dbUser.role)) {
+                    const staff = await prisma.staff.findUnique({
+                        where: { userId: dbUser.id },
+                        select: { department: true },
+                    })
+                    department = staff?.department ?? null
+                }
+                token.department = department
+                
+                // For property feature gating downstream
+                if (user) {
+                    (user as any).propertyId = token.propertyId;
+                }
+            } else if (user) {
                 token.id = user.id
                 token.role = (user as any).role
                 token.propertyId = (user as any).propertyId ?? null
                 token.department = (user as any).department ?? null
-
-                // Fetch property plan for middleware feature gating
-                const pid = (user as any).propertyId
+            }
+            
+            // Fetch property plan for middleware feature gating
+            const pid = token.propertyId
+            if (user || (account?.provider === 'google' && user?.email)) {
                 if (pid) {
                     try {
                         const prop = await prisma.property.findUnique({
-                            where: { id: pid },
+                            where: { id: pid as string },
                             select: { plan: true, customQuoteStatus: true, customQuoteAmount: true, customQuoteAllowsTrial: true },
                         })
                         token.plan = prop?.plan ?? 'BASE'
@@ -98,7 +157,6 @@ export const authOptions: NextAuthOptions = {
                     token.customQuoteAllowsTrial = false
                 }
             }
-
             // Re-fetch plan when session.update() is called (e.g. after upgrade)
             if (trigger === 'update' && token.propertyId) {
                 try {

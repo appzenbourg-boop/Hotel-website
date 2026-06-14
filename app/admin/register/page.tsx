@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Building2, Eye, EyeOff, CheckCircle2, Crown, Zap, Star } from 'lucide-react'
 import Button from '@/components/ui/Button'
@@ -16,8 +16,24 @@ const MapPicker = dynamic(() => import('@/components/ui/MapPicker'), { ssr: fals
 
 export default function AdminRegisterPage() {
     const router = useRouter()
+    const { data: session, update: updateSession } = useSession()
     const [loading, setLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search)
+            const plan = params.get('plan')
+            const hotelName = params.get('hotelName')
+            if (plan || hotelName) {
+                setFormData(prev => ({
+                    ...prev,
+                    ...(plan && { plan: plan as any }),
+                    ...(hotelName && { hotelName })
+                }))
+            }
+        }
+    }, [])
 
     // Form State
     const [formData, setFormData] = useState({
@@ -92,22 +108,43 @@ export default function AdminRegisterPage() {
         setLoading(true)
 
         try {
-            // 1. Register User & Property
-            const res = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...formData,
-                    role: 'HOTEL_ADMIN'
+            let userObj = session?.user as any
+            let propId = userObj?.propertyId
+            
+            if (!session) {
+                // 1. Register User & Property via Credentials
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...formData,
+                        role: 'HOTEL_ADMIN'
+                    })
                 })
-            })
 
-            const data = await res.json()
+                const data = await res.json()
 
-            if (!res.ok) {
-                toast.error(data.error || 'Registration failed')
-                setLoading(false)
-                return
+                if (!res.ok) {
+                    toast.error(data.error || 'Registration failed')
+                    setLoading(false)
+                    return
+                }
+                userObj = data.user
+                propId = data.propertyId
+            } else {
+                // 1b. Complete Google Auth Registration
+                const res = await fetch('/api/auth/complete-google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                })
+                const data = await res.json()
+                if (!res.ok) {
+                    toast.error(data.error || 'Update failed')
+                    setLoading(false)
+                    return
+                }
+                propId = data.propertyId
             }
 
             // 2. If paid plan, handle Razorpay payment
@@ -122,8 +159,8 @@ export default function AdminRegisterPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             plan: formData.plan,
-                            propertyId: data.propertyId,
-                            userId: data.user?.id,
+                            propertyId: propId,
+                            userId: userObj?.id,
                             trialPeriod: formData.trialPeriod,
                         })
                     })
@@ -151,8 +188,8 @@ export default function AdminRegisterPage() {
                                         body: JSON.stringify({
                                             ...response,
                                             plan: formData.plan,
-                                            propertyId: data.propertyId,
-                                            userId: data.user?.id,
+                                            propertyId: propId,
+                                            userId: userObj?.id,
                                             trialPeriod: formData.trialPeriod,
                                             upiId: formData.upiId,
                                         })
@@ -182,19 +219,25 @@ export default function AdminRegisterPage() {
                 }
             }
 
-            // 3. Auto Login
-            const result = await signIn('credentials', {
-                email: formData.email,
-                password: formData.password,
-                redirect: false,
-            })
+            if (!session) {
+                // 3. Auto Login for Credentials
+                const result = await signIn('credentials', {
+                    email: formData.email,
+                    password: formData.password,
+                    redirect: false,
+                })
 
-            if (result?.ok) {
-                toast.success('Registration successful! Welcome to Zenbourg.')
-                router.push('/admin/dashboard')
+                if (result?.ok) {
+                    toast.success('Registration successful! Welcome to Zenbourg.')
+                    router.push('/admin/dashboard')
+                } else {
+                    toast.error('Registration successful, but login failed. Please sign in manually.')
+                    router.push('/admin/login')
+                }
             } else {
-                toast.error('Registration successful, but login failed. Please sign in manually.')
-                router.push('/admin/login')
+                await updateSession() // refresh session to get new property details
+                toast.success('Setup Complete! Welcome to Zenbourg.')
+                router.push('/admin/dashboard')
             }
 
         } catch (error) {
@@ -245,55 +288,88 @@ export default function AdminRegisterPage() {
                 <div className="w-full max-w-md my-auto">
                     <div className="mb-6">
                         <h2 className="text-3xl font-bold text-text-primary mb-2">
-                            Create Account
+                            {session ? 'Complete Setup' : 'Create Account'}
                         </h2>
                         <p className="text-text-secondary">
-                            Register your hotel to get started.
+                            {session ? `Welcome, ${session.user?.name}! Tell us about your property.` : 'Register your hotel to get started.'}
                         </p>
                     </div>
 
+                    {!session && (
+                        <div className="mb-6">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full flex items-center justify-center gap-2 border-border text-text-primary hover:bg-white/5"
+                                onClick={() => signIn('google', { callbackUrl: '/admin/register' })}
+                            >
+                                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                    <path d="M1 1h22v22H1z" fill="none"/>
+                                </svg>
+                                Continue with Google
+                            </Button>
+                            
+                            <div className="relative mt-6 mb-2">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-border"></div>
+                                </div>
+                                <div className="relative flex justify-center text-sm">
+                                    <span className="px-2 bg-surface-dark text-text-tertiary">Or register with email</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-4">
 
-                        {/* Personal Info */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <Input
-                                label="Full Name"
-                                placeholder="John Doe"
-                                value={formData.name}
-                                onChange={(e) => handleChange('name', e.target.value)}
-                                required
-                            />
-                            <Input
-                                label="Phone"
-                                placeholder="+91..."
-                                value={formData.phone}
-                                onChange={(e) => handleChange('phone', e.target.value)}
-                                required
-                            />
-                        </div>
+                        {/* Personal Info - Hidden if Google Auth */}
+                        {!session && (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <Input
+                                        label="Full Name"
+                                        placeholder="John Doe"
+                                        value={formData.name}
+                                        onChange={(e) => handleChange('name', e.target.value)}
+                                        required={!session}
+                                    />
+                                    <Input
+                                        label="Phone"
+                                        placeholder="+91..."
+                                        value={formData.phone}
+                                        onChange={(e) => handleChange('phone', e.target.value)}
+                                        required={!session}
+                                    />
+                                </div>
 
-                        <Input
-                            label="Email Address"
-                            type="email"
-                            placeholder="owner@hotel.com"
-                            value={formData.email}
-                            onChange={(e) => handleChange('email', e.target.value)}
-                            required
-                        />
+                                <Input
+                                    label="Email Address"
+                                    type="email"
+                                    placeholder="owner@hotel.com"
+                                    value={formData.email}
+                                    onChange={(e) => handleChange('email', e.target.value)}
+                                    required={!session}
+                                />
 
-                        <Input
-                            label="Password"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Create a password"
-                            value={formData.password}
-                            onChange={(e) => handleChange('password', e.target.value)}
-                            required
-                            rightIcon={
-                                <button type="button" onClick={() => setShowPassword(!showPassword)}>
-                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                </button>
-                            }
-                        />
+                                <Input
+                                    label="Password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="Create a password"
+                                    value={formData.password}
+                                    onChange={(e) => handleChange('password', e.target.value)}
+                                    required={!session}
+                                    rightIcon={
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)}>
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    }
+                                />
+                            </>
+                        )}
 
                         <div className="border-t border-border my-4 pt-4">
                             <h3 className="text-sm font-semibold text-text-primary mb-3">Property Details</h3>
