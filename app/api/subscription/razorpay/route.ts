@@ -118,10 +118,12 @@ export async function POST(req: NextRequest) {
                         contact: user.phone
                     })
                     
-                    // We DO NOT hardcode orderPayload.method so the checkout UI shows all options (UPI Autopay, Cards, Emandate)
+                    // UPI Autopay requires 'method': 'upi' to be explicitly passed in the Orders API. 
+                    // Otherwise it defaults strictly to Cards and Netbanking.
+                    orderPayload.method = 'upi'
                     orderPayload.customer_id = customer.id
                     orderPayload.token = {
-                        max_amount: 1500000, // EXACTLY 15,000 INR: The absolute maximum limit allowed by NPCI for UPI Autopay. Any higher and UPI is hidden!
+                        max_amount: 1499900, // 14,999 INR strictly under the 15k RBI limit
                         expire_at: Math.floor(Date.now() / 1000) + (10 * 365 * 24 * 60 * 60), // 10 years
                         frequency: 'as_presented'
                     }

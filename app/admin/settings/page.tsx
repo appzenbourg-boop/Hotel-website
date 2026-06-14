@@ -477,7 +477,12 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
               <div className="flex items-center gap-2 mt-0.5">
                 <p className="text-base font-bold text-white">{activePlan.displayName ?? activePlan.plan}</p>
                 {isTrialActive && <span className="text-[10px] font-bold bg-amber-500/25 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Free Trial</span>}
-                {isAutopayActive && <span className="text-[10px] font-bold bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Autopay Active</span>}
+                {isAutopayActive && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Autopay Active</span>
+                    <button onClick={onCancelAutopay} className="text-[9px] text-red-400 hover:text-red-300 uppercase font-bold tracking-widest transition-colors ml-1 border border-red-500/20 px-2 py-0.5 rounded-full bg-red-500/10">Cancel Mandate</button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

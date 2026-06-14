@@ -301,6 +301,7 @@ function RegistrationWizard({
                   ? '14-Day Trial Autopay Mandate Setup'
                   : `${planUpper} Subscription`,
                 order_id: order.orderId,
+                ...(formData.trialPeriod ? { recurring: '1', customer_id: order.customer_id } : {}),
                 handler: async (response: any) => {
                   const verifyRes = await fetch('/api/subscription/verify', {
                     method: 'POST',
