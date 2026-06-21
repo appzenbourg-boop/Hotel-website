@@ -404,62 +404,120 @@ function GuestInvoiceModal({ booking, guestName, onClose }: {
 
     const handleDownloadPDF = async () => {
         try {
-            const { jsPDF } = await import('jspdf')
-            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-            const indigo = [99, 102, 241] as [number, number, number]
-            const dark   = [15, 23, 42]   as [number, number, number]
-            const mid    = [71, 85, 105]  as [number, number, number]
-            const light  = [148, 163, 184] as [number, number, number]
-            const white  = [255, 255, 255] as [number, number, number]
-            const red    = [239, 68, 68]  as [number, number, number]
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Invoice ${invoiceNo}</title>
+                    <style>
+                        body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
+                        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px; }
+                        .hotel-info h1 { margin: 0; font-size: 28px; }
+                        .hotel-info p { margin: 5px 0; color: #666; }
+                        .invoice-title { text-align: right; }
+                        .invoice-title h2 { margin: 0; color: #C26A2C; font-size: 24px; }
+                        .details-section { display: flex; justify-content: space-between; margin-top: 40px; }
+                        .details-box h3 { font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+                        .details-row { display: flex; margin-bottom: 5px; font-size: 14px; }
+                        .label { font-weight: bold; width: 100px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+                        th { background-color: #f8f8f8; text-align: left; padding: 12px; border-bottom: 2px solid #ddd; font-size: 14px; }
+                        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+                        .totals { margin-top: 30px; text-align: right; }
+                        .total-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+                        .total-label { font-weight: bold; margin-right: 20px; width: 150px; }
+                        .grand-total { font-size: 20px; font-weight: bold; color: #000; margin-top: 10px; border-top: 2px solid #000; padding-top: 10px; }
+                        .paid-row { color: #2E7D32; }
+                        .balance-row { font-size: 20px; font-weight: bold; color: #C26A2C; }
+                        .discount-row { color: #ef4444; }
+                        .footer { margin-top: 60px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="hotel-info">
+                            <h1>${(booking.property?.name || 'HOTEL').toUpperCase()}</h1>
+                            <p>Institutional Excellence in Hospitality</p>
+                            <p>support@zenbourg.com | +91 6388163169</p>
+                        </div>
+                        <div class="invoice-title">
+                            <h2>TAX INVOICE</h2>
+                            <p>ID: #${invoiceNo}</p>
+                            <p>Date: ${new Date().toLocaleDateString()}</p>
+                        </div>
+                    </div>
 
-            doc.setFillColor(...indigo); doc.rect(0, 0, 210, 38, 'F')
-            doc.setTextColor(...white); doc.setFontSize(20); doc.setFont('helvetica', 'bold')
-            doc.text('HOTEL INVOICE', 14, 16)
-            doc.setFontSize(9); doc.setFont('helvetica', 'normal')
-            doc.text(`Guest: ${guestName}`, 14, 24)
-            doc.text(`Room: ${roomNo}`, 14, 30)
-            doc.setFont('helvetica', 'bold')
-            doc.text(invoiceNo, 196, 16, { align: 'right' })
-            doc.setFont('helvetica', 'normal')
-            doc.text(`Checkout: ${format(new Date(booking.checkOut), 'dd MMM yyyy')}`, 196, 24, { align: 'right' })
+                    <div class="details-section">
+                        <div class="details-box">
+                            <h3>GUEST DETAILS</h3>
+                            <div class="details-row"><span class="label">Name:</span> ${guestName}</div>
+                            <div class="details-row"><span class="label">Room:</span> ${roomNo}${roomType ? ' — ' + roomType : ''}</div>
+                        </div>
+                        <div class="details-box" style="text-align: right;">
+                            <h3>STAY INFORMATION</h3>
+                            <div class="details-row" style="justify-content: flex-end;"><span class="label">Arrival:</span> ${format(new Date(booking.checkIn), 'dd MMM yyyy')}</div>
+                            <div class="details-row" style="justify-content: flex-end;"><span class="label">Departure:</span> ${format(new Date(booking.checkOut), 'dd MMM yyyy')}</div>
+                            <div class="details-row" style="justify-content: flex-end;"><span class="label">Duration:</span> ${nights} Night(s)</div>
+                        </div>
+                    </div>
 
-            let y = 50
-            doc.setFillColor(...indigo); doc.rect(14, y, 182, 9, 'F')
-            doc.setTextColor(...white); doc.setFontSize(8); doc.setFont('helvetica', 'bold')
-            doc.text('DESCRIPTION', 18, y + 6); doc.text('AMOUNT (₹)', 192, y + 6, { align: 'right' })
-            y += 9
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>DESCRIPTION</th>
+                                <th style="text-align: right;">AMOUNT (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ₹${(base / nights).toFixed(0)})</td>
+                                <td style="text-align: right;">${base.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                            ${gstAmt > 0 ? `<tr><td>GST (${gstPct}%)</td><td style="text-align: right;">${gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+                            ${scAmt > 0 ? `<tr><td>Service Charge (${scPct}%)</td><td style="text-align: right;">${scAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+                            ${ltAmt > 0 ? `<tr><td>Luxury Tax (${ltPct}%)</td><td style="text-align: right;">${ltAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+                            ${discAmt > 0 ? `<tr class="discount-row"><td>Discount (${discPct}%)</td><td style="text-align: right;">-${discAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
+                        </tbody>
+                    </table>
 
-            const rows: [string, number, boolean][] = [
-                [`Room Charges (${nights} night${nights > 1 ? 's' : ''} × ₹${(base / nights).toFixed(0)})`, base, false],
-                ...(gstAmt > 0 ? [[`GST (${gstPct}%)`, gstAmt, false] as [string, number, boolean]] : []),
-                ...(scAmt  > 0 ? [[`Service Charge (${scPct}%)`, scAmt, false] as [string, number, boolean]] : []),
-                ...(ltAmt  > 0 ? [[`Luxury Tax (${ltPct}%)`, ltAmt, false] as [string, number, boolean]] : []),
-                ...(discAmt > 0 ? [[`Discount (${discPct}%)`, discAmt, true] as [string, number, boolean]] : []),
-            ]
-            rows.forEach(([label, amount, isDisc], idx) => {
-                doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252)
-                doc.rect(14, y, 182, 9, 'F')
-                doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.2); doc.line(14, y + 9, 196, y + 9)
-                doc.setTextColor(...mid); doc.setFont('helvetica', 'normal'); doc.text(label, 18, y + 6)
-                doc.setTextColor(isDisc ? red[0] : dark[0], isDisc ? red[1] : dark[1], isDisc ? red[2] : dark[2])
-                doc.setFont('helvetica', 'bold')
-                doc.text(`${isDisc ? '-' : ''}₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, y + 6, { align: 'right' })
-                y += 9
-            })
-            doc.setFillColor(...indigo); doc.rect(14, y, 182, 13, 'F')
-            doc.setTextColor(...white); doc.setFontSize(10); doc.setFont('helvetica', 'bold')
-            doc.text('TOTAL AMOUNT', 18, y + 9)
-            doc.setFontSize(13)
-            doc.text(`₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, y + 9, { align: 'right' })
-            y += 20
-            doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.5); doc.line(14, y, 196, y)
-            y += 8
-            doc.setTextColor(...light); doc.setFontSize(7); doc.setFont('helvetica', 'normal')
-            doc.text('Thank you for staying with us!', 14, y)
-            doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy')}`, 196, y, { align: 'right' })
-            doc.save(`Invoice_${guestName.replace(/\s+/g, '_')}_${invoiceNo}.pdf`)
-        } catch { /* silent */ }
+                    <div class="totals">
+                        <div class="total-row grand-total">
+                            <span class="total-label">STAY TOTAL:</span>
+                            <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div class="total-row balance-row">
+                            <span class="total-label">BALANCE DUE:</span>
+                            <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <p>Thank you for choosing ${(booking.property?.name || 'Zenbourg').toUpperCase()}. We hope you had a pleasant stay.</p>
+                        <p>This is a computer-generated document and does not require a physical signature.</p>
+                    </div>
+                    <script>
+                        window.onload = function() { 
+                            setTimeout(function() {
+                                window.print(); 
+                                window.onafterprint = function(){ window.close(); };
+                            }, 200);
+                        };
+                    </script>
+                </body>
+                </html>
+            `;
+            const printWindow = window.open('', '', 'width=800,height=800');
+            if (printWindow) {
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+            } else {
+                toast.error('Please allow popups to print invoices');
+            }
+        } catch (err) {
+            console.error(err)
+            toast.error('Failed to generate printable invoice')
+        }
     }
 
     return (
@@ -470,14 +528,14 @@ function GuestInvoiceModal({ booking, guestName, onClose }: {
                     className="w-full max-w-lg bg-white text-slate-900 rounded-3xl shadow-2xl pointer-events-auto overflow-hidden max-h-[90vh] overflow-y-auto"
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="bg-indigo-600 px-6 py-6 text-white">
+                    <div className="bg-[#C26A2C] px-6 py-6 text-white">
                         <div className="flex items-start justify-between">
                             <div>
                                 <h2 className="text-xl font-black uppercase tracking-tight">Guest Invoice</h2>
-                                <p className="text-indigo-200 text-xs mt-1">{guestName} · Room {roomNo}</p>
+                                <p className="text-[#F2C4A7] text-xs mt-1">{guestName} · Room {roomNo}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-indigo-300 text-[10px] uppercase tracking-wider">Invoice No.</p>
+                                <p className="text-[#E8A375] text-[10px] uppercase tracking-wider">Invoice No.</p>
                                 <p className="text-base font-mono font-bold">{invoiceNo}</p>
                             </div>
                         </div>
@@ -485,7 +543,7 @@ function GuestInvoiceModal({ booking, guestName, onClose }: {
                     <div className="p-6 space-y-5">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest border-b border-indigo-100 pb-1 mb-2">Stay Details</p>
+                                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Stay Details</p>
                                 {[
                                     ['Room',      `${roomNo}${roomType ? ' · ' + roomType : ''}`],
                                     ['Check-in',  format(new Date(booking.checkIn),  'dd MMM yyyy')],
@@ -499,7 +557,7 @@ function GuestInvoiceModal({ booking, guestName, onClose }: {
                                 ))}
                             </div>
                             <div>
-                                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest border-b border-indigo-100 pb-1 mb-2">Billing</p>
+                                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Billing</p>
                                 {[
                                     ['Base Amount', `₹${base.toLocaleString('en-IN')}`],
                                     ...(gstAmt > 0 ? [[`GST (${gstPct}%)`, `₹${gstAmt.toLocaleString('en-IN')}`]] : []),
@@ -513,12 +571,12 @@ function GuestInvoiceModal({ booking, guestName, onClose }: {
                                 ))}
                                 <div className="flex justify-between text-sm font-black border-t border-slate-200 pt-2 mt-2">
                                     <span className="text-slate-700">Total</span>
-                                    <span className="text-indigo-600">₹{finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-[#C26A2C]">₹{finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={handleDownloadPDF} className="flex-1 flex items-center justify-center gap-2 h-11 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-2xl transition-all active:scale-95">
+                            <button onClick={handleDownloadPDF} className="flex-1 flex items-center justify-center gap-2 h-11 bg-[#C26A2C] hover:bg-[#A85822] text-white text-sm font-bold rounded-2xl transition-all active:scale-95">
                                 <Download className="w-4 h-4" /> Download PDF
                             </button>
                             <button onClick={() => window.print()} className="h-11 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-2xl transition-all flex items-center gap-2">

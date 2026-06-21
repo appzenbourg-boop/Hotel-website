@@ -800,7 +800,7 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
               .hotel-info h1 { margin: 0; font-size: 28px; }
               .hotel-info p { margin: 5px 0; color: #666; }
               .invoice-title { text-align: right; }
-              .invoice-title h2 { margin: 0; color: #4f46e5; font-size: 24px; }
+              .invoice-title h2 { margin: 0; color: #C26A2C; font-size: 24px; }
               .details-section { display: flex; justify-content: space-between; margin-top: 40px; }
               .details-box h3 { font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
               .details-row { display: flex; margin-bottom: 5px; font-size: 14px; }
@@ -812,6 +812,8 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
               .total-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
               .total-label { font-weight: bold; margin-right: 20px; width: 150px; }
               .grand-total { font-size: 20px; font-weight: bold; color: #000; margin-top: 10px; border-top: 2px solid #000; padding-top: 10px; }
+              .paid-row { color: #2E7D32; }
+              .balance-row { font-size: 20px; font-weight: bold; color: #C26A2C; }
               .discount-row { color: #ef4444; }
               .footer { margin-top: 60px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px; }
             </style>
@@ -821,12 +823,12 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
               <div class="hotel-info">
                 <h1>${hotelName.toUpperCase()}</h1>
                 <p>Institutional Excellence in Hospitality</p>
-                <p>Generated: ${format(new Date(), 'dd MMM yyyy, hh:mm a')}</p>
+                <p>support@zenbourg.com | +91 6388163169</p>
               </div>
               <div class="invoice-title">
                 <h2>TAX INVOICE</h2>
                 <p>ID: #${invoiceNo}</p>
-                <p>Checkout Date: ${format(new Date(booking.checkOut), 'dd MMM yyyy')}</p>
+                <p>Date: ${new Date().toLocaleDateString()}</p>
               </div>
             </div>
 
@@ -865,14 +867,18 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
 
             <div class="totals">
               <div class="total-row grand-total">
-                <span class="total-label">TOTAL AMOUNT:</span>
+                <span class="total-label">STAY TOTAL:</span>
+                <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div class="total-row balance-row">
+                <span class="total-label">BALANCE DUE:</span>
                 <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
 
             <div class="footer">
-              <p>Thank you for staying with us. We hope to see you again!</p>
-              <p>This is a computer-generated document.</p>
+              <p>Thank you for choosing ${hotelName}. We hope you had a pleasant stay.</p>
+              <p>This is a computer-generated document and does not require a physical signature.</p>
             </div>
             <script>
               window.onload = function() { 
@@ -908,16 +914,16 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
           onClick={e => e.stopPropagation()}
         >
           {/* Invoice Header */}
-          <div className="bg-indigo-600 px-6 py-6 text-white">
+          <div className="bg-[#C26A2C] px-6 py-6 text-white">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-black uppercase tracking-tight">{hotelName}</h2>
-                <p className="text-indigo-200 text-xs mt-1">Guest Invoice · Checkout Receipt</p>
+                <p className="text-[#F2C4A7] text-xs mt-1">Guest Invoice · Checkout Receipt</p>
               </div>
               <div className="text-right">
-                <p className="text-indigo-300 text-[10px] uppercase tracking-wider">Invoice No.</p>
+                <p className="text-[#E8A375] text-[10px] uppercase tracking-wider">Invoice No.</p>
                 <p className="text-base font-mono font-bold">{invoiceNo}</p>
-                <p className="text-indigo-200 text-[10px] mt-1">{format(new Date(), 'dd MMM yyyy')}</p>
+                <p className="text-[#F2C4A7] text-[10px] mt-1">{format(new Date(), 'dd MMM yyyy')}</p>
               </div>
             </div>
           </div>
@@ -926,7 +932,7 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
             {/* Guest + Stay Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest border-b border-indigo-100 pb-1 mb-2">Guest</p>
+                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Guest</p>
                 {[
                   ['Name',      guestName],
                   ['Room',      `${roomNo}${roomType ? ' · ' + roomType : ''}`],
@@ -938,7 +944,7 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
                 ))}
               </div>
               <div>
-                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest border-b border-indigo-100 pb-1 mb-2">Stay</p>
+                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Stay</p>
                 {[
                   ['Check-in',  format(new Date(booking.checkIn),  'dd MMM yyyy')],
                   ['Check-out', format(new Date(booking.checkOut), 'dd MMM yyyy')],
@@ -956,7 +962,7 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
             <div className="border border-slate-100 rounded-2xl overflow-hidden">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-indigo-600 text-white">
+                  <tr className="bg-[#C26A2C] text-white">
                     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest">Description</th>
                     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-right">Amount</th>
                   </tr>
@@ -993,7 +999,7 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
                       <td className="px-4 py-3 text-sm font-mono font-bold text-red-500 text-right">-₹{discAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                     </tr>
                   )}
-                  <tr className="bg-indigo-600">
+                  <tr className="bg-[#C26A2C]">
                     <td className="px-4 py-4 text-sm font-black text-white uppercase tracking-wide">Total Amount</td>
                     <td className="px-4 py-4 text-xl font-mono font-black text-white text-right">₹{finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   </tr>
@@ -1010,7 +1016,7 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
             <div className="flex gap-3 pt-2">
               <button
                 onClick={handleDownloadPDF}
-                className="flex-1 flex items-center justify-center gap-2 h-11 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-2xl transition-all active:scale-95"
+                className="flex-1 flex items-center justify-center gap-2 h-11 bg-[#C26A2C] hover:bg-[#A85822] text-white text-sm font-bold rounded-2xl transition-all active:scale-95"
               >
                 <Download className="w-4 h-4" /> Download PDF
               </button>

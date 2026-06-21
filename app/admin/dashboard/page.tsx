@@ -140,7 +140,7 @@ export default function AdminDashboard() {
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{item.roomType}</p>
-                <p className="text-xs font-medium text-primary mt-1">{item.time || item.eta || 'Staying'}</p>
+                <p className="text-xs font-medium text-primary mt-1">{item.time ? new Date(item.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : item.eta ? new Date(item.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Staying'}</p>
               </div>
             </div>
           ))
@@ -348,7 +348,7 @@ export default function AdminDashboard() {
                           <p className="text-[13px] text-gray-200 font-medium">{g.roomType}</p>
                           <p className="text-[10px] text-gray-500 mt-0.5">Base Rate</p>
                         </td>
-                        <td className="px-5 py-4 text-[13px] text-gray-400 font-bold text-center">{g.eta}</td>
+                        <td className="px-5 py-4 text-[13px] text-gray-400 font-bold text-center">{new Date(g.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</td>
                         <td className="hidden sm:table-cell px-5 py-4">{statusBadge(g.status)}</td>
                         <td className="px-5 py-4 text-right">
                           {g.status === 'RESERVED' ? (
@@ -387,7 +387,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">ETA</p>
-                        <p className="text-[13px] text-white font-bold">{g.eta}</p>
+                        <p className="text-[13px] text-white font-bold">{new Date(g.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
                       </div>
                       {g.status === 'RESERVED' ? (
                         <button 
@@ -552,7 +552,7 @@ export default function AdminDashboard() {
                 <div key={i} className="flex gap-3 items-start">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-[7px] shrink-0" />
                   <div>
-                    <p className="text-[11px] text-gray-500 font-medium">{log.time}</p>
+                    <p className="text-[11px] text-gray-500 font-medium">{new Date(log.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
                     <p className="text-[12px] text-white leading-snug mt-0.5">{log.action}</p>
                   </div>
                 </div>

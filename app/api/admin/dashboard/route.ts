@@ -263,14 +263,14 @@ export async function GET(req: NextRequest) {
         // Process and sort activity logs
         const allActivity = [
             ...recentActivity.map((a: any) => ({
-                time: new Date(a.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                time: a.updatedAt.toISOString(),
                 action: a.status === 'COMPLETED'
                     ? `Room ${a.room?.roomNumber || '?'} marked as Clean.`
                     : `${a.type.replace('_', ' ')} in progress for Room ${a.room?.roomNumber || '?'}.`,
                 timestamp: a.updatedAt
             })),
             ...recentBookingActivity.map((b: any) => ({
-                time: new Date(b.updatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+                time: b.updatedAt.toISOString(),
                 action: b.status === 'CHECKED_IN'
                     ? `${b.guest.name} checked in to Room ${b.room?.roomNumber || '?'}.`
                     : b.status === 'RESERVED'
@@ -350,7 +350,7 @@ export async function GET(req: NextRequest) {
                 guest: b.guest.name,
                 room: b.room.roomNumber,
                 roomType: `${b.room.type} (${b.room.roomNumber})`,
-                eta: new Date(b.actualCheckIn || b.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                eta: (b.actualCheckIn || b.checkIn).toISOString(),
                 status: b.status,
                 phone: b.guest.phone || 'N/A'
             })),
@@ -361,7 +361,7 @@ export async function GET(req: NextRequest) {
                 roomType: `${b.room.type} (${b.room.roomNumber})`,
                 status: b.status,
                 phone: b.guest.phone || 'N/A',
-                time: new Date(b.actualCheckOut || b.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                time: (b.actualCheckOut || b.checkOut).toISOString()
             })),
             occupancyGuests: activeBookingsToday.map(b => ({
                 id: b.id,

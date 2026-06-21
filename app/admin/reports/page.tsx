@@ -28,6 +28,7 @@ export default function ReportsPage() {
     const [trendView, setTrendView] = useState<'Daily' | 'Weekly' | 'Monthly'>('Daily')
     const [range, setRange] = useState<'this_month' | 'last_month' | 'last_3_months' | 'this_year'>('this_month')
     const [showRangePicker, setShowRangePicker] = useState(false)
+    const [feedbackPage, setFeedbackPage] = useState(1)
     const chartRef = useRef<HTMLDivElement>(null)
 
     const RANGE_LABELS: Record<string, string> = {
@@ -191,6 +192,10 @@ export default function ReportsPage() {
         if (hours > 0) return `${hours}h ago`
         return 'Just now'
     }
+
+    const FEEDBACK_PER_PAGE = 3
+    const totalFeedbackPages = data?.feedback ? Math.ceil(data.feedback.length / FEEDBACK_PER_PAGE) : 0
+    const paginatedFeedback = data?.feedback ? data.feedback.slice((feedbackPage - 1) * FEEDBACK_PER_PAGE, feedbackPage * FEEDBACK_PER_PAGE) : []
 
     return (
         <div className="space-y-6 animate-fade-in pb-10">
@@ -479,10 +484,30 @@ export default function ReportsPage() {
                     <Card className="p-6 border-white/[0.05] bg-surface">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-bold text-text-primary">Recent Guest Feedback</h3>
-                            <button className="text-xs font-bold text-primary hover:brightness-125 transition-all uppercase tracking-widest">View All</button>
+                            {totalFeedbackPages > 1 && (
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        disabled={feedbackPage === 1} 
+                                        onClick={() => setFeedbackPage(p => p - 1)}
+                                        className="text-[10px] font-bold text-text-secondary disabled:opacity-50 hover:text-white transition-colors"
+                                    >
+                                        PREV
+                                    </button>
+                                    <span className="text-[10px] font-bold text-text-tertiary">
+                                        {feedbackPage} / {totalFeedbackPages}
+                                    </span>
+                                    <button 
+                                        disabled={feedbackPage === totalFeedbackPages} 
+                                        onClick={() => setFeedbackPage(p => p + 1)}
+                                        className="text-[10px] font-bold text-text-secondary disabled:opacity-50 hover:text-white transition-colors"
+                                    >
+                                        NEXT
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-5">
-                            {data.feedback?.length > 0 ? data.feedback.map((fb: any, i: number) => (
+                            {paginatedFeedback.length > 0 ? paginatedFeedback.map((fb: any, i: number) => (
                                 <div key={i} className="space-y-2.5 pb-5 border-b border-white/[0.04] last:border-0 last:pb-0">
                                     <div className="flex items-center justify-between">
                                         <div className="flex gap-0.5">
@@ -500,7 +525,7 @@ export default function ReportsPage() {
                                     </p>
                                 </div>
                             )) : (
-                                <p className="text-sm text-text-tertiary  py-4">No guest feedback available yet.</p>
+                                <p className="text-sm text-text-tertiary  py-4">No actionable guest feedback available yet.</p>
                             )}
                         </div>
                     </Card>

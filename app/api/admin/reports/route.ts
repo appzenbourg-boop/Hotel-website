@@ -264,21 +264,26 @@ export async function GET(req: NextRequest) {
 
         // ===== 8. RECENT GUEST FEEDBACK =====
         const recentFeedback = await prisma.rating.findMany({
+            where: {
+                comment: { not: null }
+            },
             orderBy: { createdAt: 'desc' },
-            take: 5,
+            take: 50,
             include: {
                 guest: { select: { name: true } },
                 serviceRequest: { select: { room: { select: { roomNumber: true } } } }
             }
         })
 
-        const feedback = recentFeedback.map(r => ({
-            rating: r.rating,
-            comment: r.comment || null,
-            guestName: r.guest.name,
-            room: r.serviceRequest?.room?.roomNumber || 'N/A',
-            createdAt: r.createdAt
-        }))
+        const feedback = recentFeedback
+            .filter(r => r.comment && r.comment.trim() !== '' && r.comment.toLowerCase() !== 'no comment provided')
+            .map(r => ({
+                rating: r.rating,
+                comment: r.comment,
+                guestName: r.guest.name,
+                room: r.serviceRequest?.room?.roomNumber || 'N/A',
+                createdAt: r.createdAt
+            }))
 
         return NextResponse.json({
             success: true,

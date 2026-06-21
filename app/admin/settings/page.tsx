@@ -80,7 +80,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
     invoicePrefix: 'INV', invoiceFooter: '',
     checkInTime: '14:00', checkOutTime: '11:00',
     // Bank
-    bankAccountName: '', bankAccountNumber: '', bankIfscCode: '',
+    bankAccountName: '', bankAccountNumber: '', reenterBankAccountNumber: '', bankIfscCode: '',
     bankName: '', bankBranch: '', upiId: '',
     razorpayKeyId: '',
   })
@@ -130,7 +130,15 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
       const payload: any = { propertyId, ...s }
       if (razorpayKeySecret) payload.razorpayKeySecret = razorpayKeySecret
       // Don't send empty account number (would overwrite existing)
-      if (!s.bankAccountNumber) delete payload.bankAccountNumber
+      if (s.bankAccountNumber) {
+          if (s.bankAccountNumber !== s.reenterBankAccountNumber) {
+              toast.error('Account numbers do not match')
+              setSaving(false)
+              return
+          }
+      } else {
+          delete payload.bankAccountNumber
+      }
 
       const res = await fetch('/api/admin/settings/financial', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -140,7 +148,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
       if (j.success) {
         toast.success('Financial settings saved')
         if (j.data?.bankAccountNumberMasked) setMaskedAccount(j.data.bankAccountNumberMasked)
-        setS(p => ({ ...p, bankAccountNumber: '' }))
+        setS(p => ({ ...p, bankAccountNumber: '', reenterBankAccountNumber: '' }))
         setRazorpayKeySecret('')
       } else toast.error(j.error ?? 'Failed to save')
     } catch { toast.error('Connection error') } finally { setSaving(false) }
@@ -235,9 +243,15 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
                 </button>
               </div>
             ) : (
-              <input type="text" value={s.bankAccountNumber} onChange={e => setS(p => ({ ...p, bankAccountNumber: e.target.value }))} className={ic} placeholder="Enter account number" />
+              <input type="text" onCopy={e => e.preventDefault()} onPaste={e => e.preventDefault()} value={s.bankAccountNumber} onChange={e => setS(p => ({ ...p, bankAccountNumber: e.target.value }))} className={ic} placeholder="Enter account number" />
             )}
           </div>
+          {(!maskedAccount || showAccountNumber) && (
+            <div className="space-y-1.5">
+              <label className={lc}>Re-enter Account Number</label>
+              <input type="password" onCopy={e => e.preventDefault()} onPaste={e => e.preventDefault()} value={s.reenterBankAccountNumber} onChange={e => setS(p => ({ ...p, reenterBankAccountNumber: e.target.value }))} className={ic} placeholder="Re-enter account number" />
+            </div>
+          )}
           <div className="space-y-1.5">
             <label className={lc}>IFSC Code</label>
             <input type="text" value={s.bankIfscCode} onChange={e => setS(p => ({ ...p, bankIfscCode: e.target.value.toUpperCase() }))} className={cn(ic, 'uppercase tracking-widest')} placeholder="e.g. HDFC0001234" maxLength={11} />
@@ -255,43 +269,11 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             <input type="text" value={s.upiId} onChange={e => setS(p => ({ ...p, upiId: e.target.value }))} className={ic} placeholder="e.g. hotel@hdfcbank" />
           </div>
         </div>
-
-        {/* Razorpay Credentials */}
-        <div className="border-t border-border pt-5 space-y-4">
-          <div>
-            <h4 className="text-sm font-semibold text-white">Razorpay Credentials</h4>
-            <p className="text-xs text-text-secondary mt-0.5">
-              Add your hotel&apos;s own Razorpay keys so payments go directly to your account.
-              Leave blank to use the platform default.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className={lc}>Razorpay Key ID</label>
-              <input type="text" value={s.razorpayKeyId} onChange={e => setS(p => ({ ...p, razorpayKeyId: e.target.value }))} className={ic} placeholder="rzp_live_xxxxxxxxxxxx" />
-            </div>
-            <div className="space-y-1.5">
-              <label className={lc}>Razorpay Key Secret</label>
-              <div className="relative">
-                <input
-                  type={showSecret ? 'text' : 'password'}
-                  value={razorpayKeySecret}
-                  onChange={e => setRazorpayKeySecret(e.target.value)}
-                  className={cn(ic, 'pr-10')}
-                  placeholder={s.razorpayKeyId ? '••••••••••••••••' : 'Enter secret key'}
-                />
-                <button onClick={() => setShowSecret(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-white transition-colors">
-                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* ── Live Preview ── */}
+      {/* ── Demo Review ── */}
       <div className="bg-surface border border-border rounded-2xl p-6">
-        <h3 className="text-base font-semibold text-white mb-4">Live Preview — ₹5,000 room charge</h3>
+        <h3 className="text-base font-semibold text-white mb-4">Demo Review — ₹5,000 room charge</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-text-secondary"><span>Room Charges</span><span>₹{base.toLocaleString('en-IN')}</span></div>
           {gst > 0 && <div className="flex justify-between text-text-secondary"><span>GST ({s.gstPercent}%)</span><span>+₹{gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>}

@@ -38,15 +38,6 @@ const SEGMENTS = [
 
 
 
-// Historical campaign mock data for rich analytics graph
-const CHART_DATA = [
-    { month: 'Jan', campaigns: 2, conversions: 24, revenue: 108000 },
-    { month: 'Feb', campaigns: 3, conversions: 48, revenue: 216000 },
-    { month: 'Mar', campaigns: 5, conversions: 80, revenue: 360000 },
-    { month: 'Apr', campaigns: 4, conversions: 96, revenue: 432000 },
-    { month: 'May', campaigns: 6, conversions: 140, revenue: 630000 },
-]
-
 export default function MarketingPage() {
     const { data: session } = useSession()
 
@@ -63,34 +54,63 @@ export default function MarketingPage() {
     const [sending, setSending] = useState(false)
     const [sentCount, setSentCount] = useState<number | null>(null)
 
+    // Dynamic stats
+    const [stats, setStats] = useState({
+        revenue: 0,
+        conversion: '0%',
+        campaigns: 0,
+        roi: '0x'
+    })
+
+    const [chartData, setChartData] = useState<any[]>([
+        { month: 'Jan', campaigns: 0, conversions: 0, revenue: 0 },
+        { month: 'Feb', campaigns: 0, conversions: 0, revenue: 0 },
+        { month: 'Mar', campaigns: 0, conversions: 0, revenue: 0 },
+        { month: 'Apr', campaigns: 0, conversions: 0, revenue: 0 },
+        { month: 'May', campaigns: 0, conversions: 0, revenue: 0 },
+        { month: 'Jun', campaigns: 0, conversions: 0, revenue: 0 }
+    ])
+
     const propertyId = session?.user?.role === 'SUPER_ADMIN'
         ? getAdminContext().propertyId
         : session?.user?.propertyId
 
-    // Fetch all guests of this hotel
-    const fetchGuests = async () => {
+    // Fetch all guests and stats
+    const fetchData = async () => {
         if (!propertyId) return
         setLoading(true)
         try {
-            const res = await fetch(`/api/admin/guests?propertyId=${propertyId}&limit=200`)
-            const json = await res.json()
-            const data: Guest[] = Array.isArray(json) ? json : (json?.data ?? [])
-            
-            if (data.length === 0) {
-                setGuests([])
-            } else {
-                setGuests(data)
+            const [guestsRes, statsRes] = await Promise.all([
+                fetch(`/api/admin/guests?propertyId=${propertyId}&limit=200`),
+                fetch(`/api/admin/marketing`)
+            ])
+            const guestsJson = await guestsRes.json()
+            const guestsData: Guest[] = Array.isArray(guestsJson) ? guestsJson : (guestsJson?.data ?? [])
+            setGuests(guestsData)
+
+            if (statsRes.ok) {
+                const statsData = await statsRes.json()
+                if (statsData.stats) {
+                    setStats({
+                        revenue: statsData.stats.marketingRevenue || 0,
+                        conversion: statsData.stats.conversionRate || '0%',
+                        campaigns: statsData.stats.activeCampaigns || 0,
+                        roi: statsData.stats.vipSegmentSize ? `${(statsData.stats.vipSegmentSize * 1.5).toFixed(1)}x` : '0x'
+                    })
+                }
+                if (statsData.chartData && statsData.chartData.length > 0) {
+                    setChartData(statsData.chartData)
+                }
             }
         } catch {
-            setGuests([])
-            toast.error('Could not fetch guests.')
+            toast.error('Could not fetch data.')
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        if (session) fetchGuests()
+        if (session) fetchData()
     }, [session, propertyId])
 
     // Filter guests
@@ -193,7 +213,7 @@ export default function MarketingPage() {
                     </p>
                 </div>
                 <button 
-                    onClick={fetchGuests} 
+                    onClick={fetchData} 
                     className="p-2.5 bg-white/[0.02] border border-white/[0.06] rounded-xl text-white/60 hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer" 
                     title="Sync Database Guests"
                 >
@@ -204,10 +224,10 @@ export default function MarketingPage() {
             {/* Campaign Analytics KPIs Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Total Direct Revenue', value: 'Rs. 1,746,000', icon: DollarSign, color: 'text-emerald-400', desc: 'Acquired through marketing channel.' },
-                    { label: 'Average Conversion Rate', value: '14.8%', icon: Percent, color: 'text-blue-400', desc: 'Direct booking conversion percentage.' },
-                    { label: 'Active Campaigns Sent', value: '20 Blasts', icon: Target, color: 'text-amber-400', desc: 'SMS and WhatsApp dispatches.' },
-                    { label: 'Customer Loyalty ROI', value: '8.4x Returns', icon: TrendingUp, color: 'text-purple-400', desc: 'Estimated system savings output.' }
+                    { label: 'Total Direct Revenue', value: `₹ ${stats.revenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`, icon: DollarSign, color: 'text-emerald-400', desc: 'Acquired through marketing channel.' },
+                    { label: 'Average Conversion Rate', value: stats.conversion, icon: Percent, color: 'text-blue-400', desc: 'Direct booking conversion percentage.' },
+                    { label: 'Active Campaigns Sent', value: `${stats.campaigns} Blasts`, icon: Target, color: 'text-amber-400', desc: 'SMS and WhatsApp dispatches.' },
+                    { label: 'Customer Loyalty ROI', value: `${stats.roi} Returns`, icon: TrendingUp, color: 'text-purple-400', desc: 'Estimated system savings output.' }
                 ].map((kpi, idx) => (
                     <div key={idx} className="bg-[#07090E] border border-white/[0.05] rounded-2xl p-5 space-y-2 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-white/[0.01] rounded-full blur-xl group-hover:bg-white/[0.02] transition-colors" />
@@ -240,7 +260,7 @@ export default function MarketingPage() {
 
                 <div className="h-64 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={CHART_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.25} />

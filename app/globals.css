@@ -37,8 +37,14 @@
   }
 
   body {
-    @apply h-full bg-background text-text-primary font-sans antialiased;
+    @apply h-full bg-background text-text-primary font-sans antialiased select-none;
     background-color: var(--bg-dark);
+    -webkit-user-select: none;
+  }
+
+  ::selection {
+    background-color: rgba(74, 158, 255, 0.3);
+    color: #ffffff;
   }
 
   h1,
@@ -125,8 +131,10 @@
 
   /* Input Styles */
   .input {
-    @apply w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-white/[0.05] transition-all;
+    @apply w-full px-4 py-3 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 focus:bg-white/[0.05] transition-all select-text;
     color-scheme: dark;
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   /* Specific fix for native dropdown options in dark mode */

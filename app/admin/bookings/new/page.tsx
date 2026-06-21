@@ -619,7 +619,7 @@ export default function NewBookingPage() {
                             <select
                                 value={occupancyFilter}
                                 onChange={(e) => setOccupancyFilter(e.target.value)}
-                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-12 pr-10 text-white font-bold outline-none focus:border-[#4A9EFF] appearance-none cursor-pointer text-sm shadow-2xl transition-all hover:border-white/20"
+                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-12 pr-10 text-white font-bold outline-none focus:border-[#4A9EFF] cursor-pointer text-sm shadow-2xl transition-all hover:border-white/20"
                             >
                                 <option value="All" className="bg-[#101922]">Any Occupancy</option>
                                 <option value="1 Adult, 0 Kids" className="bg-[#101922]">1 Adult</option>
@@ -627,7 +627,6 @@ export default function NewBookingPage() {
                                 <option value="3 Adults, 0 Kids" className="bg-[#101922]">3 Adults</option>
                                 <option value="4 Adults, 0 Kids" className="bg-[#101922]">4 Adults</option>
                             </select>
-                            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none rotate-90" />
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -637,7 +636,7 @@ export default function NewBookingPage() {
                             <select
                                 value={roomTypeFilter}
                                 onChange={(e) => setRoomTypeFilter(e.target.value)}
-                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-12 pr-10 text-white font-bold outline-none focus:border-[#4A9EFF] appearance-none cursor-pointer text-sm shadow-2xl transition-all hover:border-white/20"
+                                className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-12 pr-10 text-white font-bold outline-none focus:border-[#4A9EFF] cursor-pointer text-sm shadow-2xl transition-all hover:border-white/20"
                             >
                                 <option value="All Rooms" className="bg-[#101922]">All Types</option>
                                 <option value="Deluxe Suite" className="bg-[#101922]">Deluxe Suite</option>
@@ -645,17 +644,15 @@ export default function NewBookingPage() {
                                 <option value="Standard Twin" className="bg-[#101922]">Standard Twin</option>
                                 <option value="Junior Suite" className="bg-[#101922]">Junior Suite</option>
                             </select>
-                            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none rotate-90" />
                         </div>
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Attributes</label>
                         <div className="relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-700" />
-                            <select className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-12 pr-10 text-white font-bold outline-none focus:border-[#4A9EFF] appearance-none cursor-pointer text-sm shadow-2xl transition-all hover:border-white/20">
+                            <select className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-12 pr-10 text-white font-bold outline-none focus:border-[#4A9EFF] cursor-pointer text-sm shadow-2xl transition-all hover:border-white/20">
                                 <option className="bg-[#101922]">Any Attribute</option>
                             </select>
-                            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none rotate-90" />
                         </div>
                     </div>
                     <div className="flex items-end">
@@ -1014,13 +1011,12 @@ export default function NewBookingPage() {
                                 <select
                                     value={bookingDetails.source}
                                     onChange={e => setBookingDetails({ ...bookingDetails, source: e.target.value })}
-                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-[1.5rem] px-6 py-5 text-white font-bold outline-none focus:border-[#4A9EFF] transition-all appearance-none cursor-pointer text-base shadow-2xl hover:border-white/20"
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-[1.5rem] px-6 py-5 text-white font-bold outline-none focus:border-[#4A9EFF] transition-all cursor-pointer text-base shadow-2xl hover:border-white/20"
                                 >
                                     <option value="WALK_IN" className="bg-[#101922]">Hotel Walk-in</option>
                                     <option value="DIRECT" className="bg-[#101922]">Direct Call Reservation</option>
                                     <option value="BOOKING_COM" className="bg-[#101922]">Booking.com Official</option>
                                 </select>
-                                <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 pointer-events-none rotate-90" />
                             </div>
                         </div>
                         <div className="space-y-3">
@@ -1029,12 +1025,11 @@ export default function NewBookingPage() {
                                 <select
                                     value={bookingDetails.status}
                                     onChange={e => setBookingDetails({ ...bookingDetails, status: e.target.value })}
-                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-[1.5rem] px-6 py-5 text-white font-bold outline-none focus:border-[#4A9EFF] transition-all appearance-none cursor-pointer text-base shadow-2xl hover:border-white/20"
+                                    className="w-full bg-[#0a0a0a] border border-white/10 rounded-[1.5rem] px-6 py-5 text-white font-bold outline-none focus:border-[#4A9EFF] transition-all cursor-pointer text-base shadow-2xl hover:border-white/20"
                                 >
                                     <option value="RESERVED" className="bg-[#101922]">Confirmed Reservation</option>
                                     <option value="PENDING" className="bg-[#101922]">Draft / Tentative</option>
                                 </select>
-                                <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 pointer-events-none rotate-90" />
                             </div>
                         </div>
                         <div className="space-y-3">
