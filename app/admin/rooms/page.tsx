@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
     Plus, Search, Filter, Copy, Save, Minus, ChevronRight,
     ArrowUp, Bed, X, Loader2, CheckCircle2, Download,
-    Wifi, Wind, Tv, Coffee, SlidersHorizontal, Image as ImageIcon, ChevronLeft, Eye, Camera, Maximize2
+    Wifi, Wind, Tv, Coffee, SlidersHorizontal, Image as ImageIcon, ChevronLeft, Eye, Camera, Maximize2,
+    Globe, Link as LinkIcon, Calendar, Check, ExternalLink
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -80,6 +81,13 @@ export default function RoomsPage() {
     const [uploading, setUploading] = useState(false)
     const [amenitiesList, setAmenitiesList] = useState<string[]>([])
 
+    // Airbnb / Booking.com OTA Import State
+    const [showAirbnbModal, setShowAirbnbModal] = useState(false)
+    const [airbnbUrl, setAirbnbUrl] = useState('')
+    const [otaChannel, setOtaChannel] = useState<'AIRBNB' | 'BOOKING_COM'>('AIRBNB')
+    const [airbnbForm, setAirbnbForm] = useState({ roomNumber: '', floor: '1', basePrice: '3500', category: 'DELUXE', type: '' })
+    const [importingAirbnb, setImportingAirbnb] = useState(false)
+
     // Hover Image Preview State & Timer Grace Period
     const [hoveredRoom, setHoveredRoom] = useState<any>(null)
     const [hoverImgIdx, setHoverImgIdx] = useState<number>(0)
@@ -142,6 +150,45 @@ export default function RoomsPage() {
                 setAmenitiesList(Array.from(new Set([...AMENITIES_OPTS, ...validCustoms])))
             }
         } catch (e) { console.error('Amenity fetch error:', e) }
+    }
+
+    const handleAirbnbImport = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!airbnbUrl.trim()) {
+            return toast.error('Please paste an Airbnb or Booking.com Listing / iCal link')
+        }
+        setImportingAirbnb(true)
+        try {
+            const res = await fetch('/api/admin/rooms/import-airbnb', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: airbnbUrl,
+                    otaChannel,
+                    roomNumber: airbnbForm.roomNumber || undefined,
+                    floor: airbnbForm.floor,
+                    basePrice: airbnbForm.basePrice,
+                    category: airbnbForm.category,
+                    type: airbnbForm.type || undefined
+                })
+            })
+
+            const json = await res.json()
+            if (!res.ok) {
+                throw new Error(json.error || json.message || 'Failed to import room')
+            }
+
+            const { room, syncReport, channelLabel } = json.data
+            toast.success(`Room ${room.roomNumber} created & ${syncReport.created} ${channelLabel || 'OTA'} reservations synced!`)
+            setShowAirbnbModal(false)
+            setAirbnbUrl('')
+            setAirbnbForm({ roomNumber: '', floor: '1', basePrice: '3500', category: 'DELUXE', type: '' })
+            fetchRooms()
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to import OTA listing')
+        } finally {
+            setImportingAirbnb(false)
+        }
     }
 
     const fetchRooms = useCallback(async () => {
@@ -339,6 +386,10 @@ export default function RoomsPage() {
                         className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-gray-300 text-[12px] font-medium rounded-lg transition-all active:scale-95"
                     >
                         <Download className="w-3.5 h-3.5" /> Export Rooms
+                    </button>
+                    <button onClick={() => setShowAirbnbModal(true)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-[#FF385C]/15 to-[#003580]/20 hover:from-[#FF385C]/25 hover:to-[#003580]/30 border border-white/10 text-white text-[12px] font-semibold rounded-lg transition-all shadow-lg active:scale-95">
+                        <Globe className="w-3.5 h-3.5 text-[#FF385C]" /> Import OTA Room (Airbnb / Booking.com)
                     </button>
                     <button onClick={() => setNewModal(true)}
                         className="flex items-center gap-1.5 px-3 py-2 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white text-[12px] font-semibold rounded-lg transition-colors shadow-lg shadow-[#4A9EFF]/20">
@@ -1046,6 +1097,163 @@ export default function RoomsPage() {
                         >
                             <SlidersHorizontal className="w-3 h-3" /> Edit Photos
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════
+               OTA (AIRBNB & BOOKING.COM) IMPORT MODAL
+             ══════════════════════════════════════════ */}
+            {showAirbnbModal && (
+                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowAirbnbModal(false)}>
+                    <div className="relative max-w-lg w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#101922]">
+                            <div className="flex items-center gap-3">
+                                <div className={cn(
+                                    "w-9 h-9 rounded-xl flex items-center justify-center transition-colors border",
+                                    otaChannel === 'BOOKING_COM' ? "bg-[#003580]/20 border-[#003580]/40 text-[#4A9EFF]" : "bg-[#FF385C]/10 border-[#FF385C]/30 text-[#FF385C]"
+                                )}>
+                                    <Globe className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-bold text-white">Import Room from OTA</h3>
+                                    <p className="text-[11px] text-gray-400">Paste Airbnb or Booking.com listing URL or iCal feed link</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowAirbnbModal(false)} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAirbnbImport} className="p-6 space-y-5">
+                            {/* Channel Switcher */}
+                            <div className="flex bg-[#101922] p-1 rounded-xl border border-white/10">
+                                <button
+                                    type="button"
+                                    onClick={() => setOtaChannel('AIRBNB')}
+                                    className={cn(
+                                        "flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                                        otaChannel === 'AIRBNB' ? "bg-[#FF385C] text-white shadow-lg" : "text-gray-400 hover:text-white"
+                                    )}
+                                >
+                                    Airbnb Listing
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setOtaChannel('BOOKING_COM')}
+                                    className={cn(
+                                        "flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                                        otaChannel === 'BOOKING_COM' ? "bg-[#003580] text-white shadow-lg" : "text-gray-400 hover:text-white"
+                                    )}
+                                >
+                                    Booking.com
+                                </button>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider flex items-center justify-between">
+                                    <span>{otaChannel === 'BOOKING_COM' ? 'Booking.com' : 'Airbnb'} Link or iCal URL</span>
+                                    <span className="text-[9px] text-[#4A9EFF] font-semibold">Auto-Detect Enabled</span>
+                                </label>
+                                <div className="relative">
+                                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <input
+                                        required
+                                        type="url"
+                                        placeholder={otaChannel === 'BOOKING_COM' ? "https://www.booking.com/hotel/... or iCal URL..." : "https://www.airbnb.com/rooms/... or iCal URL..."}
+                                        value={airbnbUrl}
+                                        onChange={e => {
+                                            const val = e.target.value
+                                            setAirbnbUrl(val)
+                                            if (val.toLowerCase().includes('booking.com')) setOtaChannel('BOOKING_COM')
+                                            else if (val.toLowerCase().includes('airbnb.com')) setOtaChannel('AIRBNB')
+                                        }}
+                                        className="w-full pl-10 pr-4 py-3 bg-[#101922] border border-white/10 rounded-xl text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#4A9EFF]/50 transition-all font-mono text-[12px]"
+                                    />
+                                </div>
+                                <p className="text-[10px] text-gray-500 leading-normal">
+                                    Supports direct listing URLs or exported calendar iCal feeds (`.ics`). Past & future reservations will automatically populate in your master calendar.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Room Number</label>
+                                    <input
+                                        type="text"
+                                        placeholder={otaChannel === 'BOOKING_COM' ? "e.g. BK-101 (Auto-generated)" : "e.g. AB-101 (Auto-generated)"}
+                                        value={airbnbForm.roomNumber}
+                                        onChange={e => setAirbnbForm({ ...airbnbForm, roomNumber: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#4A9EFF]/50 font-bold"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Floor Number</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="1"
+                                        value={airbnbForm.floor}
+                                        onChange={e => setAirbnbForm({ ...airbnbForm, floor: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#4A9EFF]/50 font-bold"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Nightly Base Rate (₹)</label>
+                                    <input
+                                        type="number"
+                                        placeholder="3500"
+                                        value={airbnbForm.basePrice}
+                                        onChange={e => setAirbnbForm({ ...airbnbForm, basePrice: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#4A9EFF]/50 font-bold"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Category</label>
+                                    <select
+                                        value={airbnbForm.category}
+                                        onChange={e => setAirbnbForm({ ...airbnbForm, category: e.target.value })}
+                                        className="w-full px-3 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-[#4A9EFF]/50 cursor-pointer font-bold"
+                                    >
+                                        <option value="DELUXE">Deluxe</option>
+                                        <option value="SUITE">Suite</option>
+                                        <option value="STANDARD">Standard</option>
+                                        <option value="EXECUTIVE">Executive</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAirbnbModal(false)}
+                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={importingAirbnb}
+                                    className={cn(
+                                        "px-5 py-2.5 text-white text-xs font-bold rounded-xl transition-all shadow-lg flex items-center gap-2 disabled:opacity-50",
+                                        otaChannel === 'BOOKING_COM' ? "bg-[#003580] hover:bg-[#002560] shadow-[#003580]/30" : "bg-[#FF385C] hover:bg-[#e0314f] shadow-[#FF385C]/30"
+                                    )}
+                                >
+                                    {importingAirbnb ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" /> Importing & Syncing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Globe className="w-4 h-4" /> Import {otaChannel === 'BOOKING_COM' ? 'Booking.com' : 'Airbnb'} Listing
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

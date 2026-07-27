@@ -149,6 +149,23 @@ export async function POST(
       createdMappings.push(created)
     }
 
+    // Sync to PropertySettings if otaName is RAZORPAY
+    if (otaName === 'RAZORPAY' && credentials) {
+      const keyId = credentials.keyId || credentials.key_id || credentials.razorpayKeyId
+      const keySecret = credentials.keySecret || credentials.key_secret || credentials.razorpayKeySecret
+      if (keyId && keySecret) {
+        try {
+          await prisma.propertySettings.upsert({
+            where: { propertyId },
+            update: { razorpayKeyId: keyId.trim(), razorpayKeySecret: keySecret.trim() },
+            create: { propertyId, razorpayKeyId: keyId.trim(), razorpayKeySecret: keySecret.trim() },
+          })
+        } catch (e) {
+          console.error('Failed to sync Razorpay keys to PropertySettings:', e)
+        }
+      }
+    }
+
     return ok({
       message: `${otaName} integration status updated`,
       connection,

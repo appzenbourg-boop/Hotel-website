@@ -165,30 +165,23 @@ export const authOptions: NextAuthOptions = {
             
             // Fetch property plan for middleware feature gating
             const pid = token.propertyId
-            if (user) {
-                if (pid) {
-                    try {
-                        const prop = await prisma.property.findUnique({
-                            where: { id: pid as string },
-                            select: { plan: true, customQuoteStatus: true, customQuoteAmount: true, customQuoteAllowsTrial: true },
-                        })
-                        token.plan = prop?.plan ?? 'BASE'
-                        token.customQuoteStatus = prop?.customQuoteStatus ?? 'NONE'
-                        token.customQuoteAmount = prop?.customQuoteAmount ?? null
-                        token.customQuoteAllowsTrial = prop?.customQuoteAllowsTrial ?? false
-                    } catch {
-                        token.plan = 'BASE'
-                        token.customQuoteStatus = 'NONE'
-                        token.customQuoteAmount = null
-                        token.customQuoteAllowsTrial = false
-                    }
-                } else {
-                    token.plan = 'BASE'
-                    token.customQuoteStatus = 'NONE'
-                    token.customQuoteAmount = null
-                    token.customQuoteAllowsTrial = false
+            if (pid) {
+                try {
+                    const prop = await prisma.property.findUnique({
+                        where: { id: pid as string },
+                        select: { plan: true, customQuoteStatus: true, customQuoteAmount: true, customQuoteAllowsTrial: true },
+                    })
+                    token.plan = (prop?.plan || 'ENTERPRISE').toUpperCase()
+                    token.customQuoteStatus = prop?.customQuoteStatus ?? 'NONE'
+                    token.customQuoteAmount = prop?.customQuoteAmount ?? null
+                    token.customQuoteAllowsTrial = prop?.customQuoteAllowsTrial ?? false
+                } catch {
+                    if (!token.plan) token.plan = 'ENTERPRISE'
                 }
+            } else {
+                if (!token.plan) token.plan = token.role === 'SUPER_ADMIN' || token.role === 'HOTEL_ADMIN' ? 'ENTERPRISE' : 'BASE'
             }
+
             // Re-fetch plan when session.update() is called (e.g. after upgrade)
             if (trigger === 'update' && token.propertyId) {
                 try {
@@ -196,7 +189,7 @@ export const authOptions: NextAuthOptions = {
                         where: { id: token.propertyId as string },
                         select: { plan: true, customQuoteStatus: true, customQuoteAmount: true, customQuoteAllowsTrial: true },
                     })
-                    if (prop?.plan) token.plan = prop.plan
+                    if (prop?.plan) token.plan = prop.plan.toUpperCase()
                     token.customQuoteStatus = prop?.customQuoteStatus ?? 'NONE'
                     token.customQuoteAmount = prop?.customQuoteAmount ?? null
                     token.customQuoteAllowsTrial = prop?.customQuoteAllowsTrial ?? false

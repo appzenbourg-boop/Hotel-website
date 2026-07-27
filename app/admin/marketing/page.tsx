@@ -143,53 +143,37 @@ export default function MarketingPage() {
     }
     const allSelected = filtered.length > 0 && selected.size === filtered.length
 
-    // Send messages
+    // Send messages via Twilio Gateway / Email Engine
     const handleSend = async () => {
         if (selected.size === 0) { toast.error('Select at least one guest'); return }
         if (!message.trim()) { toast.error('Write a message first'); return }
 
-        const targets = guests.filter(g => selected.has(g.id))
-
-        if (channel === 'WHATSAPP') {
-            let opened = 0
-            for (const g of targets) {
-                const clean = g.phone.replace(/\D/g, '')
-                const num = clean.length === 10 ? `91${clean}` : clean
-                if (!num) continue
-                const url = `https://wa.me/${num}?text=${encodeURIComponent(message)}`
-                setTimeout(() => window.open(url, '_blank'), opened * 600)
-                opened++
+        setSending(true)
+        try {
+            const res = await fetch('/api/admin/marketing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'BLAST',
+                    channel: channel,
+                    name: `Campaign ${new Date().toLocaleDateString('en-IN')}`,
+                    segment: SEGMENTS.find(s => s.id === segment)?.label ?? 'Custom',
+                    propertyId,
+                    guestIds: Array.from(selected),
+                    message,
+                }),
+            })
+            const data = await res.json()
+            if (data.success) {
+                toast.success(`${channel} message sent to ${data.count} guest${data.count !== 1 ? 's' : ''}!`)
+                setSentCount(data.count)
+            } else {
+                toast.error(data.error ?? 'Failed to send campaign message')
             }
-            toast.success(`Opening WhatsApp for ${opened} guest${opened !== 1 ? 's' : ''}`)
-            setSentCount(opened)
-        } else {
-            setSending(true)
-            try {
-                const res = await fetch('/api/admin/marketing', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'BLAST',
-                        channel: 'SMS',
-                        name: `Campaign ${new Date().toLocaleDateString('en-IN')}`,
-                        segment: SEGMENTS.find(s => s.id === segment)?.label ?? 'Custom',
-                        propertyId,
-                        guestIds: Array.from(selected),
-                        message,
-                    }),
-                })
-                const data = await res.json()
-                if (data.success) {
-                    toast.success(`SMS sent to ${data.count} guest${data.count !== 1 ? 's' : ''}`)
-                    setSentCount(data.count)
-                } else {
-                    toast.error(data.error ?? 'Failed to send')
-                }
-            } catch {
-                toast.error('Connection error')
-            } finally {
-                setSending(false)
-            }
+        } catch {
+            toast.error('Connection error sending campaign')
+        } finally {
+            setSending(false)
         }
     }
 
@@ -463,13 +447,27 @@ export default function MarketingPage() {
 
                         {/* Blast Message Text */}
                         <div>
-                            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-2">Promotion Script</label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block">Custom Campaign Message</label>
+                                <div className="flex items-center gap-1.5">
+                                    {['{guestName}', '{hotelName}', '{promoCode}'].map(tag => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            onClick={() => setMessage(prev => `${prev} ${tag}`)}
+                                            className="px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 text-[#3B82F6] rounded text-[9px] font-mono hover:bg-blue-500/20 transition-colors"
+                                        >
+                                            + {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             <textarea
-                                rows={5}
+                                rows={3}
                                 value={message}
                                 onChange={e => setMessage(e.target.value)}
-                                placeholder="Hi {guest_name}, warm greetings from StayIn Hospitality! As a premium direct client, take 20% off your next summer suite booking. Use code DIRECT20. Tap here to book instantly..."
-                                className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-xs text-white placeholder:text-white/20 focus:border-blue-500/50 outline-none resize-none transition-all"
+                                placeholder="Hi {guestName}, warm greetings from {hotelName}! As a valued guest, take 20% off your next suite booking. Use code {promoCode}."
+                                className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-xs text-white placeholder:text-white/20 focus:border-blue-500/50 outline-none resize-none transition-all font-sans"
                             />
                             <p className="text-[9.5px] text-white/25 font-mono text-right mt-1.5">{message.length} characters</p>
                         </div>
@@ -479,9 +477,9 @@ export default function MarketingPage() {
                             <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-2">High-Conversion Templates</label>
                             <div className="space-y-2">
                                 {[
-                                    { label: 'Direct Promo', text: 'Hi! As our valued direct guest, book your next luxury stay at StayIn using coupon code STAYDIRECT to claim an instant 20% flat discount and complimentary breakfast!' },
-                                    { label: 'Complimentary Perk', text: 'Hello! Thank you for choosing StayIn. For your upcoming stay request, claim a complimentary premium room upgrade and early check-in. Reply directly to book.' },
-                                    { label: 'Express Feedback', text: 'Hi there! We hope you enjoyed your stay at StayIn. Please take 30 seconds to review us and receive Rs. 500 wallet points instantly!' },
+                                    { label: 'Direct Promo', text: 'Hi {guestName}! As our valued guest, book your next luxury stay at {hotelName} using coupon code {promoCode} to claim an instant 20% flat discount!' },
+                                    { label: 'Complimentary Perk', text: 'Hello {guestName}! Thank you for staying at {hotelName}. Claim a complimentary room upgrade on your next check-in with code {promoCode}.' },
+                                    { label: 'Express Feedback', text: 'Hi {guestName}! We hope you enjoyed your stay at {hotelName}. Review us online and receive 500 wallet points instantly!' },
                                 ].map(t => (
                                     <button
                                         key={t.label}

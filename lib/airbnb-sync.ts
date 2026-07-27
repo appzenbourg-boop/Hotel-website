@@ -10,10 +10,13 @@ export interface SyncResult {
 }
 
 /**
- * Synchronizes Airbnb reservations for a single property by fetching, parsing,
- * and reconciling iCal feeds for all mapped rooms.
+ * Synchronizes OTA (Airbnb or Booking.com) reservations for a single property by fetching,
+ * parsing, and reconciling iCal feeds for all mapped rooms.
  */
-export async function syncPropertyAirbnb(propertyId: string): Promise<SyncResult> {
+export async function syncPropertyOta(propertyId: string, otaName: string = 'AIRBNB'): Promise<SyncResult> {
+  const normalizedOta = otaName.toUpperCase().includes('BOOKING') ? 'BOOKING_COM' : 'AIRBNB'
+  const displayName = normalizedOta === 'BOOKING_COM' ? 'Booking.com' : 'Airbnb'
+
   const result: SyncResult = {
     propertyId,
     created: 0,
@@ -23,18 +26,18 @@ export async function syncPropertyAirbnb(propertyId: string): Promise<SyncResult
   }
 
   try {
-    // 1. Fetch Airbnb connection
+    // 1. Fetch OTA connection
     const connection = await prisma.otaConnection.findUnique({
       where: {
         propertyId_otaName: {
           propertyId,
-          otaName: 'AIRBNB',
+          otaName: normalizedOta,
         },
       },
     })
 
     if (!connection || connection.status !== 'CONNECTED') {
-      result.errors.push('Airbnb connection is inactive or disconnected')
+      result.errors.push(`${displayName} connection is inactive or disconnected`)
       return result
     }
 
@@ -53,16 +56,17 @@ export async function syncPropertyAirbnb(propertyId: string): Promise<SyncResult
       return result
     }
 
-    // 3. Ensure generic Airbnb Guest profile exists for this tenant
+    // 3. Ensure generic OTA Guest profile exists for this tenant
+    const guestPhone = `${normalizedOta}-GUEST`
     let guest = await prisma.guest.findUnique({
-      where: { phone: 'AIRBNB-GUEST' },
+      where: { phone: guestPhone },
     })
     if (!guest) {
       guest = await prisma.guest.create({
         data: {
-          name: 'Airbnb Guest',
-          phone: 'AIRBNB-GUEST',
-          email: 'airbnb-guest@zenbourg.com',
+          name: `${displayName} Guest`,
+          phone: guestPhone,
+          email: `${normalizedOta.toLowerCase()}-guest@zenbourg.com`,
           createdByPropertyId: propertyId,
         },
       })
@@ -90,18 +94,18 @@ export async function syncPropertyAirbnb(propertyId: string): Promise<SyncResult
         const icalText = await res.text()
         const parsedEvents = parseICal(icalText)
 
-        // Fetch existing Airbnb bookings in Zenbourg for this room
+        // Fetch existing OTA bookings in Zenbourg for this room
         const existingBookings = await prisma.booking.findMany({
           where: {
             roomId: mapping.roomId,
-            source: 'AIRBNB',
+            source: normalizedOta,
             status: { in: ['RESERVED', 'CHECKED_IN', 'CANCELLED'] },
           },
         })
 
         const activeUids = new Set(parsedEvents.map((e) => e.uid))
 
-        // Reconcile: Mark bookings as CANCELLED if deleted from Airbnb calendar
+        // Reconcile: Mark bookings as CANCELLED if deleted from OTA calendar
         for (const existing of existingBookings) {
           const matchUid = getUidFromNotes(existing.notes)
           if (matchUid && !activeUids.has(matchUid) && existing.status !== 'CANCELLED') {
@@ -156,9 +160,9 @@ export async function syncPropertyAirbnb(propertyId: string): Promise<SyncResult
                 paidAmount: 0,
                 paymentStatus: 'PENDING',
                 status: 'RESERVED',
-                source: 'AIRBNB',
-                specialRequests: 'Airbnb Imported Booking',
-                notes: `Airbnb Sync UID: ${event.uid}\nEvent Summary: ${event.summary}`,
+                source: normalizedOta,
+                specialRequests: `${displayName} Imported Booking`,
+                notes: `${displayName} Sync UID: ${event.uid}\nEvent Summary: ${event.summary}`,
               },
             })
             result.created++
@@ -185,8 +189,12 @@ export async function syncPropertyAirbnb(propertyId: string): Promise<SyncResult
   return result
 }
 
+export async function syncPropertyAirbnb(propertyId: string): Promise<SyncResult> {
+  return syncPropertyOta(propertyId, 'AIRBNB')
+}
+
 function getUidFromNotes(notes: string | null): string | null {
   if (!notes) return null
-  const match = notes.match(/Airbnb Sync UID:\s*([^\n\r]+)/)
+  const match = notes.match(/(?:Airbnb|Booking\.com|OTA)\s*Sync UID:\s*([^\n\r]+)/i)
   return match ? match[1].trim() : null
 }

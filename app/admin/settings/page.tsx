@@ -6,7 +6,7 @@ import {
   Save, Building2, IndianRupee, Sparkles, Shield, Smartphone,
   Database, Globe, ChevronRight, ChevronLeft, Loader2,
   Calendar, Check, CheckCircle2, Bell, Zap, ShieldAlert, ClipboardList,
-  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X
+  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X, MessageSquare
 } from 'lucide-react'
 import { cn, validateGSTIN } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -707,6 +707,8 @@ export default function SettingsPage() {
   const [otaConnections, setOtaConnections] = useState<any[]>([])
   
   const [airbnbConnected, setAirbnbConnected] = useState(false)
+  const [showTwilioModal, setShowTwilioModal] = useState(false)
+  const [showRazorpayModal, setShowRazorpayModal] = useState(false)
   const [airbnbMappings, setAirbnbMappings] = useState<any[]>([])
   const [airbnbRooms, setAirbnbRooms] = useState<any[]>([])
   const [showAirbnbModal, setShowAirbnbModal] = useState(false)
@@ -741,11 +743,6 @@ export default function SettingsPage() {
     { id: 'booking_com',  name: 'Booking.com',   type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'BOOKING_COM') ? 'CONNECTED' : 'NOT_CONNECTED' },
     { id: 'makemytrip',   name: 'MakeMyTrip',    type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP') ? 'CONNECTED' : 'NOT_CONNECTED' },
     { id: 'agoda',        name: 'Agoda',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'AGODA') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'goibibo',      name: 'Goibibo',       type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'GOIBIBO') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'easemytrip',   name: 'EaseMyTrip',    type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'EASEMYTRIP') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'yatra',        name: 'Yatra',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'YATRA') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'ixigo',        name: 'ixigo',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'IXIGO') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'trivago',      name: 'Trivago',       type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'TRIVAGO') ? 'CONNECTED' : 'NOT_CONNECTED' },
     { id: 'razorpay',     name: 'Razorpay',      type: 'Payment Gateway',  status: 'CONNECTED' },
     { id: 'twilio',       name: 'Twilio',        type: 'SMS / WhatsApp',   status: 'CONNECTED' },
   ]
@@ -1128,8 +1125,10 @@ export default function SettingsPage() {
                     onClick={() => {
                       if (intg.id === 'airbnb') {
                         setShowAirbnbModal(true)
-                      } else if (intg.id === 'razorpay' || intg.id === 'twilio') {
-                        toast.info(`${intg.name} integration is pre-configured by default.`)
+                      } else if (intg.id === 'twilio') {
+                        setShowTwilioModal(true)
+                      } else if (intg.id === 'razorpay') {
+                        setShowRazorpayModal(true)
                       } else {
                         setShowOtaModal(intg)
                       }
@@ -1232,6 +1231,24 @@ export default function SettingsPage() {
           mappings={airbnbMappings}
           onClose={() => {
             setShowAirbnbModal(false)
+            fetchIntegrations()
+          }} 
+        />
+      )}
+      {showTwilioModal && (
+        <TwilioConnectionModal 
+          propertyId={effectivePropertyId || ''} 
+          onClose={() => {
+            setShowTwilioModal(false)
+            fetchIntegrations()
+          }} 
+        />
+      )}
+      {showRazorpayModal && (
+        <RazorpayConnectionModal 
+          propertyId={effectivePropertyId || ''} 
+          onClose={() => {
+            setShowRazorpayModal(false)
             fetchIntegrations()
           }} 
         />
@@ -2070,6 +2087,293 @@ function OtaConnectionModal({
       </div>
     </div>
   )
+}
+
+function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; onClose: () => void }) {
+    const [accountSid, setAccountSid] = useState('')
+    const [authToken, setAuthToken] = useState('')
+    const [phoneNumber, setPhoneNumber] = useState('')
+    const [whatsappNumber, setWhatsappNumber] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        const fetchTwilioConfig = async () => {
+            try {
+                const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`)
+                const json = await res.json()
+                if (json.success && json.data.connection) {
+                    const creds = json.data.connection.credentials || {}
+                    setAccountSid(creds.accountSid || '')
+                    setAuthToken(creds.authToken || '')
+                    setPhoneNumber(creds.phoneNumber || '')
+                    setWhatsappNumber(creds.whatsappNumber || '')
+                }
+            } catch {
+                toast.error('Failed to load Twilio settings')
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchTwilioConfig()
+    }, [propertyId])
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaving(true)
+        try {
+            const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    credentials: {
+                        accountSid: accountSid.trim(),
+                        authToken: authToken.trim(),
+                        phoneNumber: phoneNumber.trim(),
+                        whatsappNumber: whatsappNumber.trim(),
+                    },
+                    mappings: []
+                })
+            })
+            const json = await res.json()
+            if (json.success) {
+                toast.success('Twilio account credentials saved successfully!')
+                onClose()
+            } else {
+                toast.error(json.error || 'Failed to save Twilio settings')
+            }
+        } catch {
+            toast.error('Connection error saving Twilio credentials')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+            <div className="relative max-w-md w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#101922]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold">
+                            <MessageSquare className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold text-white">Twilio Gateway Settings</h3>
+                            <p className="text-[11px] text-gray-400">Configure custom SMS & WhatsApp marketing credentials</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSave} className="p-6 space-y-4">
+                    {loading ? (
+                        <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                    ) : (
+                        <>
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Twilio Account SID</label>
+                                <input
+                                    required
+                                    type="text"
+                                    placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                    value={accountSid}
+                                    onChange={e => setAccountSid(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Twilio Auth Token</label>
+                                <input
+                                    required
+                                    type="password"
+                                    placeholder="••••••••••••••••••••••••••••••••"
+                                    value={authToken}
+                                    onChange={e => setAuthToken(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">SMS Sender Phone</label>
+                                    <input
+                                        type="text"
+                                        placeholder="+18885550199"
+                                        value={phoneNumber}
+                                        onChange={e => setPhoneNumber(e.target.value)}
+                                        className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">WhatsApp Sender</label>
+                                    <input
+                                        type="text"
+                                        placeholder="+14155238886"
+                                        value={whatsappNumber}
+                                        onChange={e => setWhatsappNumber(e.target.value)}
+                                        className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                                    />
+                                </div>
+                            </div>
+
+                            <p className="text-[10px] text-gray-500 leading-normal pt-1">
+                                Used for dispatching automated booking OTPs, direct guest SMS blasts, and custom WhatsApp marketing campaigns.
+                            </p>
+
+                            <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Twilio Credentials'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </form>
+            </div>
+        </div>
+    )
+}
+
+function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; onClose: () => void }) {
+    const [keyId, setKeyId] = useState('')
+    const [keySecret, setKeySecret] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        const fetchRazorpayConfig = async () => {
+            try {
+                const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`)
+                const json = await res.json()
+                if (json.success && json.data.connection) {
+                    const creds = json.data.connection.credentials || {}
+                    setKeyId(creds.keyId || creds.razorpayKeyId || '')
+                    setKeySecret(creds.keySecret || creds.razorpayKeySecret || '')
+                }
+            } catch {
+                toast.error('Failed to load Razorpay settings')
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchRazorpayConfig()
+    }, [propertyId])
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaving(true)
+        try {
+            const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    credentials: {
+                        keyId: keyId.trim(),
+                        keySecret: keySecret.trim(),
+                    },
+                    mappings: []
+                })
+            })
+            const json = await res.json()
+            if (json.success) {
+                toast.success('Property Razorpay gateway saved successfully!')
+                onClose()
+            } else {
+                toast.error(json.error || 'Failed to save Razorpay settings')
+            }
+        } catch {
+            toast.error('Connection error saving Razorpay settings')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+            <div className="relative max-w-md w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#101922]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
+                            <CreditCard className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold text-white">Razorpay Gateway Settings</h3>
+                            <p className="text-[11px] text-gray-400">Direct booking payments to your hotel&apos;s Razorpay account</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSave} className="p-6 space-y-4">
+                    {loading ? (
+                        <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                    ) : (
+                        <>
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Razorpay Key ID</label>
+                                <input
+                                    required
+                                    type="text"
+                                    placeholder="rzp_live_xxxxxxxxxxxx"
+                                    value={keyId}
+                                    onChange={e => setKeyId(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 font-mono"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Razorpay Key Secret</label>
+                                <input
+                                    required
+                                    type="password"
+                                    placeholder="••••••••••••••••••••••••"
+                                    value={keySecret}
+                                    onChange={e => setKeySecret(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 font-mono"
+                                />
+                            </div>
+
+                            <p className="text-[10px] text-gray-400 leading-normal pt-1">
+                                When configured, 100% of guest room booking payments and service bill payments for this hotel will be deposited directly into your linked Razorpay account.
+                            </p>
+
+                            <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Razorpay Gateway'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </form>
+            </div>
+        </div>
+    )
 }
 
 

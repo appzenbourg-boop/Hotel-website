@@ -703,10 +703,10 @@ export default function NewBookingPage() {
                                     >
                                         <div className="aspect-[16/9] relative">
                                             <Image 
-                                                src={room.type.includes('Suite') 
+                                                src={room.images?.[0] || (room.type?.includes('Suite') 
                                                     ? "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80" 
                                                     : "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80"
-                                                } 
+                                                )} 
                                                 alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-700" unoptimized 
                                             />
                                             <div className="absolute top-4 right-4 flex gap-2">
@@ -801,7 +801,13 @@ export default function NewBookingPage() {
                                     {selectedRooms.map(room => (
                                         <div key={room.id} className="p-4 bg-black/30 rounded-xl border border-white/5 flex items-center gap-4 relative group overflow-hidden shadow-inner">
                                             <div className="w-12 h-10 relative rounded-lg overflow-hidden border border-white/5 shrink-0">
-                                                <Image src={`https://images.unsplash.com/photo-1590490360182-c33d57733427?w=200&q=80`} alt="" fill className="object-cover" unoptimized />
+                                                <Image 
+                                                    src={room.images?.[0] || (room.type?.includes('Suite')
+                                                        ? "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80"
+                                                        : "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80"
+                                                    )} 
+                                                    alt="" fill className="object-cover" unoptimized 
+                                                />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-white font-bold tracking-tight leading-none text-sm mb-1 truncate">Room {room.roomNumber}</p>
@@ -976,7 +982,13 @@ export default function NewBookingPage() {
                                 {selectedRooms.map((room, idx) => (
                                     <div key={room.id} className="bg-black/40 rounded-xl p-5 border border-white/10 flex items-center gap-6 group relative shadow-inner">
                                         <div className="w-32 h-20 relative rounded-lg overflow-hidden border border-white/10 shrink-0">
-                                            <Image src={`https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80`} alt="" fill className="object-cover group-hover:scale-110 transition-transform duration-1000" unoptimized />
+                                            <Image 
+                                                src={room.images?.[0] || (room.type?.includes('Suite')
+                                                    ? "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80"
+                                                    : "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80"
+                                                )} 
+                                                alt="" fill className="object-cover group-hover:scale-110 transition-transform duration-1000" unoptimized 
+                                            />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h4 className="text-base font-bold text-white tracking-tight mb-1">Room {room.roomNumber}</h4>

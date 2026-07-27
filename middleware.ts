@@ -51,7 +51,7 @@ export async function middleware(req: NextRequest) {
     // 4. Role-based access for authenticated users
     if (isAuth) {
         const role = token.role as string
-        const plan = (token.plan as string) ?? 'BASE'
+        const rawPlan = (token.plan as string) || 'ENTERPRISE'
 
         // ── Admin paths ──────────────────────────────────────────────────────
         if (pathname.startsWith('/admin') && !isAuthPage) {
@@ -60,9 +60,9 @@ export async function middleware(req: NextRequest) {
                 return NextResponse.redirect(new URL(getHomePath(role), req.url))
             }
 
-            // SUPER_ADMIN bypasses all plan checks
-            if (role !== 'SUPER_ADMIN') {
-                // Plan-gated routes — redirect to dashboard with upgrade prompt
+            // SUPER_ADMIN and HOTEL_ADMIN have full access to their dashboard features
+            if (role !== 'SUPER_ADMIN' && role !== 'HOTEL_ADMIN') {
+                // Plan-gated routes for lower roles / staff
                 const STARTER_ROUTES = [
                     '/admin/staff', '/admin/attendance', '/admin/leaves',
                     '/admin/payroll', '/admin/services', '/admin/marketing',
@@ -76,10 +76,11 @@ export async function middleware(req: NextRequest) {
                 ]
 
                 const planOrder = ['BASE', 'STARTER', 'STANDARD', 'ENTERPRISE']
-                // Normalize legacy plans
                 const legacyMap: Record<string, string> = { GOLD: 'BASE', PLATINUM: 'STARTER', DIAMOND: 'STANDARD' }
-                const normalizedPlan = legacyMap[plan] ?? plan
-                const planIdx = planOrder.indexOf(normalizedPlan)
+                const upperPlan = rawPlan.toUpperCase()
+                const normalizedPlan = legacyMap[upperPlan] ?? upperPlan
+                let planIdx = planOrder.indexOf(normalizedPlan)
+                if (planIdx === -1) planIdx = 3 // Default full ENTERPRISE access if unrecognized
 
                 const needsStarter   = STARTER_ROUTES.some(r => pathname.startsWith(r))
                 const needsStandard  = STANDARD_ROUTES.some(r => pathname.startsWith(r))

@@ -3,7 +3,8 @@ import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth/middleware'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
 import Razorpay from 'razorpay'
-import twilio from 'twilio'
+import { sendSMS, sendWhatsApp } from '@/lib/twilio'
+import { sendMarketingBlast } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,39 +14,34 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 })
 
-// Initialize Twilio
-const twilioClient = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-)
+// Real Notification Sender supporting property-specific Twilio credentials & custom text template
+async function sendRealNotification(
+    guest: any, 
+    channel: string, 
+    promoCode?: string, 
+    propertyName?: string, 
+    customMessage?: string,
+    propertyId?: string
+) {
+    const rawTemplate = customMessage || `Hello {guestName}! Use code {promoCode} for 20% off your next stay at {hotelName}. Book now!`
+    const message = rawTemplate
+        .replace(/\{guestName\}/gi, guest.name || 'Guest')
+        .replace(/\{hotelName\}/gi, propertyName || 'Zenbourg')
+        .replace(/\{promoCode\}/gi, promoCode || 'ZENVIP')
 
-import { sendMarketingBlast } from '@/lib/email'
-
-// Real Notification Sender
-async function sendRealNotification(guest: any, channel: string, promoCode?: string, propertyName?: string, customMessage?: string) {
-    const message = customMessage || `Hello ${guest.name}! Use code ${promoCode || 'ZENVIP'} for 20% off your next stay at ${propertyName || 'our hotel'}. Book now!`
-
-    // Normalize phone to E.164 format
     const rawPhone = (guest.phone || '').replace(/\D/g, '')
-    const e164Phone = rawPhone.length === 10 ? `+91${rawPhone}` : `+${rawPhone}`
 
     try {
         if (channel === 'SMS') {
-            // Send real SMS via Twilio
-            const result = await twilioClient.messages.create({
-                body: message,
-                from: process.env.TWILIO_PHONE_NUMBER!,
-                to: e164Phone,
-            })
-            console.log(`[MARKETING] SMS sent to ${e164Phone} — SID: ${result.sid}`)
+            if (!rawPhone) return false
+            const res = await sendSMS(rawPhone, message, propertyId)
+            console.log(`[MARKETING] Custom SMS sent to ${guest.name} (${rawPhone}) — SID: ${res.sid}`)
+            return true
         } else if (channel === 'WHATSAPP') {
-            const waFrom = process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886'
-            await twilioClient.messages.create({
-                from: `whatsapp:${waFrom}`,
-                to: `whatsapp:${e164Phone}`,
-                body: message,
-            })
-            console.log(`[MARKETING] WhatsApp sent to ${e164Phone}`)
+            if (!rawPhone) return false
+            const res = await sendWhatsApp(rawPhone, message, propertyId)
+            console.log(`[MARKETING] Custom WhatsApp sent to ${guest.name} (${rawPhone}) — SID: ${res.sid}`)
+            return true
         } else if (channel === 'EMAIL' && guest.email) {
             await sendMarketingBlast({
                 to: guest.email,
@@ -53,14 +49,14 @@ async function sendRealNotification(guest: any, channel: string, promoCode?: str
                 hotelName: propertyName || 'Zenbourg',
                 promoCode: promoCode || 'ZENVIP',
             })
-            console.log(`[MARKETING] Email sent to ${guest.email}`)
+            console.log(`[MARKETING] Custom Email blast sent to ${guest.email}`)
+            return true
         } else {
             console.warn(`[MARKETING] Unknown channel "${channel}" or missing contact for guest ${guest.name}`)
             return false
         }
-        return true
     } catch (err: any) {
-        console.error(`[MARKETING_ERROR] Failed to send ${channel} to ${e164Phone}:`, err?.message || err)
+        console.error(`[MARKETING_ERROR] Failed to send ${channel} to ${guest.name}:`, err?.message || err)
         return false
     }
 }
@@ -146,7 +142,7 @@ export async function POST(req: NextRequest) {
         if (authResult instanceof NextResponse) return authResult
 
         const body = await req.json()
-        const { action, name, segment, channel, promoCode, budget, orderId, paymentId } = body
+        const { action, name, segment, channel, promoCode, budget, guestIds, message: customMessage } = body
         const propertyId = authResult.user.propertyId
 
         if (!propertyId && authResult.user.role !== 'SUPER_ADMIN') {
@@ -170,7 +166,6 @@ export async function POST(req: NextRequest) {
 
         // ACTION: VERIFY_PROMOTE (Post-Payment)
         if (action === 'VERIFY_PROMOTE') {
-            // In a real app, verify razorpay_signature here
             const boost = Math.floor(budget / 1000) || 1
             
             const updated = await prisma.property.update({
@@ -183,8 +178,6 @@ export async function POST(req: NextRequest) {
 
         // ACTION: BLAST (Real Outreach)
         if (action === 'BLAST') {
-            const { guestIds, message: customMessage } = body
-
             // If specific guestIds provided, use those; otherwise fall back to segment filter
             let targetGuests: any[]
             if (guestIds && Array.isArray(guestIds) && guestIds.length > 0) {
@@ -202,7 +195,7 @@ export async function POST(req: NextRequest) {
             }
 
             if (targetGuests.length === 0) {
-                return NextResponse.json({ error: 'No guests found' }, { status: 404 })
+                return NextResponse.json({ error: 'No guests found for campaign target' }, { status: 404 })
             }
 
             // Record Campaign
@@ -220,18 +213,19 @@ export async function POST(req: NextRequest) {
                 })
             } catch { /* campaign logging is non-critical */ }
 
-            // Send SMS via Twilio
+            // Dispatch notification via property-specific Twilio / Email engine
             let sentCount = 0
+            const activeChannel = channel || 'SMS'
+
             for (const g of targetGuests) {
-                const msgText = customMessage || `Hello ${g.name}! Use code ${promoCode || 'ZENVIP'} for 20% off your next stay at ${property?.name || 'our hotel'}.`
-                const ok = await sendRealNotification(g, channel || 'SMS', promoCode, property?.name, msgText)
+                const ok = await sendRealNotification(g, activeChannel, promoCode, property?.name, customMessage, propertyId as string)
                 if (ok) sentCount++
             }
 
-            return NextResponse.json({ success: true, count: sentCount, total: targetGuests.length })
+            return NextResponse.json({ success: true, count: sentCount, total: targetGuests.length, channel: activeChannel })
         }
 
-        // Legacy/Direct PROMOTE (Bypassing payment for testing if needed, but we want real)
+        // Direct PROMOTE
         if (action === 'PROMOTE') {
              const boost = Math.floor(budget / 1000) || 1
              await prisma.property.update({
