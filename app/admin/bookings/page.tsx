@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { CheckCircle2, LogOut, XCircle } from 'lucide-react'
 import { downloadCSV } from '@/lib/csv'
 import { formatCurrency } from '@/lib/utils'
+import { generateBookingPDFVoucher } from '@/lib/pdf-generator'
 
 // ---- Color/status helpers ----
 const STATUS_CONFIG: Record<string, { bar: string; label: string; dot: string; text: string }> = {
@@ -16,11 +17,32 @@ const STATUS_CONFIG: Record<string, { bar: string; label: string; dot: string; t
   CHECKED_OUT: { bar: 'bg-[#1a1f2e] border-l-[3px] border-[#4a5568]', label: 'CHECKED-OUT', dot: 'bg-[#4a5568]', text: 'text-[#94a3b8]' },
   CANCELLED: { bar: 'bg-[#3d0d0d] border-l-[3px] border-[#e53e3e]', label: 'CANCELLED', dot: 'bg-[#e53e3e]', text: 'text-[#fc8181]' },
   AIRBNB: { bar: 'bg-[#2d1a47] border-l-[3px] border-[#805ad5]', label: 'AIRBNB', dot: 'bg-[#805ad5]', text: 'text-[#c084fc]' },
+  BOOKING_COM: { bar: 'bg-[#002244] border-l-[3px] border-[#003580]', label: 'BOOKING.COM', dot: 'bg-[#003580]', text: 'text-[#80b3ff]' },
+  MAKE_MY_TRIP: { bar: 'bg-[#4d0c10] border-l-[3px] border-[#ea2330]', label: 'MAKEMYTRIP', dot: 'bg-[#ea2330]', text: 'text-[#ff99a0]' },
+  AGODA: { bar: 'bg-[#420507] border-l-[3px] border-[#ec1c24]', label: 'AGODA', dot: 'bg-[#ec1c24]', text: 'text-[#ff8084]' },
+  GOIBIBO: { bar: 'bg-[#0b2447] border-l-[3px] border-[#2276e3]', label: 'GOIBIBO', dot: 'bg-[#2276e3]', text: 'text-[#82b1ff]' },
+  EASEMYTRIP: { bar: 'bg-[#06283d] border-l-[3px] border-[#2196f3]', label: 'EASEMYTRIP', dot: 'bg-[#2196f3]', text: 'text-[#90caf9]' },
+  YATRA: { bar: 'bg-[#3f1406] border-l-[3px] border-[#ea4c16]', label: 'YATRA', dot: 'bg-[#ea4c16]', text: 'text-[#ffab91]' },
+  IXIGO: { bar: 'bg-[#441c00] border-l-[3px] border-[#ff6600]', label: 'IXIGO', dot: 'bg-[#ff6600]', text: 'text-[#ffcc80]' },
+  TRIVAGO: { bar: 'bg-[#002f42] border-l-[3px] border-[#007faf]', label: 'TRIVAGO', dot: 'bg-[#007faf]', text: 'text-[#80d8ff]' },
   DIRECT: { bar: 'bg-[#1a3a5c] border-l-[3px] border-[#3b82f6]', label: 'DIRECT', dot: 'bg-[#3b82f6]', text: 'text-[#60a5fa]' },
 }
 
-function getStatusConfig(status: string) {
-  return STATUS_CONFIG[status] || STATUS_CONFIG['RESERVED']
+function getBookingConfig(status: string, source: string, notes: string | null) {
+  if (status === 'CANCELLED') return STATUS_CONFIG['CANCELLED']
+  if (status === 'CHECKED_OUT') return STATUS_CONFIG['CHECKED_OUT']
+  
+  const cleanSource = (source || '').toUpperCase().trim()
+  let finalSource = cleanSource
+
+  if (cleanSource === 'OTHER' && notes) {
+    const match = notes.match(/\[OTA_SOURCE:\s*([^\n\r\]]+)\]/)
+    if (match) {
+      finalSource = match[1].toUpperCase().trim()
+    }
+  }
+
+  return STATUS_CONFIG[finalSource] || STATUS_CONFIG[status] || STATUS_CONFIG['RESERVED']
 }
 
 const ROOM_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -106,6 +128,7 @@ export default function BookingsPage() {
         nights: differenceInDays(parseLocal(b.checkOut), parseLocal(b.checkIn)) || 1,
         status: b.status,
         source: b.source ?? '',
+        notes: b.notes ?? '',
         isVip: b.isVip ?? false,
       }))
       setBookings(formatted)
@@ -296,7 +319,7 @@ export default function BookingsPage() {
   const monthLabel = viewMode === 'day' ? format(currentDate, 'MMMM dd, yyyy') : format(startDate, 'MMMM yyyy')
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col gap-0 bg-[#101922] text-white">
+    <div className="-mx-4 -my-4 md:-mx-6 md:-my-6 h-[calc(100vh-4rem)] flex flex-col min-h-0 gap-0 bg-[#101922] text-white overflow-hidden">
       {/* === TOP NAV BAR === */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between px-4 py-3 gap-3 border-b border-white/[0.07] bg-[#233648] shrink-0">
         {/* Left: title + Today */}
@@ -372,15 +395,15 @@ export default function BookingsPage() {
 
 
       {/* === CALENDAR GRID (Desktop) / LIST (Mobile) === */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#101922] relative">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-[#101922] relative">
         {/* Desktop: scrollable container for month view */}
         <div className={cn(
-          "hidden md:flex flex-col flex-1 overflow-hidden",
+          "hidden md:flex flex-col flex-1 min-h-0 overflow-hidden",
           viewMode === 'month' ? "overflow-x-auto" : ""
         )}>
           {/* Min width for month view so columns don't get crushed */}
           <div className={cn(
-            "flex flex-col flex-1",
+            "flex flex-col flex-1 min-h-0",
             viewMode === 'month' ? "min-w-[2000px]" : "w-full"
           )}>
 
@@ -411,7 +434,7 @@ export default function BookingsPage() {
         </div>
 
         {/* Desktop Rows */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
           {loading ? (
              <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
           ) : filteredRooms.map((room, idx) => {
@@ -432,7 +455,7 @@ export default function BookingsPage() {
                     ))}
                     {roomBookings.map(booking => {
                       if (differenceInDays(booking.startDate, endDate) > 0 || differenceInDays(booking.endDate, startDate) < 0) return null
-                      const cfg = getStatusConfig(booking.status)
+                      const cfg = getBookingConfig(booking.status, booking.source, booking.notes)
                       return (
                         <div
                           key={booking.id}
@@ -471,7 +494,7 @@ export default function BookingsPage() {
         </div>{/* end scrollable container */}
 
         {/* Mobile View: Vertical Booking List */}
-        <div className="md:hidden flex-1 overflow-y-auto custom-scrollbar bg-[#0d1117]">
+        <div className="md:hidden flex-1 overflow-y-auto min-h-0 custom-scrollbar bg-[#0d1117]">
           {loading ? (
              <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
           ) : bookings.length === 0 ? (
@@ -483,7 +506,7 @@ export default function BookingsPage() {
             <div className="p-4 space-y-4">
                <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Current Week Schedule</h3>
                {bookings.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()).map(booking => {
-                 const cfg = getStatusConfig(booking.status)
+                 const cfg = getBookingConfig(booking.status, booking.source, booking.notes)
                  return (
                    <div 
                      key={booking.id}
@@ -564,6 +587,25 @@ export default function BookingsPage() {
 
               {/* Body */}
               <div className="p-5 space-y-4">
+                {(() => {
+                  const src = (selectedBooking.source || '').toUpperCase()
+                  const isOta = src === 'AIRBNB' || src === 'BOOKING_COM' || src === 'MAKE_MY_TRIP' || src === 'AGODA' || src === 'EXPEDIA' || (src === 'OTHER' && selectedBooking.notes?.includes('[OTA_SOURCE:'))
+                  
+                  let otaLabel = src
+                  if (src === 'OTHER' && selectedBooking.notes) {
+                    const match = selectedBooking.notes.match(/\[OTA_SOURCE:\s*([^\n\r\]]+)\]/)
+                    if (match) otaLabel = match[1].toUpperCase()
+                  }
+
+                  if (isOta) {
+                    return (
+                      <div className="bg-purple-500/10 border border-purple-500/20 text-purple-400 p-3 rounded-xl flex items-center gap-2 text-xs font-semibold">
+                        <span>🔒 Synced from {otaLabel} (Modifications Locked)</span>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-[#182433] rounded-xl">
                     <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Guest</p>
@@ -589,9 +631,9 @@ export default function BookingsPage() {
                     <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Status</p>
                     <span className={cn(
                       'text-xs font-bold uppercase',
-                      getStatusConfig(selectedBooking.status).text
+                      getBookingConfig(selectedBooking.status, selectedBooking.source, selectedBooking.notes).text
                     )}>
-                      {getStatusConfig(selectedBooking.status).label}
+                      {getBookingConfig(selectedBooking.status, selectedBooking.source, selectedBooking.notes).label}
                     </span>
                   </div>
                 </div>
@@ -765,6 +807,17 @@ export default function BookingsPage() {
 
 // ─── Invoice Modal ────────────────────────────────────────────────────────────
 function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void }) {
+  const [hotelGstNumber, setHotelGstNumber] = useState<string>('')
+
+  useEffect(() => {
+    fetch('/api/admin/settings/financial')
+      .then(res => res.json())
+      .then(j => {
+        if (j.data?.gstNumber) setHotelGstNumber(j.data.gstNumber)
+      })
+      .catch(() => {})
+  }, [])
+
   const nights = differenceInDays(
     new Date(booking.checkOut),
     new Date(booking.checkIn)
@@ -783,125 +836,43 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
   const invoiceNo  = `INV-${booking.id?.slice(-6).toUpperCase() ?? '000000'}`
   const hotelName  = booking.property?.name ?? 'Hotel'
   const guestName  = booking.guest?.name ?? 'Guest'
+  const guestGst   = booking.guestGstNumber || booking.guest?.gstNumber || ''
   const roomNo     = booking.room?.roomNumber ?? '—'
   const roomType   = booking.room?.type ?? ''
 
   const handleDownloadPDF = async () => {
+    const toastId = toast.loading('Generating luxury PDF voucher...')
     try {
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Invoice ${invoiceNo}</title>
-            <style>
-              body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
-              .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px; }
-              .hotel-info h1 { margin: 0; font-size: 28px; }
-              .hotel-info p { margin: 5px 0; color: #666; }
-              .invoice-title { text-align: right; }
-              .invoice-title h2 { margin: 0; color: #C26A2C; font-size: 24px; }
-              .details-section { display: flex; justify-content: space-between; margin-top: 40px; }
-              .details-box h3 { font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
-              .details-row { display: flex; margin-bottom: 5px; font-size: 14px; }
-              .label { font-weight: bold; width: 100px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 40px; }
-              th { background-color: #f8f8f8; text-align: left; padding: 12px; border-bottom: 2px solid #ddd; font-size: 14px; }
-              td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
-              .totals { margin-top: 30px; text-align: right; }
-              .total-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
-              .total-label { font-weight: bold; margin-right: 20px; width: 150px; }
-              .grand-total { font-size: 20px; font-weight: bold; color: #000; margin-top: 10px; border-top: 2px solid #000; padding-top: 10px; }
-              .paid-row { color: #2E7D32; }
-              .balance-row { font-size: 20px; font-weight: bold; color: #C26A2C; }
-              .discount-row { color: #ef4444; }
-              .footer { margin-top: 60px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div class="hotel-info">
-                <h1>${hotelName.toUpperCase()}</h1>
-                <p>Institutional Excellence in Hospitality</p>
-                <p>support@zenbourg.com | +91 6388163169</p>
-              </div>
-              <div class="invoice-title">
-                <h2>TAX INVOICE</h2>
-                <p>ID: #${invoiceNo}</p>
-                <p>Date: ${new Date().toLocaleDateString()}</p>
-              </div>
-            </div>
-
-            <div class="details-section">
-              <div class="details-box">
-                <h3>GUEST DETAILS</h3>
-                <div class="details-row"><span class="label">Name:</span> ${guestName}</div>
-                <div class="details-row"><span class="label">Room:</span> ${roomNo}${roomType ? ' — ' + roomType : ''}</div>
-              </div>
-              <div class="details-box" style="text-align: right;">
-                <h3>STAY INFORMATION</h3>
-                <div class="details-row" style="justify-content: flex-end;"><span class="label">Arrival:</span> ${format(new Date(booking.checkIn), 'dd MMM yyyy')}</div>
-                <div class="details-row" style="justify-content: flex-end;"><span class="label">Departure:</span> ${format(new Date(booking.checkOut), 'dd MMM yyyy')}</div>
-                <div class="details-row" style="justify-content: flex-end;"><span class="label">Duration:</span> ${nights} Night(s)</div>
-              </div>
-            </div>
-
-            <table>
-              <thead>
-                <tr>
-                  <th>DESCRIPTION</th>
-                  <th style="text-align: right;">AMOUNT (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ₹${(base / nights).toFixed(0)})</td>
-                  <td style="text-align: right;">${base.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                </tr>
-                ${gstAmt > 0 ? `<tr><td>GST (${gstPct}%)</td><td style="text-align: right;">${gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-                ${scAmt > 0 ? `<tr><td>Service Charge (${scPct}%)</td><td style="text-align: right;">${scAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-                ${ltAmt > 0 ? `<tr><td>Luxury Tax (${ltPct}%)</td><td style="text-align: right;">${ltAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-                ${discAmt > 0 ? `<tr class="discount-row"><td>Discount (${discPct}%)</td><td style="text-align: right;">-${discAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-              </tbody>
-            </table>
-
-            <div class="totals">
-              <div class="total-row grand-total">
-                <span class="total-label">STAY TOTAL:</span>
-                <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div class="total-row balance-row">
-                <span class="total-label">BALANCE DUE:</span>
-                <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-
-            <div class="footer">
-              <p>Thank you for choosing ${hotelName}. We hope you had a pleasant stay.</p>
-              <p>This is a computer-generated document and does not require a physical signature.</p>
-            </div>
-            <script>
-              window.onload = function() { 
-                setTimeout(function() {
-                  window.print(); 
-                  window.onafterprint = function(){ window.close(); };
-                }, 200);
-              };
-            </script>
-          </body>
-        </html>
-      `;
-
-      const printWindow = window.open('', '', 'width=800,height=800');
-      if (printWindow) {
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-      } else {
-        toast.error('Please allow popups to print invoices');
-      }
+      await generateBookingPDFVoucher({
+        id: booking.id,
+        bookingNumber: invoiceNo,
+        guestName: guestName,
+        guestEmail: booking.guest?.email || '',
+        guestPhone: booking.guest?.phone || '',
+        roomType: roomType || 'Luxury Suite',
+        roomNumber: String(roomNo),
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        nightsCount: nights,
+        guestsCount: booking.numberOfGuests || 1,
+        totalPrice: finalAmt,
+        paymentStatus: booking.paymentStatus || 'PAID',
+        status: booking.status,
+        specialRequests: booking.specialRequests,
+        createdAt: booking.createdAt,
+      }, {
+        name: hotelName,
+        address: booking.property?.address || 'Main Hotel Boulevard',
+        city: booking.property?.city || 'India',
+        phone: booking.property?.phone || '',
+        email: booking.property?.email || '',
+        logo: booking.property?.logo || null,
+        coverImage: booking.room?.images?.[0] || booking.property?.images?.[0] || booking.property?.coverImage || null,
+      })
+      toast.success('PDF Voucher downloaded successfully!', { id: toastId })
     } catch (err) {
-      console.error(err)
-      toast.error('Failed to generate printable invoice')
+      console.error('PDF generation error:', err)
+      toast.error('Failed to generate PDF voucher', { id: toastId })
     }
   }
 
@@ -918,10 +889,15 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-black uppercase tracking-tight">{hotelName}</h2>
-                <p className="text-[#F2C4A7] text-xs mt-1">Guest Invoice · Checkout Receipt</p>
+                <p className="text-[#F2C4A7] text-xs mt-0.5">Guest Invoice · Checkout Receipt</p>
+                {hotelGstNumber && (
+                  <span className="inline-block mt-1.5 px-2 py-0.5 bg-white/20 backdrop-blur-md rounded text-[10px] font-mono font-bold tracking-wider text-white">
+                    GSTIN: {hotelGstNumber}
+                  </span>
+                )}
               </div>
               <div className="text-right">
-                <p className="text-[#E8A375] text-[10px] uppercase tracking-wider">Invoice No.</p>
+                <p className="text-[#E8A375] text-[10px] uppercase tracking-wider">{guestGst ? 'B2B TAX INVOICE' : 'Invoice No.'}</p>
                 <p className="text-base font-mono font-bold">{invoiceNo}</p>
                 <p className="text-[#F2C4A7] text-[10px] mt-1">{format(new Date(), 'dd MMM yyyy')}</p>
               </div>
@@ -932,14 +908,15 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
             {/* Guest + Stay Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Guest</p>
+                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Guest & Tax Info</p>
                 {[
-                  ['Name',      guestName],
-                  ['Room',      `${roomNo}${roomType ? ' · ' + roomType : ''}`],
+                  ['Name',       guestName],
+                  ['Room',       `${roomNo}${roomType ? ' · ' + roomType : ''}`],
+                  ['Guest GSTIN', guestGst || 'B2C / Retail'],
                 ].map(([l, v]) => (
-                  <div key={l} className="flex justify-between text-xs mb-1.5">
-                    <span className="text-slate-400">{l}</span>
-                    <span className="font-semibold text-slate-800">{v}</span>
+                  <div key={l} className="flex justify-between text-xs mb-1.5 gap-2">
+                    <span className="text-slate-400 shrink-0">{l}</span>
+                    <span className={cn("font-semibold text-right", l === 'Guest GSTIN' && guestGst ? 'text-blue-600 font-mono font-bold' : 'text-slate-800')}>{v}</span>
                   </div>
                 ))}
               </div>

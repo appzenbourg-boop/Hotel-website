@@ -33,7 +33,7 @@ export async function GET(
         // Access check: only owner guest or staff/admin
         if (authResult.user.role === 'GUEST') {
             const user = await prisma.user.findUnique({ where: { id: authResult.user.id } })
-            const guest = await prisma.guest.findUnique({ where: { phone: user?.phone } })
+            const guest = user?.phone ? await prisma.guest.findUnique({ where: { phone: user.phone } }) : null
             if (service.guestId !== guest?.id) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
             }

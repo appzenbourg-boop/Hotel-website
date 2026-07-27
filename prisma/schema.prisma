@@ -17,7 +17,7 @@ model User {
   id       String     @id @default(auto()) @map("_id") @db.ObjectId
   name     String
   email    String     @unique
-  phone    String     @unique
+  phone    String?    @unique
   password String
   role     UserRole
   status   UserStatus @default(ACTIVE)
@@ -72,6 +72,7 @@ model Guest {
   idDocumentBack  String?
   address         String?
   dateOfBirth     DateTime?
+  gstNumber       String?   // Guest / Corporate GSTIN (e.g. 27ABCDE1234F1ZH)
 
   checkInStatus      CheckInStatus @default(PENDING)
   checkInCompletedAt DateTime?
@@ -178,6 +179,7 @@ model Property {
   supportTickets  SupportTicket[]  @relation("PropertyToSupportTicket")
   lostItems       LostItem[]       @relation("PropertyToLostItem")
   dashboardServices DashboardService[] @relation("PropertyToDashboardService")
+  otaConnections  OtaConnection[]  @relation("PropertyToOtaConnection")
 
   @@map("properties")
 }
@@ -215,6 +217,7 @@ model Room {
   serviceRequests ServiceRequest[]
   favorites       Favorite[]
   lostItems       LostItem[]
+  otaMappings     RoomOtaMapping[] @relation("RoomToOtaMapping")
 
   @@unique([propertyId, roomNumber])
   @@index([propertyId])
@@ -279,6 +282,7 @@ model Booking {
   discountPercent    Float?   // Discount %
   discountAmount     Float?   // Discount amount
   finalAmount        Float?   // totalAmount after all taxes & discounts
+  guestGstNumber     String?  // Guest GSTIN for B2B tax invoice
 
   specialRequests String?
   notes           String?
@@ -1140,6 +1144,7 @@ model PropertySettings {
   gstPercent           Float   @default(18.0)
   serviceChargePercent Float   @default(0.0)
   luxuryTaxPercent     Float   @default(0.0)
+  gstNumber            String? // Hotel GSTIN / GST Number (e.g. 22AAAAA0000A1Z5)
 
   // Discount
   defaultDiscountPercent Float  @default(0.0)
@@ -1270,6 +1275,42 @@ model AddHotelRequest {
   processedAt    DateTime?
 
   @@map("add_hotel_requests")
+}
+
+model OtaConnection {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId   String    @db.ObjectId
+  property     Property  @relation("PropertyToOtaConnection", fields: [propertyId], references: [id], onDelete: Cascade)
+  otaName      String    // e.g. "AIRBNB", "BOOKING_COM"
+  status       OtaStatus @default(DISCONNECTED)
+  credentials  Json      // e.g. { icalUrl: "..." }
+  lastSync     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([propertyId, otaName])
+  @@map("ota_connections")
+}
+
+enum OtaStatus {
+  CONNECTED
+  DISCONNECTED
+  SYNC_ERROR
+  PAUSED
+}
+
+model RoomOtaMapping {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId      String   @db.ObjectId
+  roomId          String   @db.ObjectId
+  room            Room     @relation("RoomToOtaMapping", fields: [roomId], references: [id], onDelete: Cascade)
+  otaConnectionId String   @db.ObjectId
+  otaRoomId       String   // e.g. Airbnb Listing ID or Listing iCal Import URL
+  ratePlanCode    String?  // Optional rate plan config
+  createdAt       DateTime @default(now())
+
+  @@unique([roomId, otaConnectionId])
+  @@map("room_ota_mappings")
 }
 
 

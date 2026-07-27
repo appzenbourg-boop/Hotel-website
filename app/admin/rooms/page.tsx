@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
     Plus, Search, Filter, Copy, Save, Minus, ChevronRight,
     ArrowUp, Bed, X, Loader2, CheckCircle2, Download,
-    Wifi, Wind, Tv, Coffee, SlidersHorizontal
+    Wifi, Wind, Tv, Coffee, SlidersHorizontal, Image as ImageIcon, ChevronLeft, Eye, Camera, Maximize2
 } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -13,6 +13,33 @@ import { buildContextUrl } from '@/lib/admin-context'
 type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'BOOKED' | 'MAINTENANCE' | 'CLEANING'
 type Tab = 'general' | 'amenities' | 'media' | 'upgrade'
 const PAGE_SIZE = 10
+
+const DEFAULT_ROOM_IMAGES: Record<string, string[]> = {
+    DELUXE: [
+        'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80',
+        'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80',
+        'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
+    ],
+    SUITE: [
+        'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&q=80',
+        'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80',
+        'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
+    ],
+    STANDARD: [
+        'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80',
+        'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80',
+        'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&q=80',
+    ],
+    PENTHOUSE: [
+        'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80',
+        'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80',
+        'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&q=80',
+    ],
+    EXECUTIVE: [
+        'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&q=80',
+        'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800&q=80',
+    ],
+}
 
 const STATUS_STYLE: Record<string, string> = {
     AVAILABLE: 'bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20',
@@ -52,6 +79,55 @@ export default function RoomsPage() {
     const [newForm, setNewForm] = useState({ roomNumber: '', floor: '1', category: 'STANDARD', type: 'Standard King', basePrice: '150', maxOccupancy: '2', images: [], description: '' })
     const [uploading, setUploading] = useState(false)
     const [amenitiesList, setAmenitiesList] = useState<string[]>([])
+
+    // Hover Image Preview State & Timer Grace Period
+    const [hoveredRoom, setHoveredRoom] = useState<any>(null)
+    const [hoverImgIdx, setHoverImgIdx] = useState<number>(0)
+    const [hoverPos, setHoverPos] = useState<{ top: number; left: number } | null>(null)
+    const [lightboxRoom, setLightboxRoom] = useState<any>(null)
+    const hoverTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+    const handleRoomMouseEnter = (e: React.MouseEvent, room: any) => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current)
+            hoverTimerRef.current = null
+        }
+        const rect = e.currentTarget.getBoundingClientRect()
+        const popoverWidth = 340
+        const popoverHeight = 370
+        let left = rect.left + 140
+        if (left + popoverWidth > window.innerWidth - 20) {
+            left = rect.left - popoverWidth - 10
+        }
+        let top = rect.top - 20
+        if (top + popoverHeight > window.innerHeight - 20) {
+            top = window.innerHeight - popoverHeight - 20
+        }
+        if (top < 10) top = 10
+
+        setHoveredRoom(room)
+        setHoverImgIdx(0)
+        setHoverPos({ top, left })
+    }
+
+    const handleRoomMouseLeave = () => {
+        hoverTimerRef.current = setTimeout(() => {
+            setHoveredRoom(null)
+        }, 400)
+    }
+
+    const handlePopoverMouseEnter = () => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current)
+            hoverTimerRef.current = null
+        }
+    }
+
+    const handlePopoverMouseLeave = () => {
+        hoverTimerRef.current = setTimeout(() => {
+            setHoveredRoom(null)
+        }, 400)
+    }
 
     const fetchAmenities = async () => {
         try {
@@ -321,9 +397,32 @@ export default function RoomsPage() {
                             ) : pageRows.length === 0 ? (
                                 <tr><td colSpan={8} className="text-center py-12 text-[12px] text-gray-500">No rooms found</td></tr>
                             ) : pageRows.map(room => (
-                                <tr key={room.id} className="border-b border-white/[0.04] hover:bg-white/[0.04] transition-colors group">
+                                <tr key={room.id}
+                                    className="border-b border-white/[0.04] hover:bg-white/[0.06] transition-colors group cursor-pointer"
+                                    onMouseEnter={(e) => handleRoomMouseEnter(e, room)}
+                                    onMouseLeave={handleRoomMouseLeave}
+                                >
                                     <td className="px-4 py-3.5">
-                                        <span className="text-[14px] font-bold text-white">{room.roomNumber}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[14px] font-bold text-white group-hover:text-[#4A9EFF] transition-colors">{room.roomNumber}</span>
+                                            {room.images && room.images.length > 0 ? (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setLightboxRoom(room) }}
+                                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#4A9EFF]/10 hover:bg-[#4A9EFF]/20 border border-[#4A9EFF]/30 text-[9px] font-bold text-[#4A9EFF] transition-all"
+                                                    title="Click to view full photo gallery"
+                                                >
+                                                    <ImageIcon className="w-3 h-3" /> {room.images.length}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setLightboxRoom(room) }}
+                                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-medium text-gray-400 transition-all"
+                                                    title="Click to view room photo gallery"
+                                                >
+                                                    <ImageIcon className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3.5 text-[13px] text-gray-200">{room.type}</td>
                                     <td className="px-4 py-3.5 text-[13px] text-gray-400">{room.floor}</td>
@@ -352,8 +451,10 @@ export default function RoomsPage() {
                                         </div>
                                     </td>
                                     <td className="px-4 py-3.5">
-                                        <button onClick={() => openConfig(room)}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] hover:bg-primary/20 border border-white/[0.06] hover:border-primary/40 text-[11px] text-gray-400 hover:text-white font-medium rounded-lg transition-all">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); openConfig(room) }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] hover:bg-primary/20 border border-white/[0.06] hover:border-primary/40 text-[11px] text-gray-400 hover:text-white font-medium rounded-lg transition-all"
+                                        >
                                             <SlidersHorizontal className="w-3 h-3" /> Config
                                         </button>
                                     </td>
@@ -786,6 +887,215 @@ export default function RoomsPage() {
                                 <button onClick={() => setNewModal(false)} className="flex-1 py-2 bg-white/[0.04] text-gray-300 text-[12px] font-medium rounded-lg border border-white/[0.06] hover:bg-white/[0.08] transition-colors">Cancel</button>
                                 <button onClick={handleCreate} className="flex-1 py-2 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white text-[12px] font-semibold rounded-lg transition-colors">Create Room</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════
+               ROOM HOVER IMAGE PREVIEW POPOVER CARD
+             ══════════════════════════════════════════ */}
+            {hoveredRoom && hoverPos && (
+                <div
+                    className="fixed z-50 w-80 bg-[#182433]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden p-3.5 animate-fade-in pointer-events-auto"
+                    style={{
+                        top: `${hoverPos.top}px`,
+                        left: `${hoverPos.left}px`,
+                    }}
+                    onMouseEnter={handlePopoverMouseEnter}
+                    onMouseLeave={handlePopoverMouseLeave}
+                >
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-2 mb-2.5">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-base font-extrabold text-white tracking-tight">Room {hoveredRoom.roomNumber}</span>
+                                <span className={cn('px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider', STATUS_STYLE[hoveredRoom.status] || STATUS_STYLE.AVAILABLE)}>
+                                    {hoveredRoom.status}
+                                </span>
+                            </div>
+                            <p className="text-[11px] font-medium text-gray-400">{hoveredRoom.type || 'Standard Room'}</p>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-sm font-black text-[#4A9EFF]">{formatCurrency(hoveredRoom.basePrice)}</span>
+                            <p className="text-[9px] text-gray-500 font-bold uppercase">per night</p>
+                        </div>
+                    </div>
+
+                    {/* Gallery View */}
+                    {(() => {
+                        const displayImgs = (hoveredRoom.images && hoveredRoom.images.length > 0)
+                            ? hoveredRoom.images
+                            : (DEFAULT_ROOM_IMAGES[(hoveredRoom.category || 'STANDARD').toUpperCase()] || DEFAULT_ROOM_IMAGES.STANDARD)
+                        const safeIdx = Math.min(hoverImgIdx, displayImgs.length - 1)
+                        const currentImg = displayImgs[safeIdx]
+                        const isCustom = hoveredRoom.images && hoveredRoom.images.length > 0
+
+                        return (
+                            <div className="space-y-2">
+                                <div 
+                                    className="relative w-full h-44 rounded-xl overflow-hidden bg-black/40 group/img border border-white/5 cursor-pointer"
+                                    onClick={() => {
+                                        const room = hoveredRoom
+                                        setHoveredRoom(null)
+                                        setLightboxRoom(room)
+                                    }}
+                                >
+                                    <img
+                                        src={currentImg}
+                                        alt={`Room ${hoveredRoom.roomNumber}`}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/30 pointer-events-none" />
+
+                                    {/* Top Badges */}
+                                    <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-bold text-white">
+                                        <Camera className="w-3 h-3 text-[#4A9EFF]" />
+                                        <span>{safeIdx + 1} / {displayImgs.length} {displayImgs.length === 1 ? 'Photo' : 'Photos'}</span>
+                                    </div>
+
+                                    <div className="absolute top-2 right-2 flex items-center gap-1">
+                                        {!isCustom && (
+                                            <span className="px-2 py-0.5 bg-amber-500/20 backdrop-blur-md border border-amber-500/30 rounded-md text-[9px] font-semibold text-amber-300">
+                                                Stock Preview
+                                            </span>
+                                        )}
+                                        <span className="p-1 bg-black/60 backdrop-blur-md border border-white/10 rounded-md text-white hover:text-[#4A9EFF]">
+                                            <Maximize2 className="w-3 h-3" />
+                                        </span>
+                                    </div>
+
+                                    {/* Navigation Arrows */}
+                                    {displayImgs.length > 1 && (
+                                        <>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setHoverImgIdx((prev) => (prev > 0 ? prev - 1 : displayImgs.length - 1))
+                                                }}
+                                                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white flex items-center justify-center transition-all opacity-80 hover:opacity-100 hover:scale-110"
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setHoverImgIdx((prev) => (prev < displayImgs.length - 1 ? prev + 1 : 0))
+                                                }}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 border border-white/20 text-white flex items-center justify-center transition-all opacity-80 hover:opacity-100 hover:scale-110"
+                                            >
+                                                <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {/* Overlay details */}
+                                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[10px] text-white/90">
+                                        <span className="font-semibold">{hoveredRoom.maxOccupancy || 2} Guests • Floor {hoveredRoom.floor || 1}</span>
+                                        {hoveredRoom.amenities?.length > 0 && (
+                                            <span className="text-[9px] text-gray-300 bg-white/10 px-1.5 py-0.5 rounded backdrop-blur-sm">
+                                                {hoveredRoom.amenities.length} Amenities
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Thumbnail Strip */}
+                                {displayImgs.length > 1 && (
+                                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                                        {displayImgs.map((imgUrl: string, i: number) => (
+                                            <button
+                                                key={i}
+                                                onMouseEnter={() => setHoverImgIdx(i)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setHoverImgIdx(i)
+                                                }}
+                                                className={cn(
+                                                    'relative w-12 h-10 rounded-lg overflow-hidden shrink-0 border-2 transition-all cursor-pointer',
+                                                    i === safeIdx
+                                                        ? 'border-[#4A9EFF] scale-105 shadow-md shadow-[#4A9EFF]/30'
+                                                        : 'border-white/10 opacity-60 hover:opacity-100'
+                                                )}
+                                            >
+                                                <img src={imgUrl} alt="" className="w-full h-full object-cover" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })()}
+
+                    {/* Footer */}
+                    <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                            {(hoveredRoom.amenities || []).slice(0, 3).map((a: string) => (
+                                <span key={a} className="text-[9px] px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-gray-300">
+                                    {a}
+                                </span>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => {
+                                const room = hoveredRoom
+                                setHoveredRoom(null)
+                                openConfig(room)
+                            }}
+                            className="text-[10px] text-[#4A9EFF] hover:underline font-bold flex items-center gap-1 shrink-0"
+                        >
+                            <SlidersHorizontal className="w-3 h-3" /> Edit Photos
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════
+               FULL PHOTO LIGHTBOX MODAL
+             ══════════════════════════════════════════ */}
+            {lightboxRoom && (
+                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setLightboxRoom(null)}>
+                    <div className="relative max-w-4xl w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-4 border-b border-white/10 bg-[#101922]">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Room {lightboxRoom.roomNumber} Photo Gallery</h3>
+                                <p className="text-xs text-gray-400">{lightboxRoom.type} • Floor {lightboxRoom.floor} • {formatCurrency(lightboxRoom.basePrice)}/night</p>
+                            </div>
+                            <button onClick={() => setLightboxRoom(null)} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 flex-1 overflow-y-auto space-y-4">
+                            {(() => {
+                                const imgs = (lightboxRoom.images && lightboxRoom.images.length > 0)
+                                    ? lightboxRoom.images
+                                    : (DEFAULT_ROOM_IMAGES[(lightboxRoom.category || 'STANDARD').toUpperCase()] || DEFAULT_ROOM_IMAGES.STANDARD)
+                                return (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {imgs.map((url: string, i: number) => (
+                                            <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-white/10 group bg-black/50">
+                                                <img src={url} alt={`Room photo ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                <div className="absolute top-2 left-2 px-2.5 py-1 bg-black/70 rounded-md text-xs font-semibold text-white backdrop-blur-sm">
+                                                    Photo #{i + 1}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            })()}
+                        </div>
+                        <div className="p-4 border-t border-white/10 bg-[#101922] flex items-center justify-between">
+                            <span className="text-xs text-gray-400">Total Photos: {(lightboxRoom.images?.length || 0) > 0 ? lightboxRoom.images.length : 'Stock Gallery'}</span>
+                            <button
+                                onClick={() => {
+                                    const r = lightboxRoom
+                                    setLightboxRoom(null)
+                                    openConfig(r)
+                                }}
+                                className="px-4 py-2 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-[#4A9EFF]/20"
+                            >
+                                <SlidersHorizontal className="w-4 h-4" /> Manage Room Photos
+                            </button>
                         </div>
                     </div>
                 </div>

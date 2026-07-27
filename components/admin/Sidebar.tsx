@@ -55,6 +55,7 @@ const navItems: Omit<NavItem, 'badge'>[] = [
   { label: 'Food & Beverage Menu', icon: <UtensilsCrossed className="w-[18px] h-[18px]" />, href: '/admin/content/menu',         featureKey: 'content' },
   { label: 'Guests',               icon: <Users className="w-[18px] h-[18px]" />,            href: '/admin/guests',               featureKey: 'guests' },
   { label: 'Rooms',                icon: <BedDouble className="w-[18px] h-[18px]" />,        href: '/admin/rooms',                featureKey: 'rooms' },
+  { label: 'Room Occupancy',       icon: <Building2 className="w-[18px] h-[18px]" />,        href: '/admin/occupancy',            featureKey: 'rooms' },
   { label: 'Services',             icon: <Bell className="w-[18px] h-[18px]" />,             href: '/admin/services',             featureKey: 'services' },
   { 
     label: 'Staff', 

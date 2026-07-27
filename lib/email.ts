@@ -48,6 +48,49 @@ async function sendWithResend(payload: EmailPayload): Promise<boolean> {
     }
 }
 
+async function sendWithNodemailer(payload: EmailPayload): Promise<boolean> {
+    try {
+        let nodemailer: any
+        try {
+            nodemailer = await (new Function('m', 'return import(m)'))('nodemailer')
+        } catch {
+            console.warn('[EMAIL] nodemailer package not installed. Run: npm install nodemailer')
+            return logMockEmail(payload)
+        }
+
+        const host = process.env.SMTP_HOST || 'smtp.gmail.com'
+        const port = parseInt(process.env.SMTP_PORT || '465')
+        const user = process.env.SMTP_USER
+        const pass = process.env.SMTP_PASS
+
+        const transporter = nodemailer.createTransport({
+            host,
+            port,
+            secure: port === 465,
+            auth: {
+                user,
+                pass,
+            },
+        })
+
+        const fromAddress = payload.from || process.env.EMAIL_FROM || `Zenbourg Hotel <${user}>`
+        const recipient = Array.isArray(payload.to) ? payload.to.join(',') : payload.to
+
+        await transporter.sendMail({
+            from: fromAddress,
+            to: recipient,
+            subject: payload.subject,
+            html: payload.html,
+        })
+
+        console.log(`[EMAIL SMTP SUCCESS] Sent email to ${recipient}`)
+        return true
+    } catch (err) {
+        console.error('[EMAIL SMTP Error]', err)
+        return false
+    }
+}
+
 function logMockEmail(payload: EmailPayload): boolean {
     console.log('[EMAIL MOCK]', {
         to: payload.to,
@@ -58,6 +101,9 @@ function logMockEmail(payload: EmailPayload): boolean {
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        return sendWithNodemailer(payload)
+    }
     if (process.env.RESEND_API_KEY) {
         return sendWithResend(payload)
     }
@@ -122,10 +168,29 @@ export async function sendWelcomeEmail(opts: {
         to: opts.to,
         subject: `Welcome to ${opts.hotelName || 'Zenbourg'}!`,
         html: `
-      <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
-        <h2 style="color:#4A9EFF">Welcome, ${opts.name}!</h2>
-        <p>Your account at <strong>${opts.hotelName || 'Zenbourg'}</strong> has been created successfully.</p>
-        <p style="color:#666;font-size:13px">If you have any questions, our support team is here to help.</p>
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:auto;padding:32px;background:#0F172A;color:#F8FAFC;border-radius:20px;border:1px solid #1E293B">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="display:inline-block;background:#3B82F6;color:#ffffff;width:44px;height:44px;line-height:44px;border-radius:12px;font-size:22px;font-weight:bold;margin-bottom:12px">Z</div>
+          <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:800;letter-spacing:-0.5px">Welcome to ${opts.hotelName || 'Zenbourg'}</h1>
+          <p style="color:#94A3B8;font-size:13px;margin-top:6px;font-weight:600">All-in-One Hotel Management & Guest Platform</p>
+        </div>
+        
+        <div style="background:#1E293B;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #334155">
+          <p style="font-size:16px;font-weight:700;color:#38BDF8;margin-top:0">Dear ${opts.name},</p>
+          <p style="color:#CBD5E1;line-height:1.6;font-size:14px">We are thrilled to welcome you! Your account at <strong>${opts.hotelName || 'Zenbourg'}</strong> has been created and is fully active.</p>
+          <div style="margin-top:20px;padding:16px;background:#0F172A;border-radius:12px;border:1px solid #334155">
+            <div style="font-size:11px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">REGISTERED EMAIL ADDRESS</div>
+            <div style="font-size:15px;font-weight:700;color:#F8FAFC">${opts.to}</div>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin:32px 0 24px 0">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/login" style="background:#3B82F6;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:9999px;font-weight:800;font-size:13px;letter-spacing:1px;text-transform:uppercase;display:inline-block;box-shadow:0 10px 25px -5px rgba(59,130,246,0.5)">Log In to Your Account</a>
+        </div>
+
+        <p style="color:#64748B;font-size:12px;text-align:center;margin-top:28px;border-top:1px solid #1E293B;padding-top:20px">
+          Need assistance? Our support team is here to help at support@zenbourg.com
+        </p>
       </div>`,
     })
 }
@@ -181,6 +246,111 @@ export async function sendEnterpriseQuoteApproval(opts: {
           <a href="${opts.dashboardUrl}" style="background:#9333EA;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:bold;display:inline-block;box-shadow:0 4px 14px 0 rgba(147,51,234,0.39)">Proceed to Secure Checkout</a>
         </div>
         <p style="color:#9CA3AF;font-size:12px;text-align:center;margin-top:32px;border-top:1px solid #374151;padding-top:16px">If you did not request this or need adjustments, contact corporate-sales@zenbourg.com</p>
+      </div>`,
+    })
+}
+
+export async function sendLoginAlertEmail(opts: {
+    to: string
+    name: string
+    time?: string
+    ipAddress?: string
+}) {
+    return sendEmail({
+        to: opts.to,
+        subject: `Security Alert: New Sign-In to Your Zenbourg Account`,
+        html: `
+      <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:600px;margin:auto;padding:32px;background:#0F172A;color:#F8FAFC;border-radius:20px;border:1px solid #1E293B">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="display:inline-block;background:#3B82F6;color:#ffffff;width:44px;height:44px;line-height:44px;border-radius:12px;font-size:22px;font-weight:bold;margin-bottom:12px">Z</div>
+          <h2 style="color:#ffffff;margin:0;font-size:22px;font-weight:800">New Account Login Detected</h2>
+        </div>
+        <div style="background:#1E293B;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #334155">
+          <p style="font-size:15px;color:#CBD5E1;margin-top:0">Hi <strong>${opts.name}</strong>,</p>
+          <p style="color:#94A3B8;font-size:14px;line-height:1.6">We noticed a new login to your Zenbourg account on <strong>${opts.time || new Date().toLocaleString('en-IN')}</strong>.</p>
+          ${opts.ipAddress ? `<p style="color:#38BDF8;font-size:13px;font-family:monospace">IP Address: ${opts.ipAddress}</p>` : ''}
+        </div>
+        <p style="color:#64748B;font-size:12px;text-align:center">If this was you, no action is needed. If you did not authorize this login, please reset your password immediately.</p>
+      </div>`,
+    })
+}
+
+export async function sendSubscriptionUpgradeEmail(opts: {
+    to: string
+    name: string
+    hotelName: string
+    newPlan: string
+    amountPaid?: number
+}) {
+    return sendEmail({
+        to: opts.to,
+        subject: `Subscription Upgraded to ${opts.newPlan} – ${opts.hotelName}`,
+        html: `
+      <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:600px;margin:auto;padding:32px;background:#0F172A;color:#F8FAFC;border-radius:20px;border:1px solid #1E293B">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="display:inline-block;background:#10B981;color:#ffffff;width:44px;height:44px;line-height:44px;border-radius:12px;font-size:22px;font-weight:bold;margin-bottom:12px">✓</div>
+          <h2 style="color:#ffffff;margin:0;font-size:24px;font-weight:800">Subscription Upgraded!</h2>
+          <p style="color:#34D399;font-size:13px;margin-top:4px;font-weight:700">${opts.hotelName}</p>
+        </div>
+        <div style="background:#1E293B;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #334155">
+          <p style="font-size:15px;color:#CBD5E1;margin-top:0">Dear ${opts.name},</p>
+          <p style="color:#CBD5E1;line-height:1.6;font-size:14px">Congratulations! Your subscription has been successfully upgraded to the <strong>${opts.newPlan}</strong> plan.</p>
+          ${opts.amountPaid ? `<div style="margin-top:16px;padding:16px;background:#0F172A;border-radius:12px;font-size:16px;font-weight:bold;color:#10B981">Amount Paid: ₹${opts.amountPaid.toLocaleString('en-IN')}</div>` : ''}
+        </div>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/dashboard" style="background:#10B981;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:9999px;font-weight:800;font-size:13px;letter-spacing:1px;text-transform:uppercase;display:inline-block">Go to Dashboard</a>
+        </div>
+      </div>`,
+    })
+}
+
+export async function sendTrialExpiringEmail(opts: {
+    to: string
+    name: string
+    hotelName: string
+    daysLeft: number
+}) {
+    return sendEmail({
+        to: opts.to,
+        subject: `Reminder: Your Free Trial for ${opts.hotelName} Expires in ${opts.daysLeft} Day(s)`,
+        html: `
+      <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:600px;margin:auto;padding:32px;background:#0F172A;color:#F8FAFC;border-radius:20px;border:1px solid #1E293B">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="display:inline-block;background:#F59E0B;color:#ffffff;width:44px;height:44px;line-height:44px;border-radius:12px;font-size:22px;font-weight:bold;margin-bottom:12px">⏳</div>
+          <h2 style="color:#ffffff;margin:0;font-size:22px;font-weight:800">Your Free Trial is Expiring Soon</h2>
+        </div>
+        <div style="background:#1E293B;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #334155">
+          <p style="font-size:15px;color:#CBD5E1;margin-top:0">Dear ${opts.name},</p>
+          <p style="color:#CBD5E1;line-height:1.6;font-size:14px">Your free trial for <strong>${opts.hotelName}</strong> will expire in <strong>${opts.daysLeft} day(s)</strong>. Upgrade now to ensure uninterrupted access to reservations, POS, and channel sync.</p>
+        </div>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/settings?view=SUBSCRIPTION" style="background:#3B82F6;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:9999px;font-weight:800;font-size:13px;letter-spacing:1px;text-transform:uppercase;display:inline-block">Upgrade Subscription</a>
+        </div>
+      </div>`,
+    })
+}
+
+export async function sendTrialExpiredEmail(opts: {
+    to: string
+    name: string
+    hotelName: string
+}) {
+    return sendEmail({
+        to: opts.to,
+        subject: `Trial Expired – Upgrade ${opts.hotelName} to Continue Services`,
+        html: `
+      <div style="font-family:'Segoe UI',Roboto,sans-serif;max-width:600px;margin:auto;padding:32px;background:#0F172A;color:#F8FAFC;border-radius:20px;border:1px solid #1E293B">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="display:inline-block;background:#EF4444;color:#ffffff;width:44px;height:44px;line-height:44px;border-radius:12px;font-size:22px;font-weight:bold;margin-bottom:12px">!</div>
+          <h2 style="color:#ffffff;margin:0;font-size:22px;font-weight:800">Your Free Trial Has Expired</h2>
+        </div>
+        <div style="background:#1E293B;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #334155">
+          <p style="font-size:15px;color:#CBD5E1;margin-top:0">Dear ${opts.name},</p>
+          <p style="color:#CBD5E1;line-height:1.6;font-size:14px">The free trial period for <strong>${opts.hotelName}</strong> has ended. Please choose a subscription plan to reactivate all features.</p>
+        </div>
+        <div style="text-align:center;margin:28px 0">
+          <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/admin/settings?view=SUBSCRIPTION" style="background:#EF4444;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:9999px;font-weight:800;font-size:13px;letter-spacing:1px;text-transform:uppercase;display:inline-block">Select Plan & Upgrade</a>
+        </div>
       </div>`,
     })
 }

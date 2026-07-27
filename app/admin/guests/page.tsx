@@ -8,9 +8,9 @@ import { useMemo } from 'react'
 import { format } from 'date-fns'
 import {
   Plus, Download, Search, CheckCircle2, Clock,
-  ChevronLeft, ChevronRight, Calendar, SlidersHorizontal,
+  ChevronLeft, ChevronRight, Calendar, SlidersHorizontal, AlertCircle
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, validateGSTIN } from '@/lib/utils'
 import { toast } from 'sonner'
 import Avatar from '@/components/common/Avatar'
 import Modal from '@/components/ui/Modal'
@@ -51,7 +51,7 @@ function GuestsContent() {
   const [showAdd, setShowAdd] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [form, setForm] = useState({
-    name: '', phone: '', email: '', idType: '', idNumber: '', address: '', dateOfBirth: '',
+    name: '', phone: '', email: '', idType: '', idNumber: '', address: '', dateOfBirth: '', gstNumber: '',
   })
 
   const { data: rawGuests, mutate, isValidating: loading } = useSWR('/api/admin/guests', (url) => fetch(url).then(res => res.json()), {
@@ -116,7 +116,7 @@ function GuestsContent() {
       if (res.ok) {
         toast.success('Guest added successfully')
         setShowAdd(false)
-        setForm({ name: '', phone: '', email: '', idType: '', idNumber: '', address: '', dateOfBirth: '' })
+        setForm({ name: '', phone: '', email: '', idType: '', idNumber: '', address: '', dateOfBirth: '', gstNumber: '' })
         fetchGuests()
       } else {
         toast.error(await res.text())
@@ -472,6 +472,24 @@ function GuestsContent() {
             />
             <Input label="ID Number" placeholder="Enter ID number" value={form.idNumber}
               onChange={e => setForm({ ...form, idNumber: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Input
+              label="Guest GSTIN (Optional for B2B Tax Invoice)"
+              placeholder="e.g. 27ABCDE1234F1ZH"
+              value={form.gstNumber}
+              onChange={e => setForm({ ...form, gstNumber: e.target.value.toUpperCase() })}
+            />
+            {(() => {
+              if (!form.gstNumber) return null
+              const v = validateGSTIN(form.gstNumber)
+              return (
+                <div className={cn("text-[11px] font-semibold flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-md border", v.isValid ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400")}>
+                  {v.isValid ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                  <span>{v.message}</span>
+                </div>
+              )
+            })()}
           </div>
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>

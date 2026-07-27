@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import { prisma } from '@/lib/db'
 import { compare } from 'bcryptjs'
+import { sendWelcomeEmail } from '@/lib/email'
 
 export const authOptions: NextAuthOptions = {
     session: {
@@ -12,10 +13,31 @@ export const authOptions: NextAuthOptions = {
     pages: {
         signIn: '/admin/login',
     },
+    cookies: {
+        pkceCodeVerifier: {
+            name: 'next-auth.pkce.code_verifier',
+            options: {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+            },
+        },
+        state: {
+            name: 'next-auth.state',
+            options: {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+            },
+        },
+    },
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID || '',
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+            checks: ['none'],
         }),
         CredentialsProvider({
             name: 'Credentials',
@@ -79,21 +101,23 @@ export const authOptions: NextAuthOptions = {
                 })
                 
                 if (!dbUser) {
+                    const cleanEmail = user.email.trim().toLowerCase()
+                    const uniquePhone = `google_${cleanEmail.replace(/[^a-z0-9]/g, '_')}`
                     dbUser = await prisma.user.create({
                         data: {
-                            email: user.email.trim().toLowerCase(),
+                            email: cleanEmail,
                             name: user.name || 'Google User',
                             role: 'HOTEL_ADMIN',
                             password: '', // OAuth users have no password
-                            phone: '', // Google Auth does not provide phone number
+                            phone: uniquePhone, // Unique phone identifier for Google Auth user
                         }
                     })
                     const property = await prisma.property.create({
                         data: {
                             name: `${user.name || 'My'} Hotel`,
                             address: 'Pending Setup',
-                            phone: '',
-                            email: user.email?.trim().toLowerCase() || '',
+                            phone: uniquePhone,
+                            email: cleanEmail,
                             ownerIds: [dbUser.id],
                             plan: 'BASE',
                         }
@@ -102,6 +126,11 @@ export const authOptions: NextAuthOptions = {
                         where: { id: dbUser.id },
                         data: { ownedPropertyIds: [property.id] } as any
                     })
+                    sendWelcomeEmail({
+                        to: cleanEmail,
+                        name: user.name || 'User',
+                        hotelName: `${user.name || 'My'} Hotel`
+                    }).catch(() => {})
                 }
                 
                 token.id = dbUser.id

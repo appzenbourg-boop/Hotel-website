@@ -5,6 +5,8 @@ import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
+import { validateGSTIN } from '@/lib/utils'
+
 // PATCH: Update guest fields (used by Check-in Manager to update checkInStatus)
 export async function PATCH(
     request: Request,
@@ -20,10 +22,15 @@ export async function PATCH(
         const body = await request.json()
         const { 
             checkInStatus, idType, idNumber, idDocumentFront, idDocumentBack,
-            name, email, phone, address, dateOfBirth 
+            name, email, phone, address, dateOfBirth, gstNumber
         } = body
 
-        const guest = await prisma.guest.update({
+        if (gstNumber && gstNumber.trim().length > 0) {
+            const v = validateGSTIN(gstNumber)
+            if (!v.isValid) return new NextResponse(`GSTIN Error: ${v.message}`, { status: 400 })
+        }
+
+        const guest = await (prisma as any).guest.update({
             where: { id: params.id },
             data: {
                 ...(name && { name }),
@@ -31,6 +38,7 @@ export async function PATCH(
                 ...(phone && { phone }),
                 ...(address && { address }),
                 ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+                ...(gstNumber !== undefined && { gstNumber: gstNumber ? gstNumber.trim().toUpperCase() : null }),
                 ...(checkInStatus && { checkInStatus }),
                 ...(idType && { idType }),
                 ...(idNumber && { idNumber }),

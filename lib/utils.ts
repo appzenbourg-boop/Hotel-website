@@ -30,6 +30,33 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Authentic Indian GSTIN Validator (15-character alphanumeric format)
+ * Pattern: State Code (01-38) + PAN (5 letters, 4 digits, 1 letter) + Entity # + 'Z' + Checksum char
+ * Example: 22AAAAA0000A1Z5 or 27ABCDE1234F1ZH
+ */
+export function validateGSTIN(gstin?: string | null): { isValid: boolean; message: string; stateCode?: string; pan?: string } {
+  if (!gstin || !gstin.trim()) {
+    return { isValid: true, message: '' }
+  }
+  const cleaned = gstin.trim().toUpperCase()
+  if (cleaned.length !== 15) {
+    return { isValid: false, message: `GSTIN must be 15 characters (currently ${cleaned.length})` }
+  }
+  const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+  if (!regex.test(cleaned)) {
+    return { isValid: false, message: 'Invalid GSTIN format (e.g. 22AAAAA0000A1Z5)' }
+  }
+  const stateCode = cleaned.slice(0, 2)
+  const pan = cleaned.slice(2, 12)
+  return { 
+    isValid: true, 
+    message: `Valid GSTIN (State: ${stateCode}, PAN: ${pan})`,
+    stateCode,
+    pan 
+  }
+}
+
+/**
  * Format date to readable string
  */
 export function formatDate(date: Date | string, formatStr: string = 'MMM dd, yyyy'): string {

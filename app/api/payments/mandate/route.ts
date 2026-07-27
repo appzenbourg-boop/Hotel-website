@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
         // For simplicity, we create a new one or you can store razorpay_customer_id in user model
         const customer = await razorpay.customers.create({
             name: user.name || 'Valued Guest',
-            email: user.email || `${user.phone}@zenbourg.com`,
-            contact: user.phone
+            email: user.email || `${user.phone || 'guest'}@zenbourg.com`,
+            contact: user.phone || undefined
         });
 
         // 2. Create Order for Mandate (auth only or small amount for registration)

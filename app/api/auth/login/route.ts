@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { badRequest, unauthorized, forbidden, tooManyRequests, serverError } from '@/lib/api-response'
+import { sendLoginAlertEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
         if (!isValid) return unauthorized('Invalid credentials')
 
         // Ensure Guest profile exists
-        if (user.role === 'GUEST') {
+        if (user.role === 'GUEST' && user.phone) {
             const guest = await prisma.guest.findUnique({ where: { phone: user.phone } })
             if (!guest) {
                 await prisma.guest.create({
@@ -62,6 +63,15 @@ export async function POST(request: NextRequest) {
                     },
                 })
             }
+        }
+
+        // Send new login security alert (non-blocking)
+        if (user.email) {
+            sendLoginAlertEmail({
+                to: user.email,
+                name: user.name || 'User',
+                time: new Date().toLocaleString('en-IN')
+            }).catch(() => {})
         }
 
         const token = jwt.sign(

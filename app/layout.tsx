@@ -62,7 +62,7 @@ export default function RootLayout({
             expand={true}
             toastOptions={{
               className: 'rounded-3xl border-white/10 bg-[#161b22] text-white font-outfit shadow-2xl',
-              duration: 4000,
+              duration: 2000,
             }}
           />
         </Providers>

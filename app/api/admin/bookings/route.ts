@@ -42,19 +42,42 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const [bookings, total] = await Promise.all([
-            prisma.booking.findMany({
-                where,
-                include: {
-                    guest: { select: { name: true, phone: true, email: true } },
-                    room: { select: { roomNumber: true, type: true, category: true } },
-                },
-                orderBy: { checkIn: 'asc' },
-                skip: (page - 1) * limit,
-                take: limit,
+        const total = await prisma.booking.count({ where })
+        
+        const rawBookings = await prisma.booking.findMany({
+            where,
+            orderBy: { checkIn: 'asc' },
+            skip: (page - 1) * limit,
+            take: limit,
+        })
+
+        // Resolve referenced guests and rooms to prevent "Inconsistent query result" exceptions
+        const guestIds = [...new Set(rawBookings.map(b => b.guestId))]
+        const roomIds = [...new Set(rawBookings.map(b => b.roomId))]
+
+        const [guests, rooms] = await Promise.all([
+            prisma.guest.findMany({
+                where: { id: { in: guestIds } },
+                select: { id: true, name: true, phone: true, email: true }
             }),
-            prisma.booking.count({ where }),
+            prisma.room.findMany({
+                where: { id: { in: roomIds } },
+                select: { id: true, roomNumber: true, type: true, category: true }
+            })
         ])
+
+        const guestMap = new Map(guests.map(g => [g.id, g]))
+        const roomMap = new Map(rooms.map(r => [r.id, r]))
+
+        const bookings = rawBookings.map(b => {
+            const guest = guestMap.get(b.guestId)
+            const room = roomMap.get(b.roomId)
+            return {
+                ...b,
+                guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email } : { name: 'Unknown Guest', phone: 'N/A', email: '' },
+                room: room ? { roomNumber: room.roomNumber, type: room.type, category: room.category } : { roomNumber: 'N/A', type: 'N/A', category: 'STANDARD' }
+            }
+        })
 
         return NextResponse.json({
             data: bookings,

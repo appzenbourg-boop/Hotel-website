@@ -20,15 +20,18 @@ export async function middleware(req: NextRequest) {
         return NextResponse.next()
     }
 
-    const getHomePath = (role: string) => {
+    const getHomePath = (role?: string): string => {
         if (role === 'STAFF') return '/staff'
-        if (['HOTEL_ADMIN', 'MANAGER', 'SUPER_ADMIN', 'RECEPTIONIST'].includes(role)) return '/admin/dashboard'
-        return '/'
+        if (['HOTEL_ADMIN', 'MANAGER', 'SUPER_ADMIN', 'RECEPTIONIST'].includes(role || '')) return '/admin/dashboard'
+        return '/admin/dashboard'
     }
 
-    // 2. If logged in, don't allow visiting auth pages
+    // 2. If logged in with a valid admin/staff role, don't allow visiting auth pages
     if (isAuthPage && isAuth) {
-        return NextResponse.redirect(new URL(getHomePath(token.role as string), req.url))
+        const role = token.role as string
+        if (['STAFF', 'HOTEL_ADMIN', 'MANAGER', 'SUPER_ADMIN', 'RECEPTIONIST'].includes(role || '')) {
+            return NextResponse.redirect(new URL(getHomePath(role), req.url))
+        }
     }
 
     // 3. Unauthenticated users trying to access protected paths

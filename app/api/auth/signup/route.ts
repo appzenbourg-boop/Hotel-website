@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,11 @@ export async function POST(request: NextRequest) {
                 email: email || null,
             },
         });
+
+        // Send welcome email (non-blocking)
+        if (email) {
+            sendWelcomeEmail({ to: email, name }).catch(() => {})
+        }
 
         // Return user data without password
         const { password: _, ...userWithoutPassword } = user;

@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { unauthorized, badRequest, serverError } from '@/lib/api-response'
 import { redis } from '@/lib/redis'
+import { validateGSTIN } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -141,16 +142,23 @@ export async function POST(req: NextRequest) {
         if (!session) return unauthorized()
 
         const body = await req.json()
-        const { name, email, phone, idType, idNumber, address, dateOfBirth } = body
+        const { name, email, phone, idType, idNumber, address, dateOfBirth, gstNumber } = body
 
         if (!name || !phone) return badRequest('Name and phone are required')
+
+        if (gstNumber && gstNumber.trim().length > 0) {
+            const v = validateGSTIN(gstNumber)
+            if (!v.isValid) return badRequest(`Guest GSTIN Error: ${v.message}`)
+        }
 
         // Resolve property — this is who "owns" this guest
         const propertyId = session.user.role === 'SUPER_ADMIN'
             ? (body.propertyId ?? session.user.propertyId)
             : session.user.propertyId
 
-        const guest = await prisma.guest.upsert({
+        const cleanGst = gstNumber ? gstNumber.trim().toUpperCase() : null
+
+        const guest = await (prisma as any).guest.upsert({
             where: { phone },
             update: {
                 name,
@@ -158,6 +166,7 @@ export async function POST(req: NextRequest) {
                 idType: idType ?? undefined,
                 idNumber: idNumber ?? undefined,
                 address: address ?? undefined,
+                gstNumber: cleanGst ?? undefined,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
                 // Update property link if not already set
                 ...(propertyId ? { createdByPropertyId: propertyId } : {}),
@@ -169,6 +178,7 @@ export async function POST(req: NextRequest) {
                 idType: idType ?? null,
                 idNumber: idNumber ?? null,
                 address: address ?? null,
+                gstNumber: cleanGst,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
                 checkInStatus: 'PENDING',
                 // Link to the property that created this guest

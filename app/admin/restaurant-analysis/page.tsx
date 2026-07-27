@@ -96,14 +96,14 @@ export default function RestaurantAnalysisPage() {
         )
     }
 
+    const { stats, topSelling, poorPerforming, matrix, categories } = analysisData
+
     const handleExportPDF = async () => {
         setExporting(true)
         try {
             const jsPDF = (await import('jspdf')).default
             const autoTable = (await import('jspdf-autotable')).default
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-
-            const { stats, topSelling, poorPerforming, matrix, categories } = analysisData
 
             // Header
             doc.setFillColor(22, 27, 34)
@@ -163,7 +163,6 @@ export default function RestaurantAnalysisPage() {
         } catch { toast.error('Error') }
     }
 
-    const { stats, topSelling, poorPerforming, matrix, categories } = analysisData
     const barData = topSelling.map((i: any) => ({ name: i.name.length > 12 ? i.name.slice(0, 12) + '…' : i.name, units: i.units }))
     const pieData = categories.map((c: any) => ({ name: c.label, value: c.value }))
 
@@ -239,14 +238,15 @@ export default function RestaurantAnalysisPage() {
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center gap-2 bg-surface-light border border-border rounded-xl px-3 py-1.5">
-                        <Calendar className="w-4 h-4 text-text-tertiary" />
+                    <div className="flex items-center gap-2 bg-[#182433] border border-white/10 rounded-xl px-3 py-2 transition-all">
+                        <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
                         <select
                             value={timeRange}
                             onChange={(e) => setTimeRange(e.target.value)}
-                            className="bg-transparent text-[10px] font-bold text-white focus:outline-none uppercase tracking-wider cursor-pointer"
+                            className="bg-transparent text-[11px] font-bold text-white focus:outline-none focus:ring-0 outline-none border-none uppercase tracking-wider cursor-pointer shadow-none ring-0 appearance-none pr-2"
+                            style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
                         >
-                            {Object.keys(rangeMap).map(r => <option key={r} value={r} className="bg-surface">{r}</option>)}
+                            {Object.keys(rangeMap).map(r => <option key={r} value={r} className="bg-[#182433] text-white py-1">{r}</option>)}
                         </select>
                     </div>
                     <button

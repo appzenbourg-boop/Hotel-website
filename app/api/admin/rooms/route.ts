@@ -57,32 +57,65 @@ export async function GET(request: NextRequest) {
         }
         const rooms = await prisma.room.findMany({
             where,
-            include: {
-                bookings: {
-                    where: {
-                        status: { in: ['CHECKED_IN', 'RESERVED'] },
-                        ...(start && end
-                            ? { checkIn: { lte: new Date(end) }, checkOut: { gte: new Date(start) } }
-                            : {}),
-                    },
-                    select: {
-                        id: true,
-                        status: true,
-                        checkIn: true,
-                        checkOut: true,
-                        guest: { select: { name: true, phone: true } },
-                    },
-                },
-            },
             orderBy: { roomNumber: 'asc' },
             skip: (page - 1) * limit,
             take: limit,
         })
 
+        const roomIds = rooms.map(r => r.id)
+        
+        // Fetch active bookings for these rooms
+        const bookings = await prisma.booking.findMany({
+            where: {
+                roomId: { in: roomIds },
+                status: { in: ['CHECKED_IN', 'RESERVED'] },
+                ...(start && end
+                    ? { checkIn: { lte: new Date(end) }, checkOut: { gte: new Date(start) } }
+                    : {}),
+            },
+            select: {
+                id: true,
+                roomId: true,
+                status: true,
+                checkIn: true,
+                checkOut: true,
+                guestId: true,
+            }
+        })
+
+        // Fetch guests for these bookings to avoid Inconsistent Query Result crash
+        const guestIds = [...new Set(bookings.map(b => b.guestId))]
+        const guests = await prisma.guest.findMany({
+            where: { id: { in: guestIds } },
+            select: { id: true, name: true, phone: true }
+        })
+
+        const guestMap = new Map(guests.map(g => [g.id, g]))
+
+        // Map bookings with their guests and attach to rooms
+        const mappedRooms = rooms.map(room => {
+            const rBookings = bookings
+                .filter(b => b.roomId === room.id)
+                .map(b => {
+                    const guest = guestMap.get(b.guestId)
+                    return {
+                        id: b.id,
+                        status: b.status,
+                        checkIn: b.checkIn,
+                        checkOut: b.checkOut,
+                        guest: guest ? { name: guest.name, phone: guest.phone } : { name: 'Unknown Guest', phone: 'N/A' }
+                    }
+                })
+            return {
+                ...room,
+                bookings: rBookings
+            }
+        })
+
         // For availability queries, filter out rooms with overlapping bookings
-        let result = rooms
+        let result = mappedRooms
         if (start && end && status === 'AVAILABLE') {
-            result = rooms.filter((r) => r.bookings.length === 0 && r.status !== 'MAINTENANCE')
+            result = mappedRooms.filter((r) => r.bookings.length === 0 && r.status !== 'MAINTENANCE')
         }
 
         const responseData = { success: true, data: result }

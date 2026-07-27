@@ -13,10 +13,13 @@ export const dynamic = 'force-dynamic'
 
 const ALLOWED_ROLES = ['SUPER_ADMIN', 'HOTEL_ADMIN']
 
+import { validateGSTIN } from '@/lib/utils'
+
 const DEFAULTS = {
     gstPercent: 18.0,
     serviceChargePercent: 0.0,
     luxuryTaxPercent: 0.0,
+    gstNumber: null,
     defaultDiscountPercent: 0.0,
     discountLabel: 'Discount',
     invoicePrefix: 'INV',
@@ -84,7 +87,7 @@ export async function POST(req: NextRequest) {
         const {
             propertyId: bodyPropertyId,
             // Tax
-            gstPercent, serviceChargePercent, luxuryTaxPercent,
+            gstPercent, serviceChargePercent, luxuryTaxPercent, gstNumber,
             // Discount
             defaultDiscountPercent, discountLabel,
             // Invoice
@@ -116,6 +119,14 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Validate Hotel GSTIN if provided
+        if (gstNumber && gstNumber.trim().length > 0) {
+            const gstValidation = validateGSTIN(gstNumber)
+            if (!gstValidation.isValid) {
+                return badRequest(`Hotel GSTIN Error: ${gstValidation.message}`)
+            }
+        }
+
         // Validate IFSC format if provided
         if (bankIfscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankIfscCode.toUpperCase())) {
             return badRequest('Invalid IFSC code format (e.g. HDFC0001234)')
@@ -127,6 +138,7 @@ export async function POST(req: NextRequest) {
         setIfDefined('gstPercent', gstPercent !== undefined ? parseFloat(gstPercent) : undefined)
         setIfDefined('serviceChargePercent', serviceChargePercent !== undefined ? parseFloat(serviceChargePercent) : undefined)
         setIfDefined('luxuryTaxPercent', luxuryTaxPercent !== undefined ? parseFloat(luxuryTaxPercent) : undefined)
+        setIfDefined('gstNumber', gstNumber ? gstNumber.trim().toUpperCase() : gstNumber)
         setIfDefined('defaultDiscountPercent', defaultDiscountPercent !== undefined ? parseFloat(defaultDiscountPercent) : undefined)
         setIfDefined('discountLabel', discountLabel)
         setIfDefined('invoicePrefix', invoicePrefix)

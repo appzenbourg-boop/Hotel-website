@@ -8,7 +8,7 @@ import {
     Upload, CheckCircle2, Loader2, X, Plus, FileCheck, Star,
     User, MapPin, Calendar, CreditCard, Clock, History, Settings, FileText, Download, Printer
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, validateGSTIN } from '@/lib/utils'
 import { toast } from 'sonner'
 import Avatar from '@/components/common/Avatar'
 
@@ -60,6 +60,7 @@ export default function GuestDetailPage() {
                     dateOfBirth: data.guest.dateOfBirth ? format(new Date(data.guest.dateOfBirth), 'yyyy-MM-dd') : '',
                     idType: data.guest.idType || '',
                     idNumber: data.guest.idNumber || '',
+                    gstNumber: data.guest.gstNumber || '',
                     language: data.guest.language || 'English'
                 })
             } else { toast.error('Failed to load guest') }
@@ -162,6 +163,7 @@ export default function GuestDetailPage() {
                                 { icon: Calendar, label: 'DOB', value: guest.dateOfBirth ? format(new Date(guest.dateOfBirth), 'dd MMMM yyyy') : 'D.O.B Not Set', color: 'text-rose-500' },
                                 { icon: MapPin, label: 'Address', value: guest.address || 'Address Not Provided', color: 'text-emerald-500' },
                                 { icon: CreditCard, label: 'Identification', value: guest.idType ? `${guest.idType} : ${guest.idNumber}` : 'ID Not Available', color: 'text-amber-500' },
+                                { icon: FileText, label: 'Guest GSTIN', value: guest.gstNumber || 'B2C / Not Set', color: 'text-indigo-400' },
                                 { icon: Star, label: 'Language', value: guest.language || 'English', color: 'text-purple-500' },
                             ].map((item, i) => (
                                 <div key={i} className="flex items-start gap-4 p-4 hover:bg-white/[0.02] rounded-2xl transition-all group">
@@ -330,6 +332,19 @@ export default function GuestDetailPage() {
                                     <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Home Address / Street</label>
                                     <input value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500/50 shadow-inner" />
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">Guest GSTIN (Optional B2B Tax Invoice)</label>
+                                    <input value={editForm.gstNumber} placeholder="e.g. 27ABCDE1234F1ZH" onChange={e => setEditForm({...editForm, gstNumber: e.target.value.toUpperCase()})} className="w-full bg-black/40 border border-white/5 rounded-2xl px-6 py-4 text-white font-mono font-bold outline-none focus:border-blue-500/50 uppercase shadow-inner" />
+                                    {(() => {
+                                        if (!editForm.gstNumber) return null
+                                        const v = validateGSTIN(editForm.gstNumber)
+                                        return (
+                                            <div className={cn("text-[11px] font-semibold flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-xl border", v.isValid ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400")}>
+                                                <span>{v.message}</span>
+                                            </div>
+                                        )
+                                    })()}
+                                </div>
                             </div>
                             <div className="space-y-6">
                                 <div className="space-y-2">
@@ -404,106 +419,314 @@ function GuestInvoiceModal({ booking, guestName, onClose }: {
 
     const handleDownloadPDF = async () => {
         try {
+            const hotelName = booking.property?.name || 'Zenbourg Luxury Manor'
+            const roomImg = booking.room?.images?.[0] || booking.property?.images?.[0] || 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200&auto=format&fit=crop&q=80'
+            const checkInFormatted = format(new Date(booking.checkIn), 'yyyy-MM-dd')
+            const checkOutFormatted = format(new Date(booking.checkOut), 'yyyy-MM-dd')
+
             const htmlContent = `
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="utf-8">
-                    <title>Invoice ${invoiceNo}</title>
+                    <title>Luxury Stay Voucher - ${invoiceNo}</title>
                     <style>
-                        body { font-family: 'Helvetica', sans-serif; padding: 40px; color: #333; }
-                        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px; }
-                        .hotel-info h1 { margin: 0; font-size: 28px; }
-                        .hotel-info p { margin: 5px 0; color: #666; }
-                        .invoice-title { text-align: right; }
-                        .invoice-title h2 { margin: 0; color: #C26A2C; font-size: 24px; }
-                        .details-section { display: flex; justify-content: space-between; margin-top: 40px; }
-                        .details-box h3 { font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
-                        .details-row { display: flex; margin-bottom: 5px; font-size: 14px; }
-                        .label { font-weight: bold; width: 100px; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 40px; }
-                        th { background-color: #f8f8f8; text-align: left; padding: 12px; border-bottom: 2px solid #ddd; font-size: 14px; }
-                        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
-                        .totals { margin-top: 30px; text-align: right; }
-                        .total-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
-                        .total-label { font-weight: bold; margin-right: 20px; width: 150px; }
-                        .grand-total { font-size: 20px; font-weight: bold; color: #000; margin-top: 10px; border-top: 2px solid #000; padding-top: 10px; }
-                        .paid-row { color: #2E7D32; }
-                        .balance-row { font-size: 20px; font-weight: bold; color: #C26A2C; }
-                        .discount-row { color: #ef4444; }
-                        .footer { margin-top: 60px; text-align: center; color: #999; font-size: 12px; border-top: 1px solid #eee; padding-top: 20px; }
+                        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap');
+                        
+                        * { box-sizing: border-box; margin: 0; padding: 0; }
+                        body {
+                            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+                            background-color: #ffffff;
+                            color: #1e293b;
+                            padding: 32px 40px;
+                            max-width: 820px;
+                            margin: 0 auto;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        
+                        .brand-header {
+                            display: flex;
+                            align-items: flex-start;
+                            justify-content: space-between;
+                            margin-bottom: 20px;
+                        }
+                        .brand-logo-group {
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                        }
+                        .brand-icon {
+                            width: 28px;
+                            height: 28px;
+                            background: #4F46E5;
+                            color: #ffffff;
+                            border-radius: 8px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 16px;
+                            font-weight: 800;
+                        }
+                        .brand-title {
+                            font-family: 'Outfit', sans-serif;
+                            font-size: 24px;
+                            font-weight: 800;
+                            color: #4F46E5;
+                            letter-spacing: -0.5px;
+                        }
+                        .brand-subtitle {
+                            font-size: 10px;
+                            font-weight: 700;
+                            letter-spacing: 0.15em;
+                            color: #64748B;
+                            text-transform: uppercase;
+                            margin-top: 4px;
+                        }
+                        .status-pill {
+                            background-color: #ECFDF5;
+                            border: 1px solid #A7F3D0;
+                            color: #059669;
+                            font-size: 10px;
+                            font-weight: 800;
+                            letter-spacing: 0.08em;
+                            padding: 6px 14px;
+                            border-radius: 9999px;
+                            text-transform: uppercase;
+                        }
+                        .top-divider {
+                            height: 1px;
+                            background-color: #F1F5F9;
+                            margin-bottom: 24px;
+                        }
+                        
+                        .card {
+                            background-color: #F8FAFC;
+                            border: 1px solid #E2E8F0;
+                            border-radius: 20px;
+                            overflow: hidden;
+                            margin-bottom: 20px;
+                        }
+                        .card-content {
+                            padding: 22px;
+                        }
+                        
+                        .banner-img {
+                            width: 100%;
+                            height: 210px;
+                            object-fit: cover;
+                            display: block;
+                            border-radius: 16px;
+                            margin-bottom: 18px;
+                        }
+                        
+                        .res-tag {
+                            display: inline-block;
+                            background-color: #EFF6FF;
+                            border: 1px solid #BFDBFE;
+                            color: #1D4ED8;
+                            font-size: 10px;
+                            font-weight: 800;
+                            font-family: monospace;
+                            letter-spacing: 0.1em;
+                            padding: 4px 10px;
+                            border-radius: 6px;
+                            text-transform: uppercase;
+                            margin-bottom: 8px;
+                        }
+                        .prop-title {
+                            font-size: 20px;
+                            font-weight: 800;
+                            color: #0F172A;
+                            margin-bottom: 4px;
+                        }
+                        .prop-loc {
+                            font-size: 12px;
+                            font-weight: 600;
+                            color: #64748B;
+                            margin-bottom: 16px;
+                        }
+                        
+                        .card-divider {
+                            height: 1px;
+                            background-color: #E2E8F0;
+                            margin: 16px 0;
+                        }
+                        
+                        .grid-2 {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 20px;
+                        }
+                        .field-label {
+                            font-size: 10px;
+                            font-weight: 800;
+                            letter-spacing: 0.12em;
+                            color: #64748B;
+                            text-transform: uppercase;
+                            margin-bottom: 4px;
+                        }
+                        .field-val-lg {
+                            font-size: 15px;
+                            font-weight: 800;
+                            color: #0F172A;
+                        }
+                        .field-sub {
+                            font-size: 11px;
+                            font-weight: 500;
+                            color: #64748B;
+                            margin-top: 2px;
+                        }
+                        
+                        .card-header-title {
+                            font-size: 11px;
+                            font-weight: 800;
+                            letter-spacing: 0.12em;
+                            color: #475569;
+                            text-transform: uppercase;
+                            margin-bottom: 14px;
+                        }
+                        .kv-row {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            padding: 6px 0;
+                            font-size: 13px;
+                        }
+                        .kv-key {
+                            color: #64748B;
+                            font-weight: 500;
+                        }
+                        .kv-val {
+                            color: #0F172A;
+                            font-weight: 700;
+                            text-align: right;
+                        }
+                        .total-val {
+                            font-size: 18px;
+                            font-weight: 800;
+                            color: #4F46E5;
+                        }
+
+                        .bottom-code {
+                            text-align: center;
+                            font-family: monospace;
+                            font-size: 12px;
+                            font-weight: 800;
+                            letter-spacing: 0.35em;
+                            color: #64748B;
+                            margin-top: 32px;
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        <div class="hotel-info">
-                            <h1>${(booking.property?.name || 'HOTEL').toUpperCase()}</h1>
-                            <p>Institutional Excellence in Hospitality</p>
-                            <p>support@zenbourg.com | +91 6388163169</p>
+                    <div class="brand-header">
+                        <div>
+                            <div class="brand-logo-group">
+                                <div class="brand-icon">📄</div>
+                                <div class="brand-title">${hotelName.toUpperCase()}</div>
+                            </div>
+                            <div class="brand-subtitle">LUXURY STAY VOUCHER & CONFIRMATION RECEIPT</div>
                         </div>
-                        <div class="invoice-title">
-                            <h2>TAX INVOICE</h2>
-                            <p>ID: #${invoiceNo}</p>
-                            <p>Date: ${new Date().toLocaleDateString()}</p>
+                        <div class="status-pill">PAID & CONFIRMED</div>
+                    </div>
+
+                    <div class="top-divider"></div>
+
+                    <!-- Property Card -->
+                    <div class="card">
+                        <div class="card-content">
+                            <img src="${roomImg}" alt="Property Preview" class="banner-img" />
+                            <div class="res-tag">RESERVATION: ${invoiceNo}</div>
+                            <div class="prop-title">${hotelName} - ${roomType || 'Luxury Suite'}</div>
+                            <div class="prop-loc">📍 Room ${roomNo} • ${hotelName}</div>
+
+                            <div class="card-divider"></div>
+
+                            <div class="grid-2">
+                                <div>
+                                    <div class="field-label">CHECK IN DATE</div>
+                                    <div class="field-val-lg">${checkInFormatted}</div>
+                                    <div class="field-sub">From 2:00 PM</div>
+                                </div>
+                                <div>
+                                    <div class="field-label">CHECK OUT DATE</div>
+                                    <div class="field-val-lg">${checkOutFormatted}</div>
+                                    <div class="field-sub">By 11:00 AM</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="details-section">
-                        <div class="details-box">
-                            <h3>GUEST DETAILS</h3>
-                            <div class="details-row"><span class="label">Name:</span> ${guestName}</div>
-                            <div class="details-row"><span class="label">Room:</span> ${roomNo}${roomType ? ' — ' + roomType : ''}</div>
-                        </div>
-                        <div class="details-box" style="text-align: right;">
-                            <h3>STAY INFORMATION</h3>
-                            <div class="details-row" style="justify-content: flex-end;"><span class="label">Arrival:</span> ${format(new Date(booking.checkIn), 'dd MMM yyyy')}</div>
-                            <div class="details-row" style="justify-content: flex-end;"><span class="label">Departure:</span> ${format(new Date(booking.checkOut), 'dd MMM yyyy')}</div>
-                            <div class="details-row" style="justify-content: flex-end;"><span class="label">Duration:</span> ${nights} Night(s)</div>
-                        </div>
-                    </div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>DESCRIPTION</th>
-                                <th style="text-align: right;">AMOUNT (₹)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Room Charges (${nights} night${nights > 1 ? 's' : ''} × ₹${(base / nights).toFixed(0)})</td>
-                                <td style="text-align: right;">${base.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                            </tr>
-                            ${gstAmt > 0 ? `<tr><td>GST (${gstPct}%)</td><td style="text-align: right;">${gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-                            ${scAmt > 0 ? `<tr><td>Service Charge (${scPct}%)</td><td style="text-align: right;">${scAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-                            ${ltAmt > 0 ? `<tr><td>Luxury Tax (${ltPct}%)</td><td style="text-align: right;">${ltAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-                            ${discAmt > 0 ? `<tr class="discount-row"><td>Discount (${discPct}%)</td><td style="text-align: right;">-${discAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td></tr>` : ''}
-                        </tbody>
-                    </table>
-
-                    <div class="totals">
-                        <div class="total-row grand-total">
-                            <span class="total-label">STAY TOTAL:</span>
-                            <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div class="total-row balance-row">
-                            <span class="total-label">BALANCE DUE:</span>
-                            <span>₹${finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <!-- Guest Info Card -->
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-header-title">PRIMARY LODGING GUEST</div>
+                            <div class="kv-row">
+                                <span class="kv-key">Guest Name:</span>
+                                <span class="kv-val">${guestName}</span>
+                            </div>
+                            ${booking.guest?.email ? `
+                            <div class="kv-row">
+                                <span class="kv-key">Email Address:</span>
+                                <span class="kv-val">${booking.guest.email}</span>
+                            </div>` : ''}
+                            ${booking.guest?.phone ? `
+                            <div class="kv-row">
+                                <span class="kv-key">Phone Contact:</span>
+                                <span class="kv-val">${booking.guest.phone}</span>
+                            </div>` : ''}
+                            <div class="kv-row">
+                                <span class="kv-key">Party Size:</span>
+                                <span class="kv-val">${booking.numberOfGuests || 1} Guests</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="footer">
-                        <p>Thank you for choosing ${(booking.property?.name || 'Zenbourg').toUpperCase()}. We hope you had a pleasant stay.</p>
-                        <p>This is a computer-generated document and does not require a physical signature.</p>
+                    <!-- Payment Breakdown Card -->
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-header-title">PAYMENT BREAKDOWN</div>
+                            <div class="kv-row">
+                                <span class="kv-key">Room Fare (${nights} Night${nights > 1 ? 's' : ''}):</span>
+                                <span class="kv-val">₹${base.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div class="kv-row">
+                                <span class="kv-key">Concierge & Butler Fees:</span>
+                                <span class="kv-val" style="color: #059669;">Complimentary</span>
+                            </div>
+                            ${gstAmt > 0 ? `
+                            <div class="kv-row">
+                                <span class="kv-key">GST & Local Stay Taxes (${gstPct}%):</span>
+                                <span class="kv-val">₹${gstAmt.toLocaleString('en-IN')}</span>
+                            </div>` : `
+                            <div class="kv-row">
+                                <span class="kv-key">GST & Local Stay Taxes:</span>
+                                <span class="kv-val">Included</span>
+                            </div>`}
+                            ${discAmt > 0 ? `
+                            <div class="kv-row" style="color: #DC2626;">
+                                <span class="kv-key" style="color: #DC2626;">Special Rate Discount (${discPct}%):</span>
+                                <span class="kv-val" style="color: #DC2626;">-₹${discAmt.toLocaleString('en-IN')}</span>
+                            </div>` : ''}
+
+                            <div class="card-divider"></div>
+
+                            <div class="kv-row" style="padding-top: 4px;">
+                                <span class="kv-key" style="font-size: 15px; font-weight: 800; color: #4F46E5;">Total Charged (Paid):</span>
+                                <span class="total-val">₹${finalAmt.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="bottom-code">${invoiceNo.split('').join(' ')}</div>
                     <script>
                         window.onload = function() { 
                             setTimeout(function() {
                                 window.print(); 
                                 window.onafterprint = function(){ window.close(); };
-                            }, 200);
+                            }, 300);
                         };
-                    </script>
                 </body>
                 </html>
             `;

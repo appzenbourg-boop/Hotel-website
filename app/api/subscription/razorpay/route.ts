@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
                     const customer = await razorpay.customers.create({
                         name: user.name,
                         email: user.email,
-                        contact: user.phone
+                        contact: user.phone || undefined
                     })
                     
                     // UPI Autopay requires 'method': 'upi' to be explicitly passed in the Orders API. 

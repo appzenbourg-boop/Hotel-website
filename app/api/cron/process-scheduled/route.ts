@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { sendSMS } from '@/lib/twilio';
+import { syncPropertyAirbnb } from '@/lib/airbnb-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,10 +57,36 @@ export async function GET(request: Request) {
             }
         }
 
+        // 2. Automatically sync Airbnb calendars for all connected properties
+        const airbnbConnections = await prisma.otaConnection.findMany({
+            where: {
+                otaName: 'AIRBNB',
+                status: 'CONNECTED'
+            },
+            select: { propertyId: true }
+        });
+
+        const syncResults = [];
+        for (const conn of airbnbConnections) {
+            try {
+                const res = await syncPropertyAirbnb(conn.propertyId);
+                syncResults.push(res);
+            } catch (err: any) {
+                console.error(`[CRON] Airbnb sync failed for property ${conn.propertyId}:`, err.message);
+                syncResults.push({ propertyId: conn.propertyId, error: err.message });
+            }
+        }
+
         return NextResponse.json({
             success: true,
-            processedCount: wakeupCalls.length,
-            results
+            wakeup: {
+                processedCount: wakeupCalls.length,
+                results
+            },
+            airbnbSync: {
+                connectionsFound: airbnbConnections.length,
+                results: syncResults
+            }
         });
     } catch (error: any) {
         console.error('[CRON_ERROR]', error);

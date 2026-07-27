@@ -330,7 +330,7 @@ export default function MenuPage() {
                             className="flex-[1.5] py-4 bg-primary hover:bg-primary-hover rounded-2xl text-[11px] font-bold uppercase tracking-widest text-white transition-all shadow-xl shadow-primary/20 active:scale-95"
                             onClick={handleSubmit}
                         >
-                            {formData.id ? 'Synchronize Updates' : 'Commit to Menu'}
+                            {formData.id ? 'Synchronize Updates' : 'Add to Menu'}
                         </button>
                     </div>
                 </div>

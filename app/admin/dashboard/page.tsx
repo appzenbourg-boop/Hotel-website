@@ -51,6 +51,14 @@ export default function AdminDashboard() {
   )
   const rooms = roomsRaw
 
+  const { data: occupancyRaw } = useSWR(
+    session ? bcu('/api/admin/occupancy') : null,
+    (url: string) => fetch(url).then(res => res.json()),
+    { refreshInterval: 15000 }
+  )
+  const occupancySummary = occupancyRaw?.data?.summary ?? occupancyRaw?.summary
+  const occupancyRooms: any[] = occupancyRaw?.data?.rooms ?? occupancyRaw?.rooms ?? []
+
   const { data: reservationsRaw } = useSWR(
     session ? bcu('/api/admin/bookings', { 
         start: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(), 
@@ -469,6 +477,71 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Live Room Occupancy Widget (Left Column) */}
+          <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5 space-y-4 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-[#3B82F6]/15 flex items-center justify-center border border-[#3B82F6]/20">
+                  <Building2 className="w-3.5 h-3.5 text-[#3B82F6]" />
+                </div>
+                <div>
+                  <h2 className="text-[14px] font-bold text-white">Room Occupancy</h2>
+                  <p className="text-[10px] text-gray-400 font-medium">Real-time status per room</p>
+                </div>
+              </div>
+              <button
+                onClick={() => router.push('/admin/occupancy')}
+                className="text-[11px] font-bold text-[#3B82F6] hover:underline uppercase tracking-wider flex items-center gap-1"
+              >
+                View Full Grid ➔
+              </button>
+            </div>
+
+            {/* Micro KPI Bar */}
+            <div className="grid grid-cols-3 gap-2 bg-[#182433] p-2.5 rounded-xl border border-white/[0.06] text-center">
+              <div>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Live Rate</p>
+                <p className="text-sm font-extrabold text-[#3B82F6]">{occupancySummary?.occupancyRate ?? safeStats.occupancyRate ?? 0}%</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Occupied</p>
+                <p className="text-sm font-extrabold text-purple-400">{occupancySummary?.occupiedCount ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Available</p>
+                <p className="text-sm font-extrabold text-emerald-400">{occupancySummary?.availableCount ?? 0}</p>
+              </div>
+            </div>
+
+            {/* Room Pills Grid */}
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+              {occupancyRooms.length > 0 ? occupancyRooms.map((room: any) => (
+                <div
+                  key={room.id}
+                  onClick={() => router.push('/admin/occupancy')}
+                  className={cn(
+                    "p-2 rounded-xl border text-left cursor-pointer transition-all active:scale-95",
+                    room.isOccupied ? "bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50" :
+                    room.isMaintenance ? "bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50" :
+                    "bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50"
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[11px] font-extrabold text-white">R-{room.roomNumber}</span>
+                    <div className={cn("w-1.5 h-1.5 rounded-full", room.isOccupied ? "bg-purple-400" : room.isMaintenance ? "bg-amber-400" : "bg-emerald-400")} />
+                  </div>
+                  <p className="text-[9px] font-bold truncate text-gray-300">
+                    {room.isOccupied ? (room.currentBooking?.guestName ?? 'Occupied') : room.isMaintenance ? 'Service' : 'Available'}
+                  </p>
+                </div>
+              )) : (
+                <div className="col-span-full py-4 text-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                  Loading rooms...
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

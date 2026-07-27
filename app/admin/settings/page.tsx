@@ -8,7 +8,7 @@ import {
   Calendar, Check, CheckCircle2, Bell, Zap, ShieldAlert, ClipboardList,
   Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, validateGSTIN } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getAdminContext } from '@/lib/admin-context'
 import Switch from '@/components/ui/Switch'
@@ -76,6 +76,7 @@ const PLAN_COLORS: Record<string, string> = {
 function FinancialView({ propertyId }: { propertyId: string | null | undefined }) {
   const [s, setS] = useState({
     gstPercent: 18, serviceChargePercent: 0, luxuryTaxPercent: 0,
+    gstNumber: '',
     defaultDiscountPercent: 0, discountLabel: 'Discount',
     invoicePrefix: 'INV', invoiceFooter: '',
     checkInTime: '14:00', checkOutTime: '11:00',
@@ -103,6 +104,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             gstPercent: d.gstPercent ?? 18,
             serviceChargePercent: d.serviceChargePercent ?? 0,
             luxuryTaxPercent: d.luxuryTaxPercent ?? 0,
+            gstNumber: d.gstNumber ?? '',
             defaultDiscountPercent: d.defaultDiscountPercent ?? 0,
             discountLabel: d.discountLabel ?? 'Discount',
             invoicePrefix: d.invoicePrefix ?? 'INV',
@@ -199,6 +201,29 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
       <div className="bg-surface border border-border rounded-2xl p-6 space-y-4">
         <h3 className="text-base font-semibold text-white">Invoice & Operations</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5 md:col-span-2 bg-[#182433]/60 border border-white/5 rounded-xl p-3.5">
+            <label className={lc}>Hotel GST Number (GSTIN)</label>
+            <p className="text-[11px] text-text-tertiary">Official 15-character GSTIN displayed on all hotel tax invoices</p>
+            <div className="relative mt-1">
+              <input
+                type="text"
+                placeholder="e.g. 22AAAAA0000A1Z5"
+                value={s.gstNumber}
+                onChange={e => setS(p => ({ ...p, gstNumber: e.target.value.toUpperCase() }))}
+                className={cn(ic, "font-mono uppercase tracking-wide")}
+              />
+            </div>
+            {(() => {
+              if (!s.gstNumber) return null
+              const v = validateGSTIN(s.gstNumber)
+              return (
+                <div className={cn("text-xs font-semibold flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg border", v.isValid ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400")}>
+                  {v.isValid ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />}
+                  <span>{v.message}</span>
+                </div>
+              )
+            })()}
+          </div>
           <div className="space-y-1.5"><label className={lc}>Invoice Prefix</label><p className="text-[11px] text-text-tertiary">e.g. INV, ZB, HTL</p><input type="text" value={s.invoicePrefix} onChange={e => setS(p => ({ ...p, invoicePrefix: e.target.value }))} className={ic} /></div>
           <div className="space-y-1.5"><label className={lc}>Invoice Footer Note</label><p className="text-[11px] text-text-tertiary">Appears at the bottom of every invoice</p><input type="text" value={s.invoiceFooter} onChange={e => setS(p => ({ ...p, invoiceFooter: e.target.value }))} className={ic} /></div>
           <div className="space-y-1.5"><label className={lc}>Check-in Time</label><input type="time" value={s.checkInTime} onChange={e => setS(p => ({ ...p, checkInTime: e.target.value }))} className={ic} /></div>
@@ -673,20 +698,57 @@ export default function SettingsPage() {
   const [notif, setNotif] = useState({ smsAlerts: false, pushNotifications: true, emailAlerts: true, bookingConfirmation: true, checkoutReminder: true, serviceUpdates: true })
   const [retention, setRetention] = useState({ guestProfiles: '3_YEARS', financials: '7_YEARS', serviceLogs: '1_YEAR', legalHoldMode: false })
 
-  const INTEGRATIONS = [
-    { id: 'booking_com', name: 'Booking.com',  type: 'OTA Channel',      status: 'NOT_CONNECTED' },
-    { id: 'expedia',     name: 'Expedia',       type: 'OTA Channel',      status: 'NOT_CONNECTED' },
-    { id: 'airbnb',      name: 'Airbnb',        type: 'Travel & Booking', status: 'NOT_CONNECTED' },
-    { id: 'makemytrip',  name: 'MakeMyTrip',    type: 'OTA Channel',      status: 'NOT_CONNECTED' },
-    { id: 'razorpay',    name: 'Razorpay',      type: 'Payment Gateway',  status: 'CONNECTED' },
-    { id: 'twilio',      name: 'Twilio',        type: 'SMS / WhatsApp',   status: 'CONNECTED' },
-  ]
-
   const [activePropertyId, setActivePropertyId] = useState('')
   const [myProperties, setMyProperties] = useState<any[]>([])
 
   const currentPropertyId = useMemo(() => session?.user?.role === 'SUPER_ADMIN' ? getAdminContext()?.propertyId : session?.user?.propertyId, [session])
   const effectivePropertyId = activePropertyId || currentPropertyId
+
+  const [otaConnections, setOtaConnections] = useState<any[]>([])
+  
+  const [airbnbConnected, setAirbnbConnected] = useState(false)
+  const [airbnbMappings, setAirbnbMappings] = useState<any[]>([])
+  const [airbnbRooms, setAirbnbRooms] = useState<any[]>([])
+  const [showAirbnbModal, setShowAirbnbModal] = useState(false)
+  
+  const [showOtaModal, setShowOtaModal] = useState<any | null>(null)
+
+  const fetchIntegrations = useCallback(async () => {
+    if (!effectivePropertyId || effectivePropertyId === 'ALL') return
+    try {
+      const resAir = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${effectivePropertyId}`)
+      const dAir = await resAir.json()
+      if (dAir.success) {
+        setAirbnbConnected(dAir.data.connected)
+        setAirbnbMappings(dAir.data.mappings)
+        setAirbnbRooms(dAir.data.rooms)
+      }
+
+      const resAll = await fetch(`/api/admin/settings/integrations?propertyId=${effectivePropertyId}`)
+      const dAll = await resAll.json()
+      if (dAll.success) {
+        setOtaConnections(dAll.data.connections)
+      }
+    } catch {}
+  }, [effectivePropertyId])
+
+  useEffect(() => {
+    fetchIntegrations()
+  }, [fetchIntegrations])
+
+  const INTEGRATIONS = [
+    { id: 'airbnb',       name: 'Airbnb',        type: 'Travel & Booking', status: airbnbConnected ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'booking_com',  name: 'Booking.com',   type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'BOOKING_COM') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'makemytrip',   name: 'MakeMyTrip',    type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'agoda',        name: 'Agoda',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'AGODA') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'goibibo',      name: 'Goibibo',       type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'GOIBIBO') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'easemytrip',   name: 'EaseMyTrip',    type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'EASEMYTRIP') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'yatra',        name: 'Yatra',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'YATRA') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'ixigo',        name: 'ixigo',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'IXIGO') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'trivago',      name: 'Trivago',       type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'TRIVAGO') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'razorpay',     name: 'Razorpay',      type: 'Payment Gateway',  status: 'CONNECTED' },
+    { id: 'twilio',       name: 'Twilio',        type: 'SMS / WhatsApp',   status: 'CONNECTED' },
+  ]
 
   useEffect(() => {
     if (currentPropertyId) setActivePropertyId(currentPropertyId)
@@ -1062,7 +1124,20 @@ export default function SettingsPage() {
                   <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', intg.status === 'CONNECTED' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-surface text-text-tertiary border border-border')}>
                     {intg.status === 'CONNECTED' ? 'Connected' : 'Not Connected'}
                   </span>
-                  <button className="text-xs text-primary hover:underline font-medium">{intg.status === 'CONNECTED' ? 'Manage' : 'Connect'}</button>
+                  <button 
+                    onClick={() => {
+                      if (intg.id === 'airbnb') {
+                        setShowAirbnbModal(true)
+                      } else if (intg.id === 'razorpay' || intg.id === 'twilio') {
+                        toast.info(`${intg.name} integration is pre-configured by default.`)
+                      } else {
+                        setShowOtaModal(intg)
+                      }
+                    }}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    {intg.status === 'CONNECTED' ? 'Manage' : 'Connect'}
+                  </button>
                 </div>
               </div>
             ))}
@@ -1150,6 +1225,27 @@ export default function SettingsPage() {
         )}
       </div>
       {renderView()}
+      {showAirbnbModal && (
+        <AirbnbModal 
+          propertyId={effectivePropertyId || ''} 
+          rooms={airbnbRooms} 
+          mappings={airbnbMappings}
+          onClose={() => {
+            setShowAirbnbModal(false)
+            fetchIntegrations()
+          }} 
+        />
+      )}
+      {showOtaModal && (
+        <OtaConnectionModal 
+          propertyId={effectivePropertyId || ''} 
+          ota={showOtaModal}
+          onClose={() => {
+            setShowOtaModal(null)
+            fetchIntegrations()
+          }} 
+        />
+      )}
     </div>
   )
 }
@@ -1414,4 +1510,566 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
     </div>
   )
 }
+
+// ─── Airbnb Integration Setup Modal Component ─────────────────────────────────
+function AirbnbModal({ 
+  propertyId, 
+  rooms: initialRooms, 
+  mappings: initialMappings, 
+  onClose 
+}: { 
+  propertyId: string
+  rooms: any[]
+  mappings: any[]
+  onClose: () => void 
+}) {
+  const [localRooms, setLocalRooms] = useState<any[]>(initialRooms || [])
+  const [localMappings, setLocalMappings] = useState<Record<string, string>>({})
+  const [loadingRooms, setLoadingRooms] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  const loadData = useCallback(async () => {
+    if (!propertyId || propertyId === 'ALL') return
+    setLoadingRooms(true)
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${propertyId}`)
+      const d = await res.json()
+      if (d.success && d.data) {
+        setLocalRooms(d.data.rooms || [])
+        const initial: Record<string, string> = {}
+        ;(d.data.rooms || []).forEach((r: any) => {
+          const match = (d.data.mappings || []).find((m: any) => m.roomId === r.id)
+          initial[r.id] = match ? match.otaRoomId : ''
+        })
+        setLocalMappings(initial)
+      }
+    } catch {} finally {
+      setLoadingRooms(false)
+    }
+  }, [propertyId])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const handleSave = async () => {
+    setSaving(true)
+    const payload = Object.entries(localMappings).map(([roomId, otaRoomId]) => ({
+      roomId,
+      otaRoomId,
+    }))
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${propertyId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mappings: payload }),
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success('Airbnb settings saved successfully!')
+        onClose()
+      } else {
+        toast.error(d.error || 'Failed to save settings')
+      }
+    } catch {
+      toast.error('Network error saving settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSync = async () => {
+    setSyncing(true)
+    const toastId = toast.loading('Syncing bookings with Airbnb...')
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/airbnb/sync?propertyId=${propertyId}`, {
+        method: 'POST',
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success(`Sync completed! Created: ${d.summary.created}, Updated: ${d.summary.updated}, Canceled: ${d.summary.canceled}`, { id: toastId, duration: 5000 })
+        if (d.errors && d.errors.length > 0) {
+          console.warn('Sync warnings:', d.errors)
+        }
+      } else {
+        toast.error(d.error || 'Sync failed', { id: toastId })
+      }
+    } catch {
+      toast.error('Network error during sync', { id: toastId })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect Airbnb integration? All room mapping links will be removed.')) return
+    setDisconnecting(true)
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${propertyId}`, {
+        method: 'DELETE',
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success('Airbnb disconnected successfully')
+        onClose()
+      } else {
+        toast.error(d.error || 'Failed to disconnect')
+      }
+    } catch {
+      toast.error('Network error during disconnect')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success('Zenbourg export calendar link copied to clipboard!')
+  }
+
+  return (
+    <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-left">
+      <div className="bg-[#101922] border border-white/[0.08] rounded-3xl max-w-4xl w-full p-6 space-y-6 text-left my-8 shadow-2xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+          <X className="w-5 h-5" />
+        </button>
+
+        <div>
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Globe className="w-5 h-5 text-rose-500" /> Connect Airbnb Channel
+          </h3>
+          <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+            Setup direct 2-way iCal sync. Paste your Airbnb <span className="font-bold text-white">Export Calendar URL</span> for each room into field 1 below, and copy the Zenbourg <span className="font-bold text-white">Export URL</span> to paste into Airbnb&apos;s calendar import settings.
+          </p>
+        </div>
+
+        <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar border border-white/[0.05] rounded-2xl p-4 bg-black/20">
+          {loadingRooms ? (
+            <div className="flex items-center justify-center py-10 gap-2 text-xs text-text-tertiary">
+              <Loader2 className="w-4 h-4 animate-spin text-rose-500" /> Loading property rooms...
+            </div>
+          ) : localRooms.length === 0 ? (
+            <p className="text-center py-8 text-xs text-text-tertiary">No rooms registered for this property yet. Please add rooms in Settings or Infrastructure first.</p>
+          ) : (
+            localRooms.map(room => {
+              const exportUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/properties/${propertyId}/rooms/${room.id}/ical` : ''
+              return (
+                <div key={room.id} className="p-5 bg-surface-light border border-white/[0.08] rounded-2xl space-y-4 hover:border-rose-500/30 transition-all shadow-md">
+                  <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
+                    <div>
+                      <span className="text-sm font-extrabold text-white">Room {room.roomNumber}</span>
+                      <span className="text-[10px] text-rose-400 font-bold uppercase tracking-widest ml-3 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">
+                        {room.type || room.category || 'Standard'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-rose-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <span>1. Paste Airbnb iCal Export Link Here *</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        value={localMappings[room.id] || ''} 
+                        onChange={e => setLocalMappings(prev => ({ ...prev, [room.id]: e.target.value }))}
+                        placeholder="https://www.airbnb.com/calendar/ical/1234567.ics?s=..."
+                        className="w-full bg-[#101922] border border-white/[0.15] focus:border-rose-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none transition-colors shadow-inner"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-[#4A9EFF] uppercase tracking-wider block mb-1.5">
+                        2. Zenbourg iCal Link (Copy to Airbnb)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="text" 
+                          readOnly 
+                          value={exportUrl}
+                          className="flex-1 bg-[#101922] border border-white/[0.1] rounded-xl px-3.5 py-2.5 text-xs text-text-tertiary outline-none select-all"
+                        />
+                        <button 
+                          onClick={() => handleCopy(exportUrl)}
+                          className="px-3.5 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[#4A9EFF] text-xs font-bold rounded-xl transition-all active:scale-95 shrink-0"
+                        >
+                          Copy Link
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+          {initialMappings.length > 0 ? (
+            <button 
+              disabled={saving || syncing || disconnecting}
+              onClick={handleDisconnect}
+              className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider text-left border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {disconnecting ? 'Disconnecting...' : 'Disconnect Airbnb'}
+            </button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2 justify-end flex-1">
+            <button 
+              onClick={onClose}
+              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Cancel
+            </button>
+            {initialMappings.length > 0 && (
+              <button 
+                disabled={saving || syncing || disconnecting}
+                onClick={handleSync}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2"
+              >
+                {syncing ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
+                Sync Bookings Now
+              </button>
+            )}
+            <button 
+              disabled={saving || syncing || disconnecting}
+              onClick={handleSave}
+              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-600/50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              {saving ? 'Saving...' : 'Save Mappings'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Unified OTA Connection Setup & Simulation Modal ───────────────────────────
+function OtaConnectionModal({ 
+  propertyId, 
+  ota, 
+  onClose 
+}: { 
+  propertyId: string
+  ota: { id: string; name: string }
+  onClose: () => void 
+}) {
+  const [rooms, setRooms] = useState<any[]>([])
+  const [mappings, setMappings] = useState<any[]>([])
+  const [hotelId, setHotelId] = useState('')
+  const [apiKey, setApiKey] = useState('')
+  
+  const [localMappings, setLocalMappings] = useState<Record<string, string>>({})
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+
+  // Simulation form states
+  const [simRoomId, setSimRoomId] = useState('')
+  const [simGuestName, setSimGuestName] = useState('')
+  const [simCheckIn, setSimCheckIn] = useState('')
+  const [simCheckOut, setSimCheckOut] = useState('')
+  const [simulating, setSimulating] = useState(false)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/admin/settings/integrations/${ota.id}?propertyId=${propertyId}`)
+        const d = await res.json()
+        if (d.success) {
+          setRooms(d.data.rooms)
+          setMappings(d.data.mappings)
+          if (d.data.connection) {
+            setHotelId(d.data.connection.credentials?.hotelId || '')
+            setApiKey(d.data.connection.credentials?.apiKey || '')
+          }
+          
+          const initial: Record<string, string> = {}
+          d.data.rooms.forEach((r: any) => {
+            const match = d.data.mappings.find((m: any) => m.roomId === r.id)
+            initial[r.id] = match ? match.otaRoomId : ''
+          })
+          setLocalMappings(initial)
+          if (d.data.rooms.length > 0) {
+            setSimRoomId(d.data.rooms[0].id)
+          }
+        }
+      } catch {
+        toast.error('Failed to load integration settings')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [ota, propertyId])
+
+  const handleSave = async () => {
+    setSaving(true)
+    const payload = Object.entries(localMappings).map(([roomId, otaRoomId]) => ({
+      roomId,
+      otaRoomId,
+    }))
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/${ota.id}?propertyId=${propertyId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credentials: { hotelId, apiKey },
+          mappings: payload,
+        }),
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success(`${ota.name} settings saved successfully!`)
+        onClose()
+      } else {
+        toast.error(d.error || 'Failed to save settings')
+      }
+    } catch {
+      toast.error('Network error saving settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (!confirm(`Are you sure you want to disconnect ${ota.name}?`)) return
+    setDisconnecting(true)
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/${ota.id}?propertyId=${propertyId}`, {
+        method: 'DELETE',
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success(`${ota.name} disconnected successfully`)
+        onClose()
+      } else {
+        toast.error(d.error || 'Failed to disconnect')
+      }
+    } catch {
+      toast.error('Network error during disconnect')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
+  const handleSimulateBooking = async () => {
+    if (!simRoomId || !simCheckIn || !simCheckOut) {
+      toast.error('Please fill in all simulation fields (Room, Check-in, Check-out)')
+      return
+    }
+    setSimulating(true)
+    const toastId = toast.loading('Simulating channel booking webhook...')
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/simulate?propertyId=${propertyId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          otaName: ota.name,
+          roomId: simRoomId,
+          guestName: simGuestName || `Mock ${ota.name} Reservation`,
+          checkIn: simCheckIn,
+          checkOut: simCheckOut,
+        }),
+      })
+      const d = await res.json()
+      if (d.success) {
+        toast.success(`Booking successfully simulated! Reference: ${d.data.booking.notes.split('Ref: ')[1] || 'SIM123'}`, { id: toastId, duration: 4000 })
+        setSimGuestName('')
+        setSimCheckIn('')
+        setSimCheckOut('')
+      } else {
+        toast.error(d.error || 'Simulation failed', { id: toastId })
+      }
+    } catch {
+      toast.error('Network error simulating booking', { id: toastId })
+    } finally {
+      setSimulating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-[#101922] border border-white/[0.08] rounded-3xl p-6 text-center text-white">
+          <span className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin inline-block mb-2" />
+          <p className="text-xs text-text-secondary">Loading integration credentials...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-left">
+      <div className="bg-[#101922] border border-white/[0.08] rounded-3xl max-w-4xl w-full p-6 space-y-6 text-left my-8 shadow-2xl relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+          <X className="w-5 h-5" />
+        </button>
+
+        <div>
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <Globe className="w-5 h-5 text-primary" /> Connect {ota.name} Channel
+          </h3>
+          <p className="text-xs text-text-secondary mt-1">
+            Setup direct channel connection mappings. Save your credentials first, then map room IDs. Use the simulator card to test bookings live.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="bg-black/20 p-4 border border-white/[0.05] rounded-2xl space-y-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">1. Credentials</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-text-secondary font-bold block mb-1">Hotel ID / Merchant ID</label>
+                  <input 
+                    type="text" 
+                    value={hotelId} 
+                    onChange={e => setHotelId(e.target.value)}
+                    placeholder="e.g. H10283"
+                    className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-secondary font-bold block mb-1">API Password / Key</label>
+                  <input 
+                    type="password" 
+                    value={apiKey} 
+                    onChange={e => setApiKey(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-black/20 p-4 border border-white/[0.05] rounded-2xl space-y-3">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">2. Room Mappings</h4>
+              <div className="space-y-2 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
+                {rooms.length === 0 ? (
+                  <p className="text-center text-[11px] text-text-tertiary">No rooms found to map.</p>
+                ) : (
+                  rooms.map(room => (
+                    <div key={room.id} className="flex items-center justify-between p-2 bg-surface-light border border-white/[0.05] rounded-xl gap-4">
+                      <div>
+                        <span className="text-xs font-bold text-white">Room {room.roomNumber}</span>
+                        <span className="text-[9px] text-gray-500 uppercase font-black ml-1.5">({room.type})</span>
+                      </div>
+                      <input 
+                        type="text"
+                        value={localMappings[room.id] || ''}
+                        onChange={e => setLocalMappings(prev => ({ ...prev, [room.id]: e.target.value }))}
+                        placeholder="OTA Room Code"
+                        className="bg-[#101922] border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-primary/50 w-36 text-center"
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-primary/5 border border-primary/20 p-5 rounded-2xl space-y-4">
+            <div>
+              <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Channel Manager Simulator
+              </h4>
+              <p className="text-[11px] text-text-secondary mt-1">
+                Simulate an incoming guest reservation webhook from {ota.name} to check calendar updates instantly.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] text-text-secondary font-bold block mb-1">Select Room to Book</label>
+                <select 
+                  value={simRoomId} 
+                  onChange={e => setSimRoomId(e.target.value)}
+                  className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+                >
+                  {rooms.map(r => (
+                    <option key={r.id} value={r.id} className="bg-[#101922]">Room {r.roomNumber} - {r.type}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-text-secondary font-bold block mb-1">Guest Name</label>
+                <input 
+                  type="text" 
+                  value={simGuestName} 
+                  onChange={e => setSimGuestName(e.target.value)}
+                  placeholder="e.g. Jack Sparrow"
+                  className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-text-secondary font-bold block mb-1">Check-in Date</label>
+                  <input 
+                    type="date" 
+                    value={simCheckIn} 
+                    onChange={e => setSimCheckIn(e.target.value)}
+                    className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-text-secondary font-bold block mb-1">Check-out Date</label>
+                  <input 
+                    type="date" 
+                    value={simCheckOut} 
+                    onChange={e => setSimCheckOut(e.target.value)}
+                    className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="button"
+                disabled={simulating}
+                onClick={handleSimulateBooking}
+                className="w-full py-2.5 bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-50"
+              >
+                {simulating ? <span className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : null}
+                Simulate Guest Booking Webhook
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+          {mappings.length > 0 ? (
+            <button 
+              disabled={saving || disconnecting}
+              onClick={handleDisconnect}
+              className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider text-left border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {disconnecting ? 'Disconnecting...' : `Disconnect ${ota.name}`}
+            </button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2 justify-end flex-1">
+            <button 
+              onClick={onClose}
+              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Cancel
+            </button>
+            <button 
+              disabled={saving || disconnecting}
+              onClick={handleSave}
+              className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:bg-primary/50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              {saving ? 'Saving...' : 'Save Mappings'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 

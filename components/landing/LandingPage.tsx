@@ -981,10 +981,10 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div className="hidden lg:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-4">
             <Link
               href="/admin/login"
-              className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/60 hover:text-white transition-colors py-2 px-4"
+              className="text-[11px] font-bold uppercase tracking-[0.2em] text-white hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all py-2.5 px-6 rounded-full cursor-pointer backdrop-blur-md"
             >
               Log in
             </Link>
