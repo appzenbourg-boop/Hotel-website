@@ -28,11 +28,13 @@ export async function GET(req: NextRequest) {
             propertyId = session.user.propertyId ?? null
         }
 
-        const cacheKey = `guests:${propertyId || 'ALL'}:${status || 'ALL'}:${search || 'none'}:${page}:${limit}`
-        const cached = await redis.get(cacheKey)
-        if (cached) {
-            return NextResponse.json({ ...cached, fromCache: true })
-        }
+        const cacheKey = `guests_list:${propertyId || 'ALL'}:${status || 'ALL'}:${search || 'none'}:${page}:${limit}`
+        try {
+            const cached = await redis.get(cacheKey)
+            if (cached) {
+                return NextResponse.json({ ...cached, fromCache: true })
+            }
+        } catch { /* Redis fallback */ }
 
         const where: any = {}
 
@@ -47,9 +49,6 @@ export async function GET(req: NextRequest) {
         }
 
         if (propertyId) {
-            // A guest belongs to this hotel if:
-            // 1. They were directly created by this property (createdByPropertyId)
-            // 2. They have at least one booking at this property
             const propertyFilter = {
                 OR: [
                     { createdByPropertyId: propertyId },
@@ -57,7 +56,6 @@ export async function GET(req: NextRequest) {
                 ],
             }
 
-            // Merge with existing search OR if present
             if (where.OR) {
                 where.AND = [{ OR: where.OR }, propertyFilter]
                 delete where.OR
@@ -128,7 +126,9 @@ export async function GET(req: NextRequest) {
         }
 
         // Cache for 5 minutes
-        await redis.set(cacheKey, responseData, { ex: 300 })
+        try {
+            await redis.set(cacheKey, responseData, { ex: 300 })
+        } catch { /* silent */ }
 
         return NextResponse.json(responseData)
     } catch (error) {
@@ -168,7 +168,6 @@ export async function POST(req: NextRequest) {
                 address: address ?? undefined,
                 gstNumber: cleanGst ?? undefined,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
-                // Update property link if not already set
                 ...(propertyId ? { createdByPropertyId: propertyId } : {}),
             },
             create: {
@@ -181,13 +180,20 @@ export async function POST(req: NextRequest) {
                 gstNumber: cleanGst,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
                 checkInStatus: 'PENDING',
-                // Link to the property that created this guest
                 createdByPropertyId: propertyId ?? null,
             },
         })
 
-        // Invalidate common caches (simplified)
-        await redis.del(`guests:${propertyId || 'ALL'}:*`)
+        // Invalidate Redis guest caches so newly added guest shows up instantly
+        try {
+            const targetPattern = `guests_list:${propertyId || '*'}`
+            const keys = await redis.keys(`${targetPattern}*`)
+            if (keys && keys.length > 0) {
+                await Promise.all(keys.map((k: string) => redis.del(k)))
+            }
+        } catch (cacheErr) {
+            console.error('[GUEST_CACHE_CLEAR_ERR]', cacheErr)
+        }
 
         return NextResponse.json({ success: true, data: guest }, { status: 201 })
     } catch (error) {

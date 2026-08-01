@@ -14,7 +14,7 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 })
 
-// Real Notification Sender supporting property-specific Twilio credentials & custom text template
+// Real Notification Sender supporting property-specific Twilio credentials & detailed error feedback
 async function sendRealNotification(
     guest: any, 
     channel: string, 
@@ -22,7 +22,7 @@ async function sendRealNotification(
     propertyName?: string, 
     customMessage?: string,
     propertyId?: string
-) {
+): Promise<{ ok: boolean; error?: string }> {
     const rawTemplate = customMessage || `Hello {guestName}! Use code {promoCode} for 20% off your next stay at {hotelName}. Book now!`
     const message = rawTemplate
         .replace(/\{guestName\}/gi, guest.name || 'Guest')
@@ -33,15 +33,15 @@ async function sendRealNotification(
 
     try {
         if (channel === 'SMS') {
-            if (!rawPhone) return false
+            if (!rawPhone) return { ok: false, error: `No phone number for ${guest.name}` }
             const res = await sendSMS(rawPhone, message, propertyId)
             console.log(`[MARKETING] Custom SMS sent to ${guest.name} (${rawPhone}) — SID: ${res.sid}`)
-            return true
+            return { ok: true }
         } else if (channel === 'WHATSAPP') {
-            if (!rawPhone) return false
+            if (!rawPhone) return { ok: false, error: `No phone number for ${guest.name}` }
             const res = await sendWhatsApp(rawPhone, message, propertyId)
             console.log(`[MARKETING] Custom WhatsApp sent to ${guest.name} (${rawPhone}) — SID: ${res.sid}`)
-            return true
+            return { ok: true }
         } else if (channel === 'EMAIL' && guest.email) {
             await sendMarketingBlast({
                 to: guest.email,
@@ -50,14 +50,13 @@ async function sendRealNotification(
                 promoCode: promoCode || 'ZENVIP',
             })
             console.log(`[MARKETING] Custom Email blast sent to ${guest.email}`)
-            return true
+            return { ok: true }
         } else {
-            console.warn(`[MARKETING] Unknown channel "${channel}" or missing contact for guest ${guest.name}`)
-            return false
+            return { ok: false, error: `Missing contact details or unsupported channel for ${guest.name}` }
         }
     } catch (err: any) {
         console.error(`[MARKETING_ERROR] Failed to send ${channel} to ${guest.name}:`, err?.message || err)
-        return false
+        return { ok: false, error: err?.message || 'Twilio Gateway connection error' }
     }
 }
 
@@ -78,6 +77,12 @@ export async function GET(req: NextRequest) {
         })
 
         const guests = await prisma.guest.findMany({
+            where: {
+                OR: [
+                    { createdByPropertyId: propertyId as string },
+                    { bookings: { some: { propertyId: propertyId as string } } }
+                ]
+            },
             include: { bookings: { where: { propertyId: propertyId as string } } }
         })
 
@@ -96,7 +101,7 @@ export async function GET(req: NextRequest) {
         const stats = {
             activeCampaigns: activeCampaigns.length,
             vipSegmentSize: vipGuests,
-            conversionRate: '12.4%', // Calculated based on bookings vs campaigns
+            conversionRate: '12.4%',
             marketingRevenue: guestBookings.reduce((sum, b) => sum + b.totalAmount, 0) * 0.15,
             ranking: property?.ranking || 0
         }
@@ -178,7 +183,6 @@ export async function POST(req: NextRequest) {
 
         // ACTION: BLAST (Real Outreach)
         if (action === 'BLAST') {
-            // If specific guestIds provided, use those; otherwise fall back to segment filter
             let targetGuests: any[]
             if (guestIds && Array.isArray(guestIds) && guestIds.length > 0) {
                 targetGuests = await prisma.guest.findMany({
@@ -186,7 +190,12 @@ export async function POST(req: NextRequest) {
                 })
             } else {
                 targetGuests = await prisma.guest.findMany({
-                    where: { bookings: { some: { propertyId: propertyId as string } } },
+                    where: {
+                        OR: [
+                            { createdByPropertyId: propertyId as string },
+                            { bookings: { some: { propertyId: propertyId as string } } }
+                        ]
+                    },
                     include: { bookings: { where: { propertyId: propertyId as string } } }
                 })
                 if (segment?.includes('Member')) {
@@ -215,11 +224,20 @@ export async function POST(req: NextRequest) {
 
             // Dispatch notification via property-specific Twilio / Email engine
             let sentCount = 0
+            let lastError = ''
             const activeChannel = channel || 'SMS'
 
             for (const g of targetGuests) {
-                const ok = await sendRealNotification(g, activeChannel, promoCode, property?.name, customMessage, propertyId as string)
-                if (ok) sentCount++
+                const res = await sendRealNotification(g, activeChannel, promoCode, property?.name, customMessage, propertyId as string)
+                if (res.ok) {
+                    sentCount++
+                } else if (res.error) {
+                    lastError = res.error
+                }
+            }
+
+            if (sentCount === 0 && lastError) {
+                return NextResponse.json({ error: `Twilio Dispatch Error: ${lastError}` }, { status: 400 })
             }
 
             return NextResponse.json({ success: true, count: sentCount, total: targetGuests.length, channel: activeChannel })

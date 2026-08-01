@@ -1527,7 +1527,6 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
     </div>
   )
 }
-
 // ─── Airbnb Integration Setup Modal Component ─────────────────────────────────
 function AirbnbModal({ 
   propertyId, 
@@ -1540,10 +1539,11 @@ function AirbnbModal({
   mappings: any[]
   onClose: () => void 
 }) {
+  const [airbnbUrl, setAirbnbUrl] = useState('')
   const [localRooms, setLocalRooms] = useState<any[]>(initialRooms || [])
   const [localMappings, setLocalMappings] = useState<Record<string, string>>({})
   const [loadingRooms, setLoadingRooms] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
 
@@ -1571,29 +1571,40 @@ function AirbnbModal({
     loadData()
   }, [loadData])
 
-  const handleSave = async () => {
-    setSaving(true)
-    const payload = Object.entries(localMappings).map(([roomId, otaRoomId]) => ({
-      roomId,
-      otaRoomId,
-    }))
+  const handleAutoImport = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!airbnbUrl.trim()) {
+      toast.error('Paste your Airbnb Listing URL or Calendar iCal Feed link')
+      return
+    }
+
+    setImporting(true)
+    const toastId = toast.loading('Detecting Airbnb rooms and syncing calendar...')
     try {
-      const res = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${propertyId}`, {
+      const res = await fetch('/api/admin/rooms/import-airbnb', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mappings: payload }),
+        body: JSON.stringify({
+          url: airbnbUrl.trim(),
+          otaChannel: 'AIRBNB',
+          propertyId,
+        }),
       })
       const d = await res.json()
       if (d.success) {
-        toast.success('Airbnb settings saved successfully!')
-        onClose()
+        toast.success(
+          `Airbnb Connected! Imported "${d.data.room?.type || 'Room'}" and synced ${d.data.syncReport?.created || 0} booking(s) to your calendar!`,
+          { id: toastId, duration: 6000 }
+        )
+        setAirbnbUrl('')
+        loadData()
       } else {
-        toast.error(d.error || 'Failed to save settings')
+        toast.error(d.error || 'Failed to auto-detect Airbnb listing', { id: toastId })
       }
     } catch {
-      toast.error('Network error saving settings')
+      toast.error('Connection error during Airbnb auto-import', { id: toastId })
     } finally {
-      setSaving(false)
+      setImporting(false)
     }
   }
 
@@ -1606,10 +1617,8 @@ function AirbnbModal({
       })
       const d = await res.json()
       if (d.success) {
-        toast.success(`Sync completed! Created: ${d.summary.created}, Updated: ${d.summary.updated}, Canceled: ${d.summary.canceled}`, { id: toastId, duration: 5000 })
-        if (d.errors && d.errors.length > 0) {
-          console.warn('Sync warnings:', d.errors)
-        }
+        toast.success(`Sync completed! Created: ${d.summary.created}, Updated: ${d.summary.updated}`, { id: toastId, duration: 5000 })
+        loadData()
       } else {
         toast.error(d.error || 'Sync failed', { id: toastId })
       }
@@ -1641,122 +1650,108 @@ function AirbnbModal({
     }
   }
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success('Zenbourg export calendar link copied to clipboard!')
-  }
-
   return (
     <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-left">
-      <div className="bg-[#101922] border border-white/[0.08] rounded-3xl max-w-4xl w-full p-6 space-y-6 text-left my-8 shadow-2xl relative">
+      <div className="bg-[#101922] border border-white/[0.08] rounded-3xl max-w-2xl w-full p-6 space-y-6 text-left my-8 shadow-2xl relative">
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
           <X className="w-5 h-5" />
         </button>
 
         <div>
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Globe className="w-5 h-5 text-rose-500" /> Connect Airbnb Channel
+            <Globe className="w-5 h-5 text-rose-500" /> Airbnb 1-Time Auto Connection
           </h3>
           <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-            Setup direct 2-way iCal sync. Paste your Airbnb <span className="font-bold text-white">Export Calendar URL</span> for each room into field 1 below, and copy the Zenbourg <span className="font-bold text-white">Export URL</span> to paste into Airbnb&apos;s calendar import settings.
+            Simply paste your Airbnb <span className="font-bold text-white">Listing URL or iCal Calendar Export Link</span> below. The system will automatically detect your rooms, build them into your website database, and sync all Airbnb bookings to your calendar!
           </p>
         </div>
 
-        <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar border border-white/[0.05] rounded-2xl p-4 bg-black/20">
-          {loadingRooms ? (
-            <div className="flex items-center justify-center py-10 gap-2 text-xs text-text-tertiary">
-              <Loader2 className="w-4 h-4 animate-spin text-rose-500" /> Loading property rooms...
-            </div>
-          ) : localRooms.length === 0 ? (
-            <p className="text-center py-8 text-xs text-text-tertiary">No rooms registered for this property yet. Please add rooms in Settings or Infrastructure first.</p>
-          ) : (
-            localRooms.map(room => {
-              const exportUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/properties/${propertyId}/rooms/${room.id}/ical` : ''
-              return (
-                <div key={room.id} className="p-5 bg-surface-light border border-white/[0.08] rounded-2xl space-y-4 hover:border-rose-500/30 transition-all shadow-md">
-                  <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
+        {/* 1-Time Link Import Form */}
+        <form onSubmit={handleAutoImport} className="p-5 bg-rose-500/5 border border-rose-500/20 rounded-2xl space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-rose-400 uppercase tracking-wider block">
+              Airbnb Listing URL or Export Calendar iCal Link *
+            </label>
+            <input 
+              required
+              type="text" 
+              value={airbnbUrl} 
+              onChange={e => setAirbnbUrl(e.target.value)}
+              placeholder="https://www.airbnb.com/rooms/12345678 or https://www.airbnb.com/calendar/ical/12345678.ics"
+              className="w-full bg-[#101922] border border-white/[0.15] focus:border-rose-500 rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner"
+            />
+          </div>
+
+          <button 
+            type="submit"
+            disabled={importing || !airbnbUrl.trim()}
+            className="w-full py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20"
+          >
+            {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {importing ? 'Auto-Detecting & Syncing...' : 'Connect & Auto-Import Airbnb Listing'}
+          </button>
+        </form>
+
+        {/* Registered Mapped Rooms */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Connected Airbnb Rooms ({localRooms.filter(r => localMappings[r.id]).length})</h4>
+            {localRooms.some(r => localMappings[r.id]) && (
+              <button 
+                type="button"
+                disabled={syncing}
+                onClick={handleSync}
+                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5"
+              >
+                {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Sync Calendar Now
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-[30vh] overflow-y-auto space-y-2 pr-1 custom-scrollbar border border-white/[0.05] rounded-xl p-3 bg-black/20">
+            {loadingRooms ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-xs text-text-tertiary">
+                <Loader2 className="w-4 h-4 animate-spin text-rose-500" /> Loading connected rooms...
+              </div>
+            ) : localRooms.length === 0 ? (
+              <p className="text-center py-6 text-xs text-text-tertiary">No Airbnb listings imported yet. Paste your link above to auto-connect!</p>
+            ) : (
+              localRooms.map(room => {
+                const isMapped = !!localMappings[room.id]
+                return (
+                  <div key={room.id} className="p-3 bg-surface-light border border-white/[0.08] rounded-xl flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-extrabold text-white">Room {room.roomNumber}</span>
-                      <span className="text-[10px] text-rose-400 font-bold uppercase tracking-widest ml-3 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">
-                        {room.type || room.category || 'Standard'}
-                      </span>
+                      <span className="text-xs font-bold text-white">Room {room.roomNumber}</span>
+                      <span className="text-[10px] text-gray-400 ml-2">({room.type || room.category})</span>
                     </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isMapped ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-gray-500/15 text-gray-400'}`}>
+                      {isMapped ? 'Active Calendar Sync' : 'Not Connected'}
+                    </span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] font-black text-rose-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
-                        <span>1. Paste Airbnb iCal Export Link Here *</span>
-                      </label>
-                      <input 
-                        type="text" 
-                        value={localMappings[room.id] || ''} 
-                        onChange={e => setLocalMappings(prev => ({ ...prev, [room.id]: e.target.value }))}
-                        placeholder="https://www.airbnb.com/calendar/ical/1234567.ics?s=..."
-                        className="w-full bg-[#101922] border border-white/[0.15] focus:border-rose-500 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none transition-colors shadow-inner"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black text-[#4A9EFF] uppercase tracking-wider block mb-1.5">
-                        2. Zenbourg iCal Link (Copy to Airbnb)
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="text" 
-                          readOnly 
-                          value={exportUrl}
-                          className="flex-1 bg-[#101922] border border-white/[0.1] rounded-xl px-3.5 py-2.5 text-xs text-text-tertiary outline-none select-all"
-                        />
-                        <button 
-                          onClick={() => handleCopy(exportUrl)}
-                          className="px-3.5 py-2.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-[#4A9EFF] text-xs font-bold rounded-xl transition-all active:scale-95 shrink-0"
-                        >
-                          Copy Link
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })
-          )}
+                )
+              })
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
-          {initialMappings.length > 0 ? (
+        <div className="flex items-center justify-between pt-2 border-t border-white/10">
+          {localRooms.some(r => localMappings[r.id]) ? (
             <button 
-              disabled={saving || syncing || disconnecting}
+              disabled={disconnecting}
               onClick={handleDisconnect}
               className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider text-left border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
             >
-              {disconnecting ? 'Disconnecting...' : 'Disconnect Airbnb'}
+              {disconnecting ? 'Disconnecting...' : 'Disconnect Airbnb Channel'}
             </button>
           ) : <div />}
 
-          <div className="flex items-center gap-2 justify-end flex-1">
-            <button 
-              onClick={onClose}
-              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
-            >
-              Cancel
-            </button>
-            {initialMappings.length > 0 && (
-              <button 
-                disabled={saving || syncing || disconnecting}
-                onClick={handleSync}
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2"
-              >
-                {syncing ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : null}
-                Sync Bookings Now
-              </button>
-            )}
-            <button 
-              disabled={saving || syncing || disconnecting}
-              onClick={handleSave}
-              className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-600/50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
-            >
-              {saving ? 'Saving...' : 'Save Mappings'}
-            </button>
-          </div>
+          <button 
+            onClick={onClose}
+            className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
