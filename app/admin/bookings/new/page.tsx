@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import Avatar from '@/components/common/Avatar'
@@ -12,7 +12,7 @@ import {
     CheckCircle2, AlertCircle, Clock, Undo2, Edit2
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, validateGSTIN } from '@/lib/utils'
 import { buildContextUrl } from '@/lib/admin-context'
 import Button from '@/components/ui/Button'
 
@@ -30,8 +30,12 @@ const toLocalDateStr = (date: Date) => {
     return `${year}-${month}-${day}`
 }
 
-export default function NewBookingPage() {
+function NewBookingContent() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const targetRoomId = searchParams.get('roomId')
+    const hasAutoSelected = useRef(false)
+
     const { data: session, status } = useSession({
         required: true,
         onUnauthenticated() {
@@ -53,7 +57,7 @@ export default function NewBookingPage() {
 
     // State for New Guest Modal
     const [showNewGuestModal, setShowNewGuestModal] = useState(false)
-    const [newGuestData, setNewGuestData] = useState({ name: '', email: '', phone: '', address: '', dateOfBirth: '' })
+    const [newGuestData, setNewGuestData] = useState({ name: '', email: '', phone: '', address: '', dateOfBirth: '', gstNumber: '' })
 
     // Booking Details
     const [bookingDetails, setBookingDetails] = useState({
@@ -174,17 +178,48 @@ export default function NewBookingPage() {
                 queryParams.append('status', 'AVAILABLE')
 
                 const rRes = await fetch(buildContextUrl(`/api/admin/rooms?${queryParams.toString()}`))
+                let rooms: any[] = []
                 if (rRes.ok) {
                     const json = await rRes.json()
-                    const rooms = Array.isArray(json) ? json : (json?.data ?? [])
-                    // Filter out duplicates
-                    const uniqueRooms = rooms.reduce((acc: any[], current: any) => {
-                        const x = acc.find((item: any) => item.roomNumber === current.roomNumber)
-                        if (!x) return acc.concat([current])
-                        return acc
-                    }, [])
-                    setAllRooms(uniqueRooms)
+                    rooms = Array.isArray(json) ? json : (json?.data ?? [])
                 }
+
+                // Filter out duplicates
+                let uniqueRooms = rooms.reduce((acc: any[], current: any) => {
+                    const x = acc.find((item: any) => item.roomNumber === current.roomNumber)
+                    if (!x) return acc.concat([current])
+                    return acc
+                }, [])
+
+                // Auto-select room if roomId was passed in URL query
+                if (targetRoomId && !hasAutoSelected.current) {
+                    let targetRoom = uniqueRooms.find((r: any) => r.id === targetRoomId)
+                    if (!targetRoom) {
+                        try {
+                            const trRes = await fetch(buildContextUrl(`/api/admin/rooms/${targetRoomId}`))
+                            if (trRes.ok) {
+                                const trJson = await trRes.json()
+                                const fetchedRoom = trJson?.data ?? trJson
+                                if (fetchedRoom && fetchedRoom.id) {
+                                    targetRoom = fetchedRoom
+                                    uniqueRooms = [fetchedRoom, ...uniqueRooms]
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Failed to fetch preselected room:', e)
+                        }
+                    }
+
+                    if (targetRoom) {
+                        setSelectedRooms([targetRoom])
+                        hasAutoSelected.current = true
+                        if (targetRoom.maxOccupancy && targetRoom.maxOccupancy < 2) {
+                            setOccupancyFilter('All')
+                        }
+                    }
+                }
+
+                setAllRooms(uniqueRooms)
             } catch (err) {
                 console.error(err)
             } finally {
@@ -192,7 +227,7 @@ export default function NewBookingPage() {
             }
         }
         loadRooms()
-    }, [bookingDetails.checkIn, bookingDetails.checkOut])
+    }, [bookingDetails.checkIn, bookingDetails.checkOut, targetRoomId])
 
     // Fetch Guests once
     useEffect(() => {
@@ -268,7 +303,10 @@ export default function NewBookingPage() {
             const res = await fetch(buildContextUrl('/api/admin/guests'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newGuestData)
+                body: JSON.stringify({
+                    ...newGuestData,
+                    gstNumber: newGuestData.gstNumber ? newGuestData.gstNumber.trim().toUpperCase() : undefined
+                })
             })
             if (!res.ok) throw new Error()
             const json = await res.json()
@@ -284,6 +322,7 @@ export default function NewBookingPage() {
                 dateOfBirth: guest.dateOfBirth ?? null,
                 idType: guest.idType ?? null,
                 idNumber: guest.idNumber ?? null,
+                gstNumber: guest.gstNumber ?? null,
                 checkInStatus: guest.checkInStatus ?? 'PENDING',
                 totalStays: 0,
                 bookings: [],
@@ -294,7 +333,7 @@ export default function NewBookingPage() {
             setAllGuests([normalizedGuest, ...allGuests])
             setSelectedGuest(normalizedGuest)
             setShowNewGuestModal(false)
-            setNewGuestData({ name: '', email: '', phone: '', address: '', dateOfBirth: '' })
+            setNewGuestData({ name: '', email: '', phone: '', address: '', dateOfBirth: '', gstNumber: '' })
             toast.success("Guest created successfully")
         } catch (err) {
             toast.error("Failed to create guest")
@@ -571,7 +610,7 @@ export default function NewBookingPage() {
                                     />
                                 </div>
                             </div>
-                            <div className="space-y-1.5 text-left pb-4">
+                            <div className="space-y-1.5 text-left">
                                 <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em] ml-1">Street Address</label>
                                 <input
                                     className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-white font-semibold outline-none focus:border-[#4A9EFF] shadow-inner transition-all"
@@ -579,6 +618,25 @@ export default function NewBookingPage() {
                                     value={newGuestData.address}
                                     onChange={e => setNewGuestData({ ...newGuestData, address: e.target.value })}
                                 />
+                            </div>
+                            <div className="space-y-1.5 text-left pb-4">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.15em] ml-1">GSTIN (Optional for B2B Tax Invoice)</label>
+                                <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-white font-mono font-semibold uppercase outline-none focus:border-[#4A9EFF] shadow-inner transition-all placeholder:text-gray-600"
+                                    placeholder="e.g. 27ABCDE1234F1ZH"
+                                    value={newGuestData.gstNumber}
+                                    onChange={e => setNewGuestData({ ...newGuestData, gstNumber: e.target.value.toUpperCase() })}
+                                />
+                                {(() => {
+                                    if (!newGuestData.gstNumber) return null
+                                    const v = validateGSTIN(newGuestData.gstNumber)
+                                    return (
+                                        <div className={cn("text-[11px] font-semibold flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-md border", v.isValid ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400")}>
+                                            {v.isValid ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                                            <span>{v.message}</span>
+                                        </div>
+                                    )
+                                })()}
                             </div>
                             <button
                                 type="submit"
@@ -667,7 +725,7 @@ export default function NewBookingPage() {
                             Reset Filters
                         </button>
                     </div>
-                </div>                <div className="space-y-6 pt-6">
+                </div>                <div className="space-y-6 pt-6" id="available-rooms-section">
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-bold text-white tracking-tight">Available Rooms ({filteredRooms.length})</h3>
                         <div className="flex items-center gap-2 bg-white/[0.03] border border-white/10 px-3 py-1.5 rounded-lg">
@@ -798,42 +856,79 @@ export default function NewBookingPage() {
                             </div>
                             {selectedRooms.length > 0 ? (
                                 <div className="space-y-3">
-                                    {selectedRooms.map(room => (
-                                        <div key={room.id} className="p-4 bg-black/30 rounded-xl border border-white/5 flex items-center gap-4 relative group overflow-hidden shadow-inner">
-                                            <div className="w-12 h-10 relative rounded-lg overflow-hidden border border-white/5 shrink-0">
-                                                <Image 
-                                                    src={room.images?.[0] || (room.type?.includes('Suite')
-                                                        ? "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80"
-                                                        : "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80"
-                                                    )} 
-                                                    alt="" fill className="object-cover" unoptimized 
-                                                />
+                                    {selectedRooms.map(room => {
+                                        const currentNightlyRate = room.customPrice ?? room.basePrice
+                                        const currentRoomTotal = currentNightlyRate * stayDuration
+                                        return (
+                                            <div key={room.id} className="p-4 bg-black/30 rounded-xl border border-white/5 space-y-2 relative group overflow-hidden shadow-inner">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-10 relative rounded-lg overflow-hidden border border-white/5 shrink-0">
+                                                        <Image 
+                                                            src={room.images?.[0] || (room.type?.includes('Suite')
+                                                                ? "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80"
+                                                                : "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80"
+                                                            )} 
+                                                            alt="" fill className="object-cover" unoptimized 
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white font-bold tracking-tight leading-none text-sm mb-1 truncate">Room {room.roomNumber}</p>
+                                                        <p className="text-slate-500 text-[8px] font-bold uppercase tracking-widest">{room.type}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-white font-black text-sm tracking-tight">₹{currentRoomTotal.toLocaleString('en-IN')}</p>
+                                                        <button 
+                                                            onClick={() => setSelectedRooms(selectedRooms.filter(r => r.id !== room.id))}
+                                                            className="text-[8px] text-rose-500 font-bold uppercase hover:underline block ml-auto mt-0.5"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Custom Nightly Price Editor */}
+                                                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[10px]">
+                                                    <span className="text-gray-400 font-bold flex items-center gap-1">
+                                                        <Edit2 className="w-3 h-3 text-[#4A9EFF]" /> Nightly Rate:
+                                                    </span>
+                                                    <div className="flex items-center gap-1 bg-black/60 border border-white/10 rounded-lg px-2 py-0.5 focus-within:border-[#4A9EFF] transition-all">
+                                                        <span className="text-[#4A9EFF] font-bold">₹</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            value={currentNightlyRate}
+                                                            onChange={(e) => {
+                                                                const val = Math.max(0, parseFloat(e.target.value) || 0)
+                                                                setSelectedRooms(selectedRooms.map(r => r.id === room.id ? { ...r, customPrice: val } : r))
+                                                            }}
+                                                            className="w-20 bg-transparent text-right font-mono font-bold text-white outline-none text-xs"
+                                                        />
+                                                        <span className="text-gray-500 font-bold text-[9px]">/nt</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-white font-bold tracking-tight leading-none text-sm mb-1 truncate">Room {room.roomNumber}</p>
-                                                <p className="text-slate-600 text-[8px] font-bold uppercase tracking-widest">{room.type}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-white font-bold text-sm tracking-tight">₹{(room.basePrice * stayDuration).toLocaleString()}</p>
-                                                <button 
-                                                    onClick={() => setSelectedRooms(selectedRooms.filter(r => r.id !== room.id))}
-                                                    className="text-[8px] text-rose-500 font-bold uppercase hover:underline"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                     <button 
-                                        onClick={() => setCurrentStep(1)}
-                                        className="w-full py-3 border border-dashed border-white/10 rounded-xl text-[9px] font-bold text-gray-600 uppercase tracking-[0.2em] hover:text-white hover:border-[#4A9EFF]/30 transition-all bg-white/[0.01]"
+                                        onClick={() => {
+                                            const el = document.getElementById('available-rooms-section')
+                                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                        }}
+                                        className="w-full py-3 border border-dashed border-white/10 hover:border-[#4A9EFF]/50 rounded-xl text-[10px] font-bold text-[#4A9EFF] uppercase tracking-[0.15em] hover:bg-[#4A9EFF]/10 transition-all active:scale-95 flex items-center justify-center gap-2"
                                     >
-                                        + Add Another Room
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Add Another Room</span>
                                     </button>
                                 </div>
                             ) : (
-                                <button className="w-full flex items-center justify-center gap-3 py-6 border-2 border-dashed border-white/5 rounded-2xl text-gray-700 font-bold text-[13px] hover:text-gray-500 hover:border-white/10 transition-all uppercase tracking-widest bg-white/[0.01]">
-                                    <Plus className="w-5 h-5" /> Select a Room
+                                <button 
+                                    onClick={() => {
+                                        const el = document.getElementById('available-rooms-section')
+                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                    }}
+                                    className="w-full flex items-center justify-center gap-3 py-6 border-2 border-dashed border-white/5 rounded-2xl text-gray-400 hover:text-white hover:border-[#4A9EFF]/50 transition-all font-bold text-[13px] uppercase tracking-widest bg-white/[0.01]"
+                                >
+                                    <Plus className="w-5 h-5 text-[#4A9EFF]" /> Select a Room
                                 </button>
                             )}
                         </div>
@@ -994,9 +1089,22 @@ export default function NewBookingPage() {
                                             <h4 className="text-base font-bold text-white tracking-tight mb-1">Room {room.roomNumber}</h4>
                                             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{room.type}</p>
                                         </div>
-                                        <div className="text-right pl-6 border-l border-white/5">
-                                            <p className="text-white font-bold text-base tracking-tight">₹{(room.basePrice * stayDuration).toLocaleString()}</p>
-                                            <p className="text-gray-600 text-[8px] font-bold uppercase tracking-tight">₹{room.basePrice} × {stayDuration} NY</p>
+                                        <div className="text-right pl-6 border-l border-white/5 space-y-1">
+                                            <p className="text-white font-black text-base tracking-tight">₹{((room.customPrice ?? room.basePrice) * stayDuration).toLocaleString('en-IN')}</p>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <span className="text-gray-500 text-[9px] font-bold">₹</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={room.customPrice ?? room.basePrice}
+                                                    onChange={(e) => {
+                                                        const val = Math.max(0, parseFloat(e.target.value) || 0)
+                                                        setSelectedRooms(selectedRooms.map(r => r.id === room.id ? { ...r, customPrice: val } : r))
+                                                    }}
+                                                    className="w-20 bg-black/60 border border-white/10 rounded-lg px-2 py-0.5 text-right font-mono font-bold text-white outline-none text-xs focus:border-[#4A9EFF]"
+                                                />
+                                                <span className="text-gray-500 text-[8px] font-bold uppercase">× {stayDuration} NT</span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -1100,7 +1208,7 @@ export default function NewBookingPage() {
     return (
         <div className="text-gray-400 font-sans selection:bg-[#4A9EFF]/30 selection:text-white">
 
-            <div className="max-w-[1700px] mx-auto pt-4 pb-24">
+            <div className="max-w-[1700px] mx-auto pt-4 pb-32">
                 {currentStep === 0 && renderGuestStep()}
                 {currentStep === 1 && renderRoomStep()}
                 {currentStep === 2 && renderConfirmStep()}
@@ -1121,7 +1229,79 @@ export default function NewBookingPage() {
                     </div>
                 )}
             </div>
+
+            {/* Floating Sticky Bottom Action Bar so user never has to scroll all the way down to submit/proceed */}
+            {currentStep === 1 && selectedRooms.length > 0 && (
+                <div className="fixed bottom-0 inset-x-0 bg-[#0d151c]/95 border-t border-white/10 backdrop-blur-xl px-8 py-4 z-[90] flex items-center justify-between shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex items-center gap-6">
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Selected Rooms ({selectedRooms.length})</p>
+                            <p className="text-sm font-bold text-white truncate max-w-xs">
+                                {selectedRooms.map(r => `Room ${r.roomNumber}`).join(', ')}
+                            </p>
+                        </div>
+                        <div className="h-8 w-px bg-white/10 hidden sm:block" />
+                        <div className="hidden sm:block">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Amount</p>
+                            <p className="text-lg font-black text-[#4A9EFF]">₹{grandTotal.toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => {
+                                const el = document.getElementById('available-rooms-section')
+                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            }}
+                            className="hidden md:flex items-center gap-2 px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold transition-all border border-white/10"
+                        >
+                            <Plus className="w-4 h-4 text-[#4A9EFF]" /> Add Room
+                        </button>
+                        <button
+                            onClick={() => setCurrentStep(2)}
+                            className="px-6 py-3.5 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-[#4A9EFF]/20 active:scale-95 flex items-center gap-2"
+                        >
+                            <span>Review & Finalize (₹{grandTotal.toLocaleString('en-IN')})</span>
+                            <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {currentStep === 2 && selectedRooms.length > 0 && (
+                <div className="fixed bottom-0 inset-x-0 bg-[#0d151c]/95 border-t border-white/10 backdrop-blur-xl px-8 py-4 z-[90] flex items-center justify-between shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex items-center gap-6">
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Guest & Reservation</p>
+                            <p className="text-sm font-bold text-white truncate max-w-xs">{selectedGuest?.name} ({selectedRooms.length} Room{selectedRooms.length > 1 ? 's' : ''})</p>
+                        </div>
+                        <div className="h-8 w-px bg-white/10 hidden sm:block" />
+                        <div>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Amount Secured</p>
+                            <p className="text-lg font-black text-white">₹{grandTotal.toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleFinalSubmit}
+                        disabled={loading}
+                        className="px-8 py-3.5 bg-[#4A9EFF] hover:bg-[#3A8EEF] disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-[#4A9EFF]/20 active:scale-95 flex items-center gap-2"
+                    >
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Secure Reservation</span> <ArrowRight className="w-4 h-4 stroke-[2.5]" /></>}
+                    </button>
+                </div>
+            )}
         </div>
+    )
+}
+
+export default function NewBookingPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[400px] text-gray-500 animate-pulse font-medium">
+                Loading booking form...
+            </div>
+        }>
+            <NewBookingContent />
+        </Suspense>
     )
 }
 

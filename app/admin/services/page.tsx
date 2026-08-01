@@ -7,7 +7,7 @@ import { buildContextUrl, getAdminContext } from '@/lib/admin-context'
 import {
     Plus, Search, Clock, AlertTriangle, CheckCircle2,
     Users, LayoutGrid, Filter, ChevronRight, RefreshCw, User,
-    Utensils, Brush, Settings as Tools, Shirt, AlertCircle, Loader2, Zap
+    Utensils, Brush, Settings as Tools, Shirt, AlertCircle, Loader2, Zap, Coffee
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -353,7 +353,17 @@ export default function ServicesPage() {
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-lg", getServiceColor(req.type))}>{getServiceIcon(req.type)}</div>
-                                                <div><p className="text-[15px] font-bold text-white leading-tight">{req.title}</p><p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{req.type.toLowerCase().replace('_', ' ')}</p></div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[15px] font-bold text-white leading-tight">{req.title}</p>
+                                                        {(req.title?.includes('[Cafe Order]') || req.description?.includes('[CAFE_ORDER]')) && (
+                                                            <span className="inline-flex items-center gap-1 bg-[#4A9EFF]/15 text-[#4A9EFF] border border-[#4A9EFF]/30 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                                <Coffee className="w-3 h-3" /> CAFE ORDER
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{req.type.toLowerCase().replace('_', ' ')}</p>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-5"><span className="text-lg font-bold text-white">{req.room}</span></td>

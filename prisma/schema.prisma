@@ -270,6 +270,7 @@ model Booking {
   totalAmount   Float
   paidAmount    Float         @default(0)
   paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod String?       // CASH, CARD, ONLINE, CORPORATE_CLEARANCE, OTHER
 
   // Tax & Charges breakdown (applied at booking time from PropertySettings)
   baseAmount         Float?   // Room rate × nights (before tax)
@@ -1311,6 +1312,65 @@ model RoomOtaMapping {
 
   @@unique([roomId, otaConnectionId])
   @@map("room_ota_mappings")
+}
+
+// ========================================
+// HOTEL CAFE & DINING SYSTEM
+// ========================================
+
+model CafeItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String   @db.ObjectId
+  name        String
+  category    String   // Coffee & Tea, Breakfast & Bakery, Quick Bites, Chef Meals, Desserts
+  price       Float
+  isVeg       Boolean  @default(true)
+  prepTime    Int      @default(15)
+  description String?
+  image       String?
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([propertyId])
+  @@map("cafe_items")
+}
+
+model BuffetPackage {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String   @db.ObjectId
+  name        String   // e.g. Breakfast Buffet, Dinner Buffet
+  price       Float
+  description String?
+  dishes      String[] // Included dish list
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([propertyId])
+  @@map("buffet_packages")
+}
+
+model CafeOrder {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId        String    @db.ObjectId
+  orderNumber       String
+  type              String    // ROOM_GUEST, WALK_IN
+  roomNumber        String?
+  guestName         String
+  items             Json      // Array of { name, quantity, price }
+  totalAmount       Float
+  status            String    @default("PENDING") // PENDING, PREPARING, READY, DELIVERED, CANCELLED
+  paymentMethod     String    // CASH, CARD, ONLINE, ROOM_BILL
+  paymentStatus     String    @default("PAID")
+  assignedStaffId   String?   @db.ObjectId
+  assignedStaffName String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([propertyId])
+  @@map("cafe_orders")
 }
 
 

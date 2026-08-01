@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json()
-        const { bookingId, action } = body
+        const { bookingId, action, paymentMethod, paidAmount, paymentNotes } = body
 
         if (!bookingId || !action) return badRequest('bookingId and action are required')
         if (!['CHECK_IN', 'CHECK_OUT', 'CANCEL', 'NO_SHOW'].includes(action)) {
@@ -55,7 +55,22 @@ export async function POST(request: NextRequest) {
 
         const updateData: any = { status: statusMap[action] }
         if (action === 'CHECK_IN') updateData.actualCheckIn = new Date()
-        if (action === 'CHECK_OUT') updateData.actualCheckOut = new Date()
+        if (action === 'CHECK_OUT') {
+            updateData.actualCheckOut = new Date()
+            if (paymentMethod) {
+                updateData.paymentMethod = paymentMethod
+            }
+            const finalTotal = existing.finalAmount ?? existing.totalAmount ?? 0
+            const newPaidAmount = paidAmount !== undefined ? parseFloat(paidAmount) : finalTotal
+            updateData.paidAmount = newPaidAmount
+            updateData.paymentStatus = newPaidAmount >= finalTotal ? 'PAID' : newPaidAmount > 0 ? 'PARTIAL' : existing.paymentStatus
+
+            if (paymentNotes && paymentNotes.trim() !== '') {
+                const notePrefix = paymentMethod === 'CORPORATE_CLEARANCE' ? '[Corporate Clearance]' : `[${paymentMethod || 'Payment'}]`
+                const fullNote = `${notePrefix} ${paymentNotes.trim()}`
+                updateData.notes = existing.notes ? `${existing.notes} | ${fullNote}` : fullNote
+            }
+        }
 
         const [booking] = await prisma.$transaction([
             prisma.booking.update({

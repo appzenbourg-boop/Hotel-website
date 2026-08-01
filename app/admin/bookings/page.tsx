@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { startOfWeek, addDays, format, differenceInDays, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Star, Download, Loader2, Calendar, FileText, Printer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Star, Download, Loader2, Calendar, FileText, Printer, Banknote, CreditCard, Smartphone, Building2, HelpCircle, X, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CheckCircle2, LogOut, XCircle } from 'lucide-react'
@@ -94,6 +94,12 @@ export default function BookingsPage() {
   const [extensionDays, setExtensionDays] = useState(1)
   const [requestLoading, setRequestLoading] = useState(false)
 
+  // Checkout & Payment Modal State
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'CASH' | 'CARD' | 'ONLINE' | 'CORPORATE_CLEARANCE' | 'OTHER'>('CASH')
+  const [checkoutPaidAmount, setCheckoutPaidAmount] = useState<string>('')
+  const [checkoutNotes, setCheckoutNotes] = useState<string>('')
+
   const startDate = useMemo(() => {
     let start: Date
     if (viewMode === 'day') start = currentDate
@@ -141,6 +147,49 @@ export default function BookingsPage() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  const handleConfirmCheckoutPayment = async () => {
+    if (!selectedBooking) return
+    setIsUpdating(true)
+    try {
+      const res = await fetch('/api/admin/bookings/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: selectedBooking.id,
+          action: 'CHECK_OUT',
+          paymentMethod: checkoutPaymentMethod,
+          paidAmount: parseFloat(checkoutPaidAmount) || 0,
+          paymentNotes: checkoutNotes
+        })
+      })
+      if (res.ok) {
+        toast.success('Guest checked out & payment settled successfully')
+        setShowCheckoutModal(false)
+
+        // Fetch full booking details for invoice modal
+        const allRes = await fetch(`/api/admin/bookings?status=ALL&limit=200`)
+        if (allRes.ok) {
+          const allJson = await allRes.json()
+          const allBookings = Array.isArray(allJson) ? allJson : (allJson?.data ?? [])
+          const full = allBookings.find((b: any) => b.id === selectedBooking.id)
+          if (full) {
+            setInvoiceData(full)
+            setShowInvoice(true)
+          }
+        }
+        setSelectedBooking(null)
+        fetchData()
+      } else {
+        const err = await res.json()
+        toast.error(err.error || 'Failed to check out guest')
+      }
+    } catch {
+      toast.error('Something went wrong')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   const handleUpdateStatus = async (action: string) => {
     if (!selectedBooking) return
     setIsUpdating(true)
@@ -156,8 +205,6 @@ export default function BookingsPage() {
         // On checkout — fetch full booking details and show invoice
         if (action === 'CHECK_OUT') {
           try {
-            const detailRes = await fetch(`/api/admin/bookings?status=ALL&limit=1`)
-            // Fetch the specific booking with all pricing fields
             const allRes = await fetch(`/api/admin/bookings?status=ALL&limit=200`)
             if (allRes.ok) {
               const allJson = await allRes.json()
@@ -652,11 +699,18 @@ export default function BookingsPage() {
                   {selectedBooking.status === 'CHECKED_IN' && (
                     <button
                       disabled={isUpdating}
-                      onClick={() => handleUpdateStatus('CHECK_OUT')}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+                      onClick={() => {
+                        const total = selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0
+                        const rem = Math.max(0, total - (selectedBooking.paidAmount ?? 0))
+                        setCheckoutPaidAmount(rem > 0 ? rem.toString() : total.toString())
+                        setCheckoutPaymentMethod('CASH')
+                        setCheckoutNotes('')
+                        setShowCheckoutModal(true)
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-lg shadow-[#4A9EFF]/20"
                     >
                       <LogOut className="w-4 h-4" />
-                      {isUpdating ? 'Updating...' : 'Check Out Guest'}
+                      Check Out & Clear Payment
                     </button>
                   )}
                   {selectedBooking.status !== 'CHECKED_OUT' && selectedBooking.status !== 'CANCELLED' && (
@@ -795,6 +849,127 @@ export default function BookingsPage() {
       )}
 
       {/* === INVOICE MODAL === */}
+      {/* CHECKOUT PAYMENT & CLEARANCE MODAL */}
+      {showCheckoutModal && selectedBooking && (
+        <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#101822] border border-white/10 rounded-3xl w-full max-w-lg p-6 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-[#4A9EFF]" />
+                  Check-Out & Payment Settlement
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Guest: <span className="text-white font-bold">{selectedBooking.guest?.name || selectedBooking.guest}</span> (Room {selectedBooking.room?.roomNumber || selectedBooking.room})</p>
+              </div>
+              <button onClick={() => setShowCheckoutModal(false)} className="p-1.5 hover:bg-white/10 rounded-full text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Financial Summary Box */}
+            <div className="grid grid-cols-3 gap-3 bg-black/40 p-4 rounded-2xl border border-white/5 text-center">
+              <div>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Invoice</p>
+                <p className="text-sm font-bold text-white mt-0.5">₹{(selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Already Paid</p>
+                <p className="text-sm font-bold text-emerald-400 mt-0.5">₹{(selectedBooking.paidAmount ?? 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Outstanding</p>
+                <p className="text-sm font-bold text-[#4A9EFF] mt-0.5">
+                  ₹{Math.max(0, (selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0) - (selectedBooking.paidAmount ?? 0)).toLocaleString('en-IN')}
+                </p>
+              </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Select Payment Mode</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'CASH', label: 'Cash', icon: Banknote, color: 'text-emerald-400 border-emerald-500/30' },
+                  { id: 'CARD', label: 'Credit / Debit Card', icon: CreditCard, color: 'text-blue-400 border-blue-500/30' },
+                  { id: 'ONLINE', label: 'Online / UPI', icon: Smartphone, color: 'text-purple-400 border-purple-500/30' },
+                  { id: 'CORPORATE_CLEARANCE', label: 'Corporate Clearance', icon: Building2, color: 'text-amber-400 border-amber-500/30' },
+                  { id: 'OTHER', label: 'Other', icon: HelpCircle, color: 'text-gray-400 border-gray-500/30' },
+                ].map(m => {
+                  const Icon = m.icon
+                  const isSel = checkoutPaymentMethod === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setCheckoutPaymentMethod(m.id as any)}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left flex flex-col justify-between gap-2 transition-all",
+                        isSel
+                          ? "bg-[#4A9EFF]/15 border-[#4A9EFF] ring-1 ring-[#4A9EFF]"
+                          : "bg-black/20 border-white/5 hover:border-white/20 text-gray-400"
+                      )}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <Icon className={cn("w-4 h-4", isSel ? "text-[#4A9EFF]" : m.color)} />
+                        {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-[#4A9EFF]" />}
+                      </div>
+                      <span className={cn("text-xs font-bold truncate", isSel ? "text-white" : "text-gray-300")}>
+                        {m.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Amount Being Cleared / Settled */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Amount Cleared / Settled (₹)</label>
+              <input
+                type="number"
+                value={checkoutPaidAmount}
+                onChange={e => setCheckoutPaidAmount(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-white font-mono font-bold text-base outline-none focus:border-[#4A9EFF]"
+                placeholder="Enter amount"
+              />
+            </div>
+
+            {/* Corporate Reference / Transaction Notes */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                {checkoutPaymentMethod === 'CORPORATE_CLEARANCE' ? 'Corporate Company Name / PO Number' : 'Payment Reference / Transaction Notes'}
+              </label>
+              <input
+                type="text"
+                value={checkoutNotes}
+                onChange={e => setCheckoutNotes(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 rounded-2xl px-4 py-3 text-white text-xs font-semibold outline-none focus:border-[#4A9EFF]"
+                placeholder={checkoutPaymentMethod === 'CORPORATE_CLEARANCE' ? 'e.g. Infosys Ltd - PO #8849 / Billing Ref' : 'e.g. HDFC Card Slip #4410 or UPI Ref ID'}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCheckoutModal(false)}
+                className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-gray-300 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={handleConfirmCheckoutPayment}
+                className="flex-1 py-3 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#4A9EFF]/20 active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Check-Out & Invoice</span> <ArrowRight className="w-4 h-4 stroke-[2.5]" /></>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showInvoice && invoiceData && (
         <InvoiceModal
           booking={invoiceData}
@@ -910,13 +1085,15 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
               <div>
                 <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Guest & Tax Info</p>
                 {[
-                  ['Name',       guestName],
-                  ['Room',       `${roomNo}${roomType ? ' · ' + roomType : ''}`],
-                  ['Guest GSTIN', guestGst || 'B2C / Retail'],
+                  ['Name',          guestName],
+                  ['Room',          `${roomNo}${roomType ? ' · ' + roomType : ''}`],
+                  ['Guest GSTIN',   guestGst || 'B2C / Retail'],
+                  ['Payment Mode',  booking.paymentMethod === 'CORPORATE_CLEARANCE' ? 'Corporate Clearance' : booking.paymentMethod === 'CARD' ? 'Credit / Debit Card' : booking.paymentMethod === 'ONLINE' ? 'Online / UPI' : booking.paymentMethod === 'CASH' ? 'Cash Payment' : (booking.paymentMethod || 'Direct Settlement')],
+                  ...(booking.notes ? [['Payment Notes', booking.notes]] : []),
                 ].map(([l, v]) => (
                   <div key={l} className="flex justify-between text-xs mb-1.5 gap-2">
                     <span className="text-slate-400 shrink-0">{l}</span>
-                    <span className={cn("font-semibold text-right", l === 'Guest GSTIN' && guestGst ? 'text-blue-600 font-mono font-bold' : 'text-slate-800')}>{v}</span>
+                    <span className={cn("font-semibold text-right", l === 'Guest GSTIN' && guestGst ? 'text-blue-600 font-mono font-bold' : l === 'Payment Mode' ? 'text-[#C26A2C] font-bold uppercase' : 'text-slate-800')}>{v}</span>
                   </div>
                 ))}
               </div>

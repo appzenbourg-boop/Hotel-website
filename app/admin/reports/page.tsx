@@ -444,6 +444,59 @@ export default function ReportsPage() {
                 </div>
             )}
 
+            {/* Payment Methods Division Breakdown Pie Chart */}
+            {data && (
+                <Card className="p-6 border-white/[0.05] bg-surface">
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h3 className="text-lg font-bold text-text-primary tracking-tight">Payment Methods Division Breakdown</h3>
+                            <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest mt-0.5">Revenue breakdown by Cash, Card, Online/UPI & Corporate Clearance</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div className="relative h-64 w-full flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={data.paymentBreakdown || []}
+                                        cx="50%" cy="50%"
+                                        innerRadius={60} outerRadius={90}
+                                        paddingAngle={4}
+                                        dataKey="value"
+                                        strokeWidth={0}
+                                    >
+                                        {(data.paymentBreakdown || []).map((entry: any, index: number) => (
+                                            <Cell key={`cell-pay-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ background: 'rgba(22, 27, 34, 0.95)', border: '1px solid #374151', borderRadius: 12 }}
+                                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: '600' }}
+                                        formatter={(val: number) => [`₹${val.toLocaleString()}`, 'Total Collected']}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {(data.paymentBreakdown || []).map((item: any) => (
+                                <div key={item.name} className="p-4 rounded-2xl bg-black/30 border border-white/5 space-y-2 relative overflow-hidden group hover:border-white/10 transition-all">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                                            <span className="text-white font-bold text-sm truncate">{item.name}</span>
+                                        </div>
+                                        <span className="text-xs font-black text-[#4A9EFF] bg-[#4A9EFF]/10 px-2 py-0.5 rounded-md border border-[#4A9EFF]/20">
+                                            {item.percentage}%
+                                        </span>
+                                    </div>
+                                    <p className="text-2xl font-black text-white font-mono tracking-tight">₹{item.value.toLocaleString('en-IN')}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            )}
+
             {/* Bottom Row: Leaderboard + Feedback */}
             {data && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

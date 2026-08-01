@@ -285,6 +285,56 @@ export async function GET(req: NextRequest) {
                 createdAt: r.createdAt
             }))
 
+        // ===== 9. PAYMENT METHOD DIVISION BREAKDOWN =====
+        const periodBookings = await prisma.booking.findMany({
+            where: {
+                ...whereProperty,
+                status: { in: ['CHECKED_OUT', 'CHECKED_IN'] },
+                checkIn: { gte: thisMonthStart, lte: thisMonthEnd }
+            },
+            select: {
+                paymentMethod: true,
+                paidAmount: true,
+                totalAmount: true,
+                finalAmount: true,
+                source: true,
+            }
+        })
+
+        let cashSum = 0
+        let cardSum = 0
+        let onlineSum = 0
+        let corporateSum = 0
+
+        periodBookings.forEach(b => {
+            const amt = b.finalAmount ?? b.totalAmount ?? b.paidAmount ?? 0
+            const method = (b.paymentMethod || '').toUpperCase()
+
+            if (method === 'CASH') {
+                cashSum += amt
+            } else if (method === 'CARD') {
+                cardSum += amt
+            } else if (method === 'CORPORATE_CLEARANCE' || method === 'CORPORATE') {
+                corporateSum += amt
+            } else if (method === 'ONLINE' || method === 'RAZORPAY' || method === 'UPI' || ['BOOKING_COM', 'AGODA', 'EXPEDIA', 'MAKE_MY_TRIP', 'AIRBNB'].includes(b.source)) {
+                onlineSum += amt
+            } else {
+                if (b.source === 'WALK_IN' || b.source === 'DIRECT') {
+                    cashSum += amt
+                } else {
+                    onlineSum += amt
+                }
+            }
+        })
+
+        const totalPayRev = cashSum + cardSum + onlineSum + corporateSum
+        const paymentBreakdown = [
+            { name: 'Cash', value: Math.round(cashSum), percentage: totalPayRev > 0 ? Math.round((cashSum / totalPayRev) * 100) : 0, color: '#10b981' },
+            { name: 'Credit / Debit Card', value: Math.round(cardSum), percentage: totalPayRev > 0 ? Math.round((cardSum / totalPayRev) * 100) : 0, color: '#3b82f6' },
+            { name: 'Online / UPI', value: Math.round(onlineSum), percentage: totalPayRev > 0 ? Math.round((onlineSum / totalPayRev) * 100) : 0, color: '#8b5cf6' },
+            { name: 'Corporate Clearance', value: Math.round(corporateSum), percentage: totalPayRev > 0 ? Math.round((corporateSum / totalPayRev) * 100) : 0, color: '#f59e0b' },
+        ]
+
         return NextResponse.json({
             success: true,
             data: {
@@ -302,6 +352,7 @@ export async function GET(req: NextRequest) {
             trendData,
             slaByDept,
             sentimentBreakdown,
+            paymentBreakdown,
             // Leaderboard & Feedback
             leaderboard,
             feedback,

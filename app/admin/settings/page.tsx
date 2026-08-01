@@ -740,11 +740,11 @@ export default function SettingsPage() {
 
   const INTEGRATIONS = [
     { id: 'airbnb',       name: 'Airbnb',        type: 'Travel & Booking', status: airbnbConnected ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'booking_com',  name: 'Booking.com',   type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'BOOKING_COM') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'makemytrip',   name: 'MakeMyTrip',    type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'agoda',        name: 'Agoda',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'AGODA') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'razorpay',     name: 'Razorpay',      type: 'Payment Gateway',  status: 'CONNECTED' },
-    { id: 'twilio',       name: 'Twilio',        type: 'SMS / WhatsApp',   status: 'CONNECTED' },
+    { id: 'booking_com',  name: 'Booking.com',   type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'BOOKING_COM' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'makemytrip',   name: 'MakeMyTrip',    type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'agoda',        name: 'Agoda',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'AGODA' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'razorpay',     name: 'Razorpay',      type: 'Payment Gateway',  status: otaConnections.some(c => c.otaName === 'RAZORPAY' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'twilio',       name: 'Twilio',        type: 'SMS / WhatsApp',   status: otaConnections.some(c => c.otaName === 'TWILIO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
   ]
 
   useEffect(() => {
@@ -1719,15 +1719,33 @@ function AirbnbModal({
             ) : (
               localRooms.map(room => {
                 const isMapped = !!localMappings[room.id]
+                const exportUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/properties/${room.propertyId || 'default'}/rooms/${room.id}/ical` : ''
                 return (
-                  <div key={room.id} className="p-3 bg-surface-light border border-white/[0.08] rounded-xl flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-white">Room {room.roomNumber}</span>
-                      <span className="text-[10px] text-gray-400 ml-2">({room.type || room.category})</span>
+                  <div key={room.id} className="p-3 bg-surface-light border border-white/[0.08] rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-white">Room {room.roomNumber}</span>
+                        <span className="text-[10px] text-gray-400 ml-2">({room.type || room.category})</span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isMapped ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-gray-500/15 text-gray-400'}`}>
+                        {isMapped ? 'Active Sync' : 'Not Connected'}
+                      </span>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isMapped ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-gray-500/15 text-gray-400'}`}>
-                      {isMapped ? 'Active Calendar Sync' : 'Not Connected'}
-                    </span>
+                    {isMapped && (
+                      <div className="flex items-center justify-between bg-black/40 p-2 rounded-lg border border-white/5 text-[10px]">
+                        <span className="text-gray-400 truncate max-w-[240px]" title={exportUrl}>Zenbourg iCal Export: {exportUrl}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(exportUrl)
+                            toast.success('Zenbourg Export iCal Link copied! Paste this into Airbnb Import Calendar.')
+                          }}
+                          className="px-2.5 py-1 bg-[#4A9EFF]/20 hover:bg-[#4A9EFF]/30 text-[#4A9EFF] font-bold rounded uppercase tracking-wider shrink-0 ml-2"
+                        >
+                          Copy Link for Airbnb
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })
@@ -2089,8 +2107,10 @@ function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; on
     const [authToken, setAuthToken] = useState('')
     const [phoneNumber, setPhoneNumber] = useState('')
     const [whatsappNumber, setWhatsappNumber] = useState('')
+    const [isConnected, setIsConnected] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [disconnecting, setDisconnecting] = useState(false)
 
     useEffect(() => {
         const fetchTwilioConfig = async () => {
@@ -2098,6 +2118,7 @@ function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; on
                 const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`)
                 const json = await res.json()
                 if (json.success && json.data.connection) {
+                    setIsConnected(json.data.connection.status === 'CONNECTED')
                     const creds = json.data.connection.credentials || {}
                     setAccountSid(creds.accountSid || '')
                     setAuthToken(creds.authToken || '')
@@ -2141,6 +2162,26 @@ function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; on
             toast.error('Connection error saving Twilio credentials')
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleDisconnect = async () => {
+        setDisconnecting(true)
+        try {
+            const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`, {
+                method: 'DELETE',
+            })
+            const json = await res.json()
+            if (res.ok) {
+                toast.success('Twilio integration disconnected successfully')
+                onClose()
+            } else {
+                toast.error(json.message || 'Failed to disconnect Twilio')
+            }
+        } catch {
+            toast.error('Error disconnecting Twilio')
+        } finally {
+            setDisconnecting(false)
         }
     }
 
@@ -2218,21 +2259,33 @@ function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; on
                                 Used for dispatching automated booking OTPs, direct guest SMS blasts, and custom WhatsApp marketing campaigns.
                             </p>
 
-                            <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Twilio Credentials'}
-                                </button>
+                            <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+                                {isConnected ? (
+                                    <button
+                                        type="button"
+                                        disabled={saving || disconnecting}
+                                        onClick={handleDisconnect}
+                                        className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                                    >
+                                        {disconnecting ? 'Disconnecting...' : 'Disconnect Twilio'}
+                                    </button>
+                                ) : <div />}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={onClose}
+                                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={saving || disconnecting}
+                                        className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Twilio Credentials'}
+                                    </button>
+                                </div>
                             </div>
                         </>
                     )}
@@ -2245,8 +2298,10 @@ function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; on
 function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; onClose: () => void }) {
     const [keyId, setKeyId] = useState('')
     const [keySecret, setKeySecret] = useState('')
+    const [isConnected, setIsConnected] = useState(false)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
+    const [disconnecting, setDisconnecting] = useState(false)
 
     useEffect(() => {
         const fetchRazorpayConfig = async () => {
@@ -2254,6 +2309,7 @@ function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; 
                 const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`)
                 const json = await res.json()
                 if (json.success && json.data.connection) {
+                    setIsConnected(json.data.connection.status === 'CONNECTED')
                     const creds = json.data.connection.credentials || {}
                     setKeyId(creds.keyId || creds.razorpayKeyId || '')
                     setKeySecret(creds.keySecret || creds.razorpayKeySecret || '')
@@ -2293,6 +2349,26 @@ function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; 
             toast.error('Connection error saving Razorpay settings')
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleDisconnect = async () => {
+        setDisconnecting(true)
+        try {
+            const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`, {
+                method: 'DELETE',
+            })
+            const json = await res.json()
+            if (res.ok) {
+                toast.success('Razorpay gateway disconnected successfully')
+                onClose()
+            } else {
+                toast.error(json.message || 'Failed to disconnect Razorpay')
+            }
+        } catch {
+            toast.error('Error disconnecting Razorpay')
+        } finally {
+            setDisconnecting(false)
         }
     }
 
@@ -2347,21 +2423,33 @@ function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; 
                                 When configured, 100% of guest room booking payments and service bill payments for this hotel will be deposited directly into your linked Razorpay account.
                             </p>
 
-                            <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Razorpay Gateway'}
-                                </button>
+                            <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+                                {isConnected ? (
+                                    <button
+                                        type="button"
+                                        disabled={saving || disconnecting}
+                                        onClick={handleDisconnect}
+                                        className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                                    >
+                                        {disconnecting ? 'Disconnecting...' : 'Disconnect Razorpay'}
+                                    </button>
+                                ) : <div />}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={onClose}
+                                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={saving || disconnecting}
+                                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Razorpay Gateway'}
+                                    </button>
+                                </div>
                             </div>
                         </>
                     )}
