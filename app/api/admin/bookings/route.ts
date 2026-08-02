@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         const [guests, rooms] = await Promise.all([
             prisma.guest.findMany({
                 where: { id: { in: guestIds } },
-                select: { id: true, name: true, phone: true, email: true }
+                select: { id: true, name: true, phone: true, email: true, address: true, idType: true, idNumber: true }
             }),
             prisma.room.findMany({
                 where: { id: { in: roomIds } },
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
             const room = roomMap.get(b.roomId)
             return {
                 ...b,
-                guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email } : { name: 'Unknown Guest', phone: 'N/A', email: '' },
+                guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email, address: guest.address, idType: guest.idType, idNumber: guest.idNumber } : { name: 'Unknown Guest', phone: 'N/A', email: '', address: '', idType: 'Aadhar', idNumber: '' },
                 room: room ? { roomNumber: room.roomNumber, type: room.type, category: room.category } : { roomNumber: 'N/A', type: 'N/A', category: 'STANDARD' }
             }
         })

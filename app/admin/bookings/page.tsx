@@ -6,9 +6,11 @@ import { ChevronLeft, ChevronRight, Plus, Star, Download, Loader2, Calendar, Fil
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CheckCircle2, LogOut, XCircle } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { downloadCSV } from '@/lib/csv'
 import { formatCurrency } from '@/lib/utils'
 import { generateBookingPDFVoucher } from '@/lib/pdf-generator'
+import { generateGuestDetailsPDFReport, GuestDetailsReportBooking } from '@/lib/guest-details-pdf'
 
 // ---- Color/status helpers ----
 const STATUS_CONFIG: Record<string, { bar: string; label: string; dot: string; text: string }> = {
@@ -74,6 +76,7 @@ function parseLocal(str: string) {
 }
 
 export default function BookingsPage() {
+  const { data: session } = useSession()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week')
   const [rooms, setRooms] = useState<any[]>([])
@@ -127,15 +130,28 @@ export default function BookingsPage() {
 
       const formatted = bookingsData.map((b: any) => ({
         id: b.id,
+        bookingReference: b.bookingReference || (b.id ? b.id.slice(-4).toUpperCase() : ''),
         guest: b.guest?.name ?? 'Guest',
+        guestPhone: b.guest?.phone ?? '',
+        guestAddress: b.guest?.address ?? '',
+        idType: b.guest?.idType ?? 'Aadhar',
+        idNumber: b.guest?.idNumber ?? '',
         room: b.room?.roomNumber ?? '',
         startDate: parseLocal(b.checkIn),
         endDate: parseLocal(b.checkOut),
+        actualCheckIn: b.actualCheckIn,
+        actualCheckOut: b.actualCheckOut,
         nights: differenceInDays(parseLocal(b.checkOut), parseLocal(b.checkIn)) || 1,
         status: b.status,
         source: b.source ?? '',
         notes: b.notes ?? '',
         isVip: b.isVip ?? false,
+        totalAmount: b.totalAmount ?? 0,
+        paidAmount: b.paidAmount ?? 0,
+        paymentMethod: b.paymentMethod ?? 'CASH',
+        paymentStatus: b.paymentStatus ?? 'PENDING',
+        numberOfGuests: b.numberOfGuests ?? 1,
+        raw: b
       }))
       setBookings(formatted)
     } catch (error) {
@@ -144,6 +160,48 @@ export default function BookingsPage() {
       setLoading(false)
     }
   }, [startDate, endDate])
+
+  const handleExportPDFReport = () => {
+    if (bookings.length === 0) {
+      toast.error('No bookings found for the selected period filter')
+      return
+    }
+
+    let periodLabel = ''
+    if (viewMode === 'day') {
+      periodLabel = format(currentDate, 'dd MMMM yyyy')
+    } else if (viewMode === 'week') {
+      periodLabel = `${format(startDate, 'dd MMM')} - ${format(endDate, 'dd MMM yyyy')}`
+    } else {
+      periodLabel = format(currentDate, 'MMMM yyyy')
+    }
+
+    const reportBookings: GuestDetailsReportBooking[] = bookings.map(b => ({
+      id: b.id,
+      bookingReference: b.bookingReference,
+      roomNumber: b.room,
+      checkIn: b.startDate,
+      checkOut: b.endDate,
+      actualCheckIn: b.actualCheckIn,
+      actualCheckOut: b.actualCheckOut,
+      status: b.status,
+      source: b.source,
+      guestName: b.guest,
+      guestAddress: b.guestAddress,
+      idType: b.idType,
+      idNumber: b.idNumber,
+      contactNo: b.guestPhone,
+      pax: b.numberOfGuests || 1,
+      totalAmount: b.totalAmount || 0,
+      paidAmount: b.paidAmount || 0,
+      paymentMethod: b.paymentMethod,
+      paymentStatus: b.paymentStatus
+    }))
+
+    const hotelName = session?.user?.name || 'Atlas Hotel'
+    generateGuestDetailsPDFReport(hotelName, periodLabel, reportBookings)
+    toast.success(`PDF Guest Details report downloaded for ${periodLabel}!`)
+  }
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -432,7 +490,17 @@ export default function BookingsPage() {
           </button>
 
           <button
+            onClick={handleExportPDFReport}
+            title="Download Formatted Guest Details PDF Sheet"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#233648] hover:bg-[#2a4058] border border-white/[0.1] rounded-xl text-white text-[10px] font-black uppercase tracking-wider transition-all shrink-0 active:scale-95 shadow-sm"
+          >
+            <FileText className="w-3.5 h-3.5 text-red-400" />
+            <span className="hidden sm:inline">PDF Report</span>
+          </button>
+
+          <button
             onClick={() => downloadCSV(bookings, 'Bookings_Export')}
+            title="Download CSV"
             className="p-1.5 bg-[#182433] border border-white/[0.1] rounded-xl text-gray-400 hover:text-white shrink-0"
           >
             <Download className="w-4 h-4" />
