@@ -89,24 +89,32 @@ export async function GET(request: NextRequest) {
             })
         })
 
-        // Map room occupancy status
+        // Map room occupancy status — 4 categories: Occupied, Ready, Service, Out of Order
         let occupiedCount = 0
-        let availableCount = 0
-        let maintenanceCount = 0
+        let readyCount = 0
+        let serviceCount = 0
+        let outOfOrderCount = 0
 
         const occupancyRooms = rooms.map(room => {
             const currentBooking = activeBookingMap.get(room.id)
-            let isOccupied = !!currentBooking || room.status === 'OCCUPIED' || room.status === 'BOOKED'
-            let isMaintenance = room.status === 'BLOCKED' || room.status === 'CLEANING'
+            const isOccupied = !!currentBooking || room.status === 'OCCUPIED' || room.status === 'BOOKED'
+            const isService = room.status === 'CLEANING'
+            const isOutOfOrder = room.status === 'MAINTENANCE' || room.status === 'BLOCKED'
+            const isReady = !isOccupied && !isService && !isOutOfOrder
 
             if (isOccupied) occupiedCount++
-            else if (isMaintenance) maintenanceCount++
-            else availableCount++
+            else if (isService) serviceCount++
+            else if (isOutOfOrder) outOfOrderCount++
+            else readyCount++
 
             return {
                 ...room,
                 isOccupied,
-                isMaintenance,
+                isService,
+                isOutOfOrder,
+                isReady,
+                // Legacy compat
+                isMaintenance: isService || isOutOfOrder,
                 currentBooking: currentBooking ?? null
             }
         })
@@ -118,9 +126,13 @@ export async function GET(request: NextRequest) {
             summary: {
                 totalRooms,
                 occupiedCount,
-                availableCount,
-                maintenanceCount,
-                occupancyRate
+                readyCount,
+                serviceCount,
+                outOfOrderCount,
+                occupancyRate,
+                // Legacy compat
+                availableCount: readyCount,
+                maintenanceCount: serviceCount + outOfOrderCount
             },
             rooms: occupancyRooms
         })

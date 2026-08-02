@@ -740,9 +740,13 @@ export default function SettingsPage() {
 
   const INTEGRATIONS = [
     { id: 'airbnb',       name: 'Airbnb',        type: 'Travel & Booking', status: airbnbConnected ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'booking_com',  name: 'Booking.com',   type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'BOOKING_COM' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'makemytrip',   name: 'MakeMyTrip',    type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'booking_com',  name: 'Booking.com',   type: 'OTA Channel',      status: otaConnections.some(c => (c.otaName === 'BOOKING_COM' || c.otaName === 'BOOKING_COM') && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'makemytrip',   name: 'MakeMyTrip',    type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'goibibo',      name: 'Goibibo',       type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'GOIBIBO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'easemytrip',   name: 'EaseMyTrip',    type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'EASE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'yatra',        name: 'Yatra',         type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'YATRA' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
     { id: 'agoda',        name: 'Agoda',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'AGODA' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'ixigo',        name: 'Ixigo',         type: 'Meta-Search Channel', status: otaConnections.some(c => c.otaName === 'IXIGO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
     { id: 'razorpay',     name: 'Razorpay',      type: 'Payment Gateway',  status: otaConnections.some(c => c.otaName === 'RAZORPAY' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
     { id: 'twilio',       name: 'Twilio',        type: 'SMS / WhatsApp',   status: otaConnections.some(c => c.otaName === 'TWILIO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
   ]
@@ -1796,6 +1800,15 @@ function OtaConnectionModal({
   const [saving, setSaving] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
 
+  // iCal import states (for Booking.com & Agoda)
+  const [icalUrl, setIcalUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+
+  // Check if this OTA uses iCal sync
+  const isIcalOta = ota.id === 'booking_com' || ota.id === 'agoda'
+  const otaChannel = ota.id === 'booking_com' ? 'BOOKING_COM' : ota.id === 'agoda' ? 'AGODA' : ota.id.toUpperCase()
+
   // Simulation form states
   const [simRoomId, setSimRoomId] = useState('')
   const [simGuestName, setSimGuestName] = useState('')
@@ -1814,6 +1827,9 @@ function OtaConnectionModal({
           if (d.data.connection) {
             setHotelId(d.data.connection.credentials?.hotelId || '')
             setApiKey(d.data.connection.credentials?.apiKey || '')
+            if (d.data.connection.credentials?.defaultIcal) {
+              setIcalUrl(d.data.connection.credentials.defaultIcal)
+            }
           }
           
           const initial: Record<string, string> = {}
@@ -1835,6 +1851,59 @@ function OtaConnectionModal({
     fetchData()
   }, [ota, propertyId])
 
+  // iCal auto-import handler (reuses import-airbnb API which handles Booking.com & Agoda)
+  const handleIcalImport = async () => {
+    if (!icalUrl.trim()) {
+      toast.error(`Please paste your ${ota.name} iCal Calendar Export link`)
+      return
+    }
+    setImporting(true)
+    const toastId = toast.loading(`Connecting to ${ota.name} and syncing calendar...`)
+    try {
+      const res = await fetch('/api/admin/rooms/import-airbnb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: icalUrl.trim(),
+          otaChannel: otaChannel,
+          propertyId,
+        })
+      })
+      const d = await res.json()
+      if (d.success) {
+        const roomNum = d.data?.room?.roomNumber || 'New Room'
+        const eventsCount = d.data?.detectedEventsCount || 0
+        toast.success(`${ota.name} connected! Room ${roomNum} created. ${eventsCount} calendar events detected.`, { id: toastId, duration: 5000 })
+        onClose()
+      } else {
+        toast.error(d.error || `Failed to connect ${ota.name}`, { id: toastId })
+      }
+    } catch {
+      toast.error('Network error connecting channel', { id: toastId })
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  // Manual sync trigger
+  const handleSync = async () => {
+    setSyncing(true)
+    const toastId = toast.loading(`Syncing ${ota.name} calendar...`)
+    try {
+      const res = await fetch(`/api/admin/rooms/sync-airbnb?propertyId=${propertyId}&otaName=${otaChannel}`)
+      const d = await res.json()
+      if (d.success) {
+        toast.success(`Sync complete! ${d.data?.created || 0} new, ${d.data?.updated || 0} updated bookings.`, { id: toastId })
+      } else {
+        toast.error(d.error || 'Sync failed', { id: toastId })
+      }
+    } catch {
+      toast.error('Network error during sync', { id: toastId })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     const payload = Object.entries(localMappings).map(([roomId, otaRoomId]) => ({
@@ -1846,7 +1915,7 @@ function OtaConnectionModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          credentials: { hotelId, apiKey },
+          credentials: isIcalOta ? { defaultIcal: icalUrl, autoImported: true } : { hotelId, apiKey },
           mappings: payload,
         }),
       })
@@ -1931,6 +2000,163 @@ function OtaConnectionModal({
     )
   }
 
+  // ─── iCal-based OTA (Booking.com / Agoda) ───────────────────────────────────
+  if (isIcalOta) {
+    const icalHelp = ota.id === 'booking_com'
+      ? {
+          steps: [
+            'Log in to your Booking.com Extranet (admin.booking.com)',
+            'Go to Property → Calendar & Pricing → Sync Calendar',
+            'Click "Export Calendar" and copy the iCal link',
+            'Paste the copied link below',
+          ],
+          placeholder: 'https://admin.booking.com/hotel/hoteladmin/ical.html?t=...',
+        }
+      : {
+          steps: [
+            'Log in to Agoda YCS Partner Portal (ycs.agoda.com)',
+            'Go to Property → Availability → Calendar Sync',
+            'Click "Export Calendar" and copy the iCal / .ics link',
+            'Paste the copied link below',
+          ],
+          placeholder: 'https://supply-xml.booking.com/hotels/ical/... or Agoda iCal link',
+        }
+
+    const isConnected = mappings.length > 0
+
+    return (
+      <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-left">
+        <div className="bg-[#101922] border border-white/[0.08] rounded-3xl max-w-2xl w-full p-6 space-y-6 text-left my-8 shadow-2xl relative">
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Globe className="w-5 h-5 text-primary" /> Connect {ota.name} via iCal Sync
+            </h3>
+            <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+              Paste your {ota.name} <span className="font-bold text-white">iCal Calendar Export Link</span> below. The system will auto-import rooms and sync all {ota.name} bookings to your calendar.
+            </p>
+          </div>
+
+          {/* Step-by-step guide */}
+          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 space-y-2">
+            <p className="text-[10px] font-black text-primary uppercase tracking-widest">How to get your {ota.name} iCal Link:</p>
+            <ol className="space-y-1.5">
+              {icalHelp.steps.map((step, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                  <span className="w-5 h-5 rounded-full bg-primary/20 text-primary font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          {/* iCal URL Input & Import */}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-white uppercase tracking-wider block">
+                {ota.name} iCal Export URL *
+              </label>
+              <input 
+                type="text" 
+                value={icalUrl} 
+                onChange={e => setIcalUrl(e.target.value)}
+                placeholder={icalHelp.placeholder}
+                className="w-full bg-[#0d1117] border border-white/[0.15] focus:border-primary rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner"
+              />
+            </div>
+
+            <button 
+              type="button"
+              disabled={importing || !icalUrl.trim()}
+              onClick={handleIcalImport}
+              className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+            >
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {importing ? 'Auto-Detecting & Syncing...' : `Connect & Auto-Import ${ota.name} Listing`}
+            </button>
+          </div>
+
+          {/* Connected rooms */}
+          {isConnected && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Connected {ota.name} Rooms ({rooms.filter(r => localMappings[r.id]).length})</h4>
+                <button 
+                  type="button"
+                  disabled={syncing}
+                  onClick={handleSync}
+                  className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5"
+                >
+                  {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  Sync Calendar Now
+                </button>
+              </div>
+
+              <div className="max-h-[25vh] overflow-y-auto space-y-2 pr-1 custom-scrollbar border border-white/[0.05] rounded-xl p-3 bg-black/20">
+                {rooms.map(room => {
+                  const isMapped = !!localMappings[room.id]
+                  const exportUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/properties/${propertyId}/rooms/${room.id}/ical` : ''
+                  return (
+                    <div key={room.id} className="p-3 bg-surface-light border border-white/[0.08] rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-white">Room {room.roomNumber}</span>
+                          <span className="text-[10px] text-gray-400 ml-2">({room.type || room.category})</span>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isMapped ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-gray-500/15 text-gray-400'}`}>
+                          {isMapped ? 'Active Sync' : 'Not Connected'}
+                        </span>
+                      </div>
+                      {isMapped && (
+                        <div className="flex items-center justify-between bg-black/40 p-2 rounded-lg border border-white/5 text-[10px]">
+                          <span className="text-gray-400 truncate max-w-[240px]" title={exportUrl}>Zenbourg Export: {exportUrl}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(exportUrl)
+                              toast.success(`Export link copied! Paste into ${ota.name} Import Calendar.`)
+                            }}
+                            className="px-2.5 py-1 bg-primary/20 hover:bg-primary/30 text-primary font-bold rounded uppercase tracking-wider shrink-0 ml-2"
+                          >
+                            Copy Link
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            {isConnected ? (
+              <button 
+                disabled={disconnecting}
+                onClick={handleDisconnect}
+                className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {disconnecting ? 'Disconnecting...' : `Disconnect ${ota.name}`}
+              </button>
+            ) : <div />}
+
+            <button 
+              onClick={onClose}
+              className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Non-iCal OTA (credentials + room mapping + simulator) ──────────────────
   return (
     <div className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in text-left">
       <div className="bg-[#101922] border border-white/[0.08] rounded-3xl max-w-4xl w-full p-6 space-y-6 text-left my-8 shadow-2xl relative">
@@ -1943,7 +2169,23 @@ function OtaConnectionModal({
             <Globe className="w-5 h-5 text-primary" /> Connect {ota.name} Channel
           </h3>
           <p className="text-xs text-text-secondary mt-1">
-            Setup direct channel connection mappings. Save your credentials first, then map room IDs. Use the simulator card to test bookings live.
+            Connect your existing {ota.name} extranet listing to Zenbourg. Enter your channel credentials below and map your room IDs.
+          </p>
+        </div>
+
+        {/* Channel guidance note */}
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3.5 flex items-start gap-2.5">
+          <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          <p className="text-xs text-gray-300 leading-relaxed">
+            {ota.id === 'makemytrip' || ota.id === 'goibibo'
+              ? `Hotel owners can copy their Hotel Code & Channel API Key from their MMT/Goibibo Extranet dashboard (partner.makemytrip.com → Channel Manager Settings).`
+              : ota.id === 'easemytrip'
+              ? `Copy your Hotel Property ID & API Key from your EaseMyTrip Extranet Portal.`
+              : ota.id === 'yatra'
+              ? `Copy your Property ID & Channel Key from your Yatra Extranet Portal (hotel.yatra.com).`
+              : ota.id === 'ixigo'
+              ? `Connect your Ixigo Partner Code or MMT Channel Mapping to route Ixigo meta-search bookings.`
+              : `Enter your ${ota.name} Hotel ID and API Key provided in your channel extranet.`}
           </p>
         </div>
 

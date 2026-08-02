@@ -28,6 +28,12 @@ function parseOtaUrl(inputUrl: string, requestedOta?: string) {
             if (match) listingId = match[1]
             icalUrl = trimmed
         }
+    } else if (trimmed.includes('agoda.com') || otaName === 'AGODA') {
+        otaName = 'AGODA'
+        isIcal = trimmed.includes('/ical') || trimmed.endsWith('.ics') || trimmed.includes('calendar')
+        icalUrl = trimmed
+        const match = trimmed.match(/hotel\/[^\/]+\/([^\/\?]+)/) || trimmed.match(/([0-9]+)/)
+        if (match) listingId = match[1]
     } else {
         otaName = 'AIRBNB'
         if (trimmed.includes('airbnb.com/calendar/ical/') || trimmed.endsWith('.ics')) {
@@ -70,7 +76,7 @@ export async function POST(request: NextRequest) {
         const targetPropertyId = propertyId || body.propertyId
         if (!targetPropertyId) return badRequest('Target property ID required')
 
-        const channelLabel = parsed.otaName === 'BOOKING_COM' ? 'Booking.com' : 'Airbnb'
+        const channelLabel = parsed.otaName === 'BOOKING_COM' ? 'Booking.com' : parsed.otaName === 'AGODA' ? 'Agoda' : 'Airbnb'
 
         // 1. Fetch iCal feed to validate and extract metadata if available
         let detectedName = `${channelLabel} Listing ${parsed.listingId || ''}`.trim()
@@ -108,7 +114,7 @@ export async function POST(request: NextRequest) {
         ]
 
         // 3. Determine final values
-        const prefix = parsed.otaName === 'BOOKING_COM' ? 'BK' : 'AB'
+        const prefix = parsed.otaName === 'BOOKING_COM' ? 'BK' : parsed.otaName === 'AGODA' ? 'AG' : 'AB'
         const finalRoomNumber = roomNumber || (parsed.listingId ? `${prefix}-${parsed.listingId.slice(-4)}` : `${prefix}-${Math.floor(100 + Math.random() * 900)}`)
         const finalFloor = parseInt(floor ?? '1') || 1
         const finalBasePrice = parseFloat(basePrice ?? '3500') || 3500
