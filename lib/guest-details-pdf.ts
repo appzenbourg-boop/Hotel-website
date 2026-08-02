@@ -36,12 +36,12 @@ export function generateGuestDetailsPDFReport(
         format: 'a4',
     })
 
-    // Header Title
+    // Header Title (Centered)
     doc.setFont('Helvetica', 'bold')
-    doc.setFontSize(14)
+    doc.setFontSize(13)
     doc.setTextColor(15, 23, 42)
     const titleText = `${hotelName || 'Atlas Hotel'} Guest Details - ${periodLabel}`
-    doc.text(titleText, 14, 12)
+    doc.text(titleText, 148.5, 11, { align: 'center' })
 
     // Compute metrics
     let totalOnline = 0
@@ -69,7 +69,7 @@ export function generateGuestDetailsPDFReport(
         const checkInDate = new Date(b.checkIn)
         const checkInStr = isNaN(checkInDate.getTime()) 
             ? String(b.checkIn) 
-            : format(checkInDate, 'dd MMMM hh:mm a')
+            : format(checkInDate, 'dd MMM hh:mm a')
 
         // Check Out Time / Status handling ("if not checked in than that should also be mentioned")
         let checkOutStr = ''
@@ -77,12 +77,12 @@ export function generateGuestDetailsPDFReport(
             checkOutStr = 'Not Checked In'
         } else if (b.actualCheckOut) {
             const co = new Date(b.actualCheckOut)
-            checkOutStr = isNaN(co.getTime()) ? 'Checked Out' : format(co, 'dd MMMM hh:mm a')
+            checkOutStr = isNaN(co.getTime()) ? 'Checked Out' : format(co, 'dd MMM hh:mm a')
         } else if (b.status === 'CHECKED_IN') {
             checkOutStr = 'Ext.'
         } else {
             const co = new Date(b.checkOut)
-            checkOutStr = isNaN(co.getTime()) ? 'Ext.' : format(co, 'dd MMMM hh:mm a')
+            checkOutStr = isNaN(co.getTime()) ? 'Ext.' : format(co, 'dd MMM hh:mm a')
         }
 
         const guestName = b.guestName || 'Guest'
@@ -194,9 +194,11 @@ export function generateGuestDetailsPDFReport(
         ''
     ] as any)
 
-    // Render AutoTable
+    // Render AutoTable with 8mm margins to fit all 18 columns perfectly on A4 landscape (297mm width)
     autoTable(doc, {
-        startY: 16,
+        startY: 14,
+        margin: { left: 8, right: 8 },
+        tableWidth: 281, // 8mm left + 281mm table + 8mm right = 297mm (exact page width)
         head: [[
             'S No', 'R No', 'Room No', 'Check IN', 'Guest Name', 'Address', 'Check Out', 
             'ID Type', 'ID Initials', 'Contact No.', 'Pax', 'Source', 'Online', 'Cash', 
@@ -207,37 +209,38 @@ export function generateGuestDetailsPDFReport(
         headStyles: {
             fillColor: [240, 243, 246],
             textColor: [15, 23, 42],
-            fontSize: 7.5,
+            fontSize: 6.5,
             fontStyle: 'bold',
             halign: 'center',
-            lineWidth: 0.2,
+            lineWidth: 0.15,
             lineColor: [180, 190, 200]
         },
         bodyStyles: {
             textColor: [30, 41, 59],
-            fontSize: 7,
-            lineWidth: 0.2,
-            lineColor: [200, 210, 220]
+            fontSize: 6.5,
+            lineWidth: 0.15,
+            lineColor: [200, 210, 220],
+            cellPadding: 1
         },
         columnStyles: {
-            0: { halign: 'center', cellWidth: 10 },
-            1: { halign: 'center', cellWidth: 12, textColor: [220, 38, 38], fontStyle: 'bold' }, // RED Text for R No!
-            2: { halign: 'center', cellWidth: 14, fontStyle: 'bold' },
-            3: { cellWidth: 22 },
-            4: { cellWidth: 26, fontStyle: 'bold' },
-            5: { cellWidth: 18 },
-            6: { cellWidth: 20 },
-            7: { cellWidth: 14 },
-            8: { cellWidth: 24, fontSize: 6.5 },
-            9: { cellWidth: 20 },
-            10: { halign: 'center', cellWidth: 10 },
-            11: { halign: 'center', cellWidth: 16 },
-            12: { halign: 'right', cellWidth: 14 },
-            13: { halign: 'right', cellWidth: 14 },
+            0: { halign: 'center', cellWidth: 8 },
+            1: { halign: 'center', cellWidth: 10, textColor: [220, 38, 38], fontStyle: 'bold' }, // RED Text for R No
+            2: { halign: 'center', cellWidth: 11, fontStyle: 'bold' },
+            3: { cellWidth: 20 },
+            4: { cellWidth: 22, fontStyle: 'bold' },
+            5: { cellWidth: 16 },
+            6: { cellWidth: 18 },
+            7: { cellWidth: 12 },
+            8: { cellWidth: 24, fontSize: 5.5 },
+            9: { cellWidth: 18 },
+            10: { halign: 'center', cellWidth: 8 },
+            11: { halign: 'center', cellWidth: 15 },
+            12: { halign: 'right', cellWidth: 13 },
+            13: { halign: 'right', cellWidth: 13 },
             14: { halign: 'right', cellWidth: 14 },
-            15: { halign: 'right', cellWidth: 14 },
-            16: { halign: 'right', cellWidth: 14 },
-            17: { halign: 'center', cellWidth: 18 }
+            15: { halign: 'right', cellWidth: 13 },
+            16: { halign: 'right', cellWidth: 13 },
+            17: { halign: 'center', cellWidth: 16 }
         },
         didParseCell: function(data) {
             // Apply bold to total row
@@ -248,12 +251,12 @@ export function generateGuestDetailsPDFReport(
         }
     })
 
-    // Financial Breakdown & QTY Summary Box (Bottom)
+    // Financial Breakdown & QTY Summary Box (Centered below main table)
     const finalY = (doc as any).lastAutoTable.finalY + 4
 
     autoTable(doc, {
         startY: finalY,
-        margin: { left: 30 },
+        margin: { left: 58.5 }, // Centered on page: 58.5mm + 180mm + 58.5mm = 297mm
         tableWidth: 180,
         head: [],
         body: [
@@ -267,11 +270,11 @@ export function generateGuestDetailsPDFReport(
         ],
         theme: 'grid',
         bodyStyles: {
-            fontSize: 7.5,
+            fontSize: 7,
             textColor: [15, 23, 42],
-            lineWidth: 0.2,
+            lineWidth: 0.15,
             lineColor: [180, 190, 200],
-            cellPadding: 1.5
+            cellPadding: 1.2
         },
         columnStyles: {
             0: { fontStyle: 'bold', cellWidth: 35 },
