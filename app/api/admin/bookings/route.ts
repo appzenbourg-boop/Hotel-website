@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
             return badRequest('Missing property ID context')
         }
 
-        const { guestId, roomId, checkIn, checkOut, numberOfGuests, totalAmount, source, discountPercent: manualDiscount } = body
+        const { guestId, roomId, checkIn, checkOut, numberOfGuests, totalAmount, source, discountPercent: manualDiscount, mealPlan: mealPlanType } = body
 
         if (!guestId || !roomId || !checkIn || !checkOut) {
             return badRequest('guestId, roomId, checkIn and checkOut are required')
@@ -153,7 +153,29 @@ export async function POST(request: NextRequest) {
         const nights = Math.max(1, differenceInCalendarDays(new Date(checkOut), new Date(checkIn)))
         const baseAmount = totalAmount ?? (room.basePrice * nights)
 
-        // Apply pricing
+        // Calculate meal plan amount
+        let mealPlanAmount = 0
+        let resolvedMealPlan: string | null = null
+        if (mealPlanType && mealPlanType !== 'EP') {
+            try {
+                const mealPlan = await prisma.mealPlan.findUnique({
+                    where: {
+                        propertyId_type: {
+                            propertyId: propertyId!,
+                            type: mealPlanType,
+                        },
+                    },
+                })
+                if (mealPlan && mealPlan.isActive) {
+                    mealPlanAmount = mealPlan.pricePerDay * nights * (numberOfGuests ?? 1)
+                    resolvedMealPlan = mealPlanType
+                }
+            } catch { /* MealPlan may not exist yet */ }
+        } else if (mealPlanType === 'EP') {
+            resolvedMealPlan = 'EP'
+        }
+
+        // Apply pricing (on room cost only — meal plan is added separately)
         const pricing = calculatePricing(baseAmount, pricingSettings, manualDiscount)
 
         const booking = await prisma.booking.create({
@@ -164,7 +186,7 @@ export async function POST(request: NextRequest) {
                 checkIn: new Date(checkIn),
                 checkOut: new Date(checkOut),
                 numberOfGuests: numberOfGuests ?? 1,
-                totalAmount: pricing.totalAmount,
+                totalAmount: pricing.totalAmount + mealPlanAmount,
                 // Tax breakdown
                 baseAmount: pricing.baseAmount,
                 gstPercent: pricing.gstPercent,
@@ -175,7 +197,10 @@ export async function POST(request: NextRequest) {
                 luxuryTaxAmount: pricing.luxuryTaxAmount,
                 discountPercent: pricing.discountPercent,
                 discountAmount: pricing.discountAmount,
-                finalAmount: pricing.finalAmount,
+                finalAmount: pricing.finalAmount + mealPlanAmount,
+                // Meal plan
+                mealPlan: resolvedMealPlan,
+                mealPlanAmount: mealPlanAmount > 0 ? mealPlanAmount : null,
                 status: 'RESERVED',
                 source: source ?? 'DIRECT',
             },

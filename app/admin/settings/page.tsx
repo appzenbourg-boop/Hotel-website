@@ -6,7 +6,7 @@ import {
   Save, Building2, IndianRupee, Sparkles, Shield, Smartphone,
   Database, Globe, ChevronRight, ChevronLeft, Loader2,
   Calendar, Check, CheckCircle2, Bell, Zap, ShieldAlert, ClipboardList,
-  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X, MessageSquare
+  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X, MessageSquare, UtensilsCrossed
 } from 'lucide-react'
 import { cn, validateGSTIN } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -29,14 +29,15 @@ interface PlanDef {
 }
 
 const NAV = [
-  { id: 'branding',     label: 'General Info',         icon: Building2,   desc: 'Hotel name, address, contact details' },
-  { id: 'roles',        label: 'Roles & Permissions',  icon: Shield,      desc: 'Staff access levels per module' },
-  { id: 'financial',    label: 'Financial & Tax',      icon: IndianRupee, desc: 'GST, service charge, discounts, invoice' },
-  { id: 'ops',          label: 'Notifications',        icon: Smartphone,  desc: 'SMS, push, email alert settings' },
-  { id: 'subscription', label: 'Subscription & Plans', icon: Sparkles,    desc: 'Current plan, upgrade, billing' },
-  { id: 'integrations', label: 'Integrations',         icon: Globe,       desc: 'OTA channels and API connections' },
-  { id: 'payouts',      label: 'Payouts & Withdrawals',icon: CreditCard,  desc: 'Request withdrawals and view transaction logs' },
-  { id: 'retention',    label: 'Data Retention',       icon: Database,    desc: 'How long data is stored' },
+  { id: 'branding',     label: 'General Info',         icon: Building2,       desc: 'Hotel name, address, contact details' },
+  { id: 'roles',        label: 'Roles & Permissions',  icon: Shield,          desc: 'Staff access levels per module' },
+  { id: 'financial',    label: 'Financial & Tax',      icon: IndianRupee,     desc: 'GST, service charge, discounts, invoice' },
+  { id: 'mealplans',    label: 'Meal Plans',           icon: UtensilsCrossed, desc: 'EP, CP, MAP, AP pricing and included meals' },
+  { id: 'ops',          label: 'Notifications',        icon: Smartphone,      desc: 'SMS, push, email alert settings' },
+  { id: 'subscription', label: 'Subscription & Plans', icon: Sparkles,        desc: 'Current plan, upgrade, billing' },
+  { id: 'integrations', label: 'Integrations',         icon: Globe,           desc: 'OTA channels and API connections' },
+  { id: 'payouts',      label: 'Payouts & Withdrawals',icon: CreditCard,      desc: 'Request withdrawals and view transaction logs' },
+  { id: 'retention',    label: 'Data Retention',       icon: Database,        desc: 'How long data is stored' },
 ]
 
 const PERMISSIONS_SCHEMA = [
@@ -312,6 +313,145 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
     </div>
   )
 }
+
+// ─── Meal Plans Component ───────────────────────────────────────────────────
+function MealPlansView({ propertyId }: { propertyId: string | null | undefined }) {
+  const [plans, setPlans] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const fetchPlans = useCallback(async () => {
+    if (!propertyId || propertyId === 'ALL') { setLoading(false); return }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/settings/meal-plans?propertyId=${propertyId}`)
+      const data = await res.json()
+      if (data.success) {
+        setPlans(data.data || [])
+      }
+    } catch {
+      toast.error('Failed to load meal plan settings')
+    } finally {
+      setLoading(false)
+    }
+  }, [propertyId])
+
+  useEffect(() => {
+    fetchPlans()
+  }, [fetchPlans])
+
+  const handlePriceChange = (type: string, price: number) => {
+    setPlans(prev => prev.map(p => p.type === type ? { ...p, pricePerDay: price } : p))
+  }
+
+  const handleActiveToggle = (type: string, isActive: boolean) => {
+    setPlans(prev => prev.map(p => p.type === type ? { ...p, isActive } : p))
+  }
+
+  const handleDescriptionChange = (type: string, description: string) => {
+    setPlans(prev => prev.map(p => p.type === type ? { ...p, description } : p))
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!propertyId || propertyId === 'ALL') return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/admin/settings/meal-plans?propertyId=${propertyId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plans })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success('Meal plan configuration saved successfully!')
+        setPlans(data.data)
+      } else {
+        toast.error(data.error || 'Failed to save meal plans')
+      }
+    } catch {
+      toast.error('Failed to save meal plan settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <div className="flex items-center justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+
+  return (
+    <form onSubmit={handleSave} className="space-y-6 animate-fade-in text-left">
+      <div className="bg-surface border border-border rounded-2xl p-6 space-y-6">
+        <div>
+          <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <UtensilsCrossed className="w-5 h-5 text-primary" /> Hotel Meal Plan System (EP / CP / MAP / AP)
+          </h3>
+          <p className="text-xs text-text-secondary mt-1">
+            Configure daily pricing and meal inclusions for guests booking room meal packages. Meal fees will be automatically calculated into room reservations.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {plans.map((plan) => (
+            <div key={plan.type} className={cn("p-5 rounded-2xl border transition-all space-y-4", plan.isActive ? "bg-surface-light border-white/10" : "bg-black/20 border-white/5 opacity-60")}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="px-3 py-1 bg-primary/10 text-primary font-black text-xs uppercase tracking-wider rounded-lg border border-primary/20">{plan.type}</span>
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{plan.name}</h4>
+                    <p className="text-[10px] text-gray-400">{plan.type === 'EP' ? 'Room Only' : plan.type === 'CP' ? 'Room + Breakfast' : plan.type === 'MAP' ? 'Room + Breakfast + Dinner' : 'Room + All 3 Meals'}</p>
+                  </div>
+                </div>
+                {plan.type !== 'EP' && (
+                  <Switch checked={plan.isActive} onChange={val => handleActiveToggle(plan.type, val)} />
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Per-Day Cost (₹/guest)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    disabled={plan.type === 'EP' || !plan.isActive}
+                    value={plan.pricePerDay}
+                    onChange={e => handlePriceChange(plan.type, parseFloat(e.target.value) || 0)}
+                    className="w-full bg-[#101922] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white outline-none focus:border-primary disabled:opacity-50"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Included Meals</label>
+                  <div className="flex items-center gap-1.5 pt-1.5 text-[10px] font-semibold text-gray-300">
+                    <span className={cn("px-2 py-0.5 rounded", plan.includesBreakfast ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-600")}>Bfst</span>
+                    <span className={cn("px-2 py-0.5 rounded", plan.includesLunch ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-600")}>Lunch</span>
+                    <span className={cn("px-2 py-0.5 rounded", plan.includesDinner ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-600")}>Dinner</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Description / Notes</label>
+                <input
+                  type="text"
+                  value={plan.description || ''}
+                  onChange={e => handleDescriptionChange(plan.type, e.target.value)}
+                  className="w-full bg-[#101922] border border-white/10 rounded-xl px-3 py-2 text-xs text-gray-300 outline-none focus:border-primary"
+                  placeholder="e.g. Complimentary buffet breakfast from 7-10 AM"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button type="submit" loading={saving} variant="primary" className="px-6 py-2.5 text-xs">
+          <Save className="w-4 h-4 mr-2" /> Save Meal Plan Settings
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 // Map legacy plan names to new ones (for properties that still have old plan in DB)
 const LEGACY_PLAN_MAP: Record<string, string> = {
   GOLD: 'BASE', PLATINUM: 'STARTER', DIAMOND: 'STANDARD',
@@ -1077,6 +1217,8 @@ export default function SettingsPage() {
 
     if (view === 'FINANCIAL') return <FinancialView propertyId={effectivePropertyId} />
 
+    if (view === 'MEALPLANS') return <MealPlansView propertyId={effectivePropertyId} />
+
     if (view === 'OPS') return (
       <div className="space-y-6">
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
@@ -1193,7 +1335,7 @@ export default function SettingsPage() {
 
   const viewTitle: Record<string, string> = {
     OVERVIEW: 'Settings', BRANDING: 'General Info', ROLES: 'Roles & Permissions',
-    FINANCIAL: 'Financial & Tax', OPS: 'Notifications', SUBSCRIPTION: 'Subscription & Plans',
+    FINANCIAL: 'Financial & Tax', MEALPLANS: 'Meal Plans', OPS: 'Notifications', SUBSCRIPTION: 'Subscription & Plans',
     INTEGRATIONS: 'Integrations', PAYOUTS: 'Payouts & Withdrawals', RETENTION: 'Data Retention',
   }
 

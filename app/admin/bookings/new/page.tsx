@@ -71,6 +71,10 @@ function NewBookingContent() {
         specialRequests: ''
     })
 
+    // Meal plans state
+    const [mealPlans, setMealPlans] = useState<any[]>([])
+    const [selectedMealPlan, setSelectedMealPlan] = useState<string>('EP')
+
     // Filter state
     const [roomTypeFilter, setRoomTypeFilter] = useState('All Rooms')
     const [occupancyFilter, setOccupancyFilter] = useState('2 Adults, 0 Kids')
@@ -277,21 +281,35 @@ function NewBookingContent() {
         return selectedRooms.reduce((acc, room) => acc + (room.basePrice * stayDuration), 0)
     }, [selectedRooms, stayDuration])
 
+    const activeMealPlanObj = useMemo(() => {
+        return mealPlans.find(mp => mp.type === selectedMealPlan)
+    }, [mealPlans, selectedMealPlan])
+
+    const mealPlanTotal = useMemo(() => {
+        if (!activeMealPlanObj || activeMealPlanObj.type === 'EP') return 0
+        return (activeMealPlanObj.pricePerDay || 0) * stayDuration * (bookingDetails.guests || 1)
+    }, [activeMealPlanObj, stayDuration, bookingDetails.guests])
+
     // Real tax calculation from property settings
     const gstAmount = Math.round(subtotal * pricingSettings.gstPercent / 100 * 100) / 100
     const serviceChargeAmount = Math.round(subtotal * pricingSettings.serviceChargePercent / 100 * 100) / 100
     const luxuryTaxAmount = Math.round(subtotal * pricingSettings.luxuryTaxPercent / 100 * 100) / 100
     const totalBeforeDiscount = subtotal + gstAmount + serviceChargeAmount + luxuryTaxAmount
     const discountAmount = Math.round(totalBeforeDiscount * pricingSettings.defaultDiscountPercent / 100 * 100) / 100
-    const grandTotal = Math.round((totalBeforeDiscount - discountAmount) * 100) / 100
+    const grandTotal = Math.round((totalBeforeDiscount - discountAmount + mealPlanTotal) * 100) / 100
 
-    // Fetch pricing settings when session is ready
+    // Fetch pricing & meal plan settings when session is ready
     useEffect(() => {
         const propertyId = session?.user?.propertyId
         if (!propertyId) return
         fetch(`/api/admin/settings/financial?propertyId=${propertyId}`)
             .then(r => r.json())
             .then(j => { if (j.success && j.data) setPricingSettings(j.data) })
+            .catch(() => {})
+
+        fetch(`/api/admin/settings/meal-plans?propertyId=${propertyId}`)
+            .then(r => r.json())
+            .then(j => { if (j.success && j.data) setMealPlans(j.data) })
             .catch(() => {})
     }, [session?.user?.propertyId])
 
@@ -363,6 +381,7 @@ function NewBookingContent() {
                         source: bookingDetails.source,
                         notes: bookingDetails.notes,
                         specialRequests: bookingDetails.specialRequests,
+                        mealPlan: selectedMealPlan,
                     })
                 })
             ))
@@ -804,54 +823,58 @@ function NewBookingContent() {
 
             {/* SIDEBAR PREVIEW */}
             <div className="space-y-8">
-                <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-8 space-y-10 sticky top-24 shadow-2xl">
-                    <div>
-                        <div className="flex items-center justify-between mb-8">
+                <div className="bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 sticky top-24 max-h-[calc(100vh-7.5rem)] flex flex-col shadow-2xl overflow-hidden">
+                    {/* 1. Header (Fixed at top of card) */}
+                    <div className="pb-4 border-b border-white/10 shrink-0">
+                        <div className="flex items-center justify-between mb-4">
                             <h3 className="text-xl font-bold text-white tracking-tight">Booking Summary</h3>
-                            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">ID: #BK-9284</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">ID: #BK-9284</span>
                         </div>
-                        <div className="flex items-center gap-4 p-5 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
-                            <div className="relative w-14 h-14 rounded-full overflow-hidden border-2 border-white/10 bg-[#101922]">
+                        <div className="flex items-center gap-4 p-4 bg-black/30 rounded-2xl border border-white/5 shadow-inner">
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 bg-[#101922] shrink-0">
                                 <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedGuest?.name || 'guest'}`} alt="" fill unoptimized />
                             </div>
-                            <div>
-                                <p className="text-white font-bold text-lg leading-tight tracking-tight">{selectedGuest?.name || 'Harsh Vardhan'}</p>
-                                {selectedGuest?.isVIP && (
-                                    <p className="text-[10px] text-[#4A9EFF] font-bold uppercase tracking-widest flex items-center gap-1.5 mt-1">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-white font-bold text-base leading-tight tracking-tight truncate">{selectedGuest?.name || 'Guest'}</p>
+                                {selectedGuest?.isVIP ? (
+                                    <p className="text-[10px] text-[#4A9EFF] font-bold uppercase tracking-widest flex items-center gap-1 mt-1">
                                         <CheckCircle2 className="w-3.5 h-3.5" /> VIP RETURN
                                     </p>
+                                ) : (
+                                    <p className="text-[10px] text-gray-500 font-medium truncate mt-0.5">{selectedGuest?.phone || selectedGuest?.email || 'Guest Details'}</p>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    <div className="space-y-8">
-                        <div className="space-y-4">
-                            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">STAY DATES</p>
-                            <div className="grid grid-cols-1 gap-3">
-                                <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5">
-                                    <div>
-                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">Check-in</p>
-                                        <p className="text-sm text-white font-bold">{
-                                            bookingDetails.checkIn ?
-                                            new Date(bookingDetails.checkIn + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) :
-                                            'Not Selected'
-                                        }</p>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-xl bg-[#4A9EFF]/10 flex items-center justify-center border border-[#4A9EFF]/20">
-                                        <Clock className="w-5 h-5 text-[#4A9EFF]" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest text-right">Duration</p>
-                                        <p className="text-sm text-white font-bold text-right">{stayDuration} Nights</p>
-                                    </div>
+                    {/* 2. Scrollable Body Content (Scrolls internally if tall) */}
+                    <div className="flex-1 overflow-y-auto py-4 space-y-6 pr-2 custom-scrollbar">
+                        {/* STAY DATES */}
+                        <div className="space-y-3">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">STAY DATES</p>
+                            <div className="flex items-center justify-between p-4 bg-black/20 rounded-2xl border border-white/5 text-xs">
+                                <div>
+                                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">Check-in</p>
+                                    <p className="text-sm text-white font-bold">{
+                                        bookingDetails.checkIn ?
+                                        new Date(bookingDetails.checkIn + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) :
+                                        'Not Selected'
+                                    }</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-[#4A9EFF]/10 flex items-center justify-center border border-[#4A9EFF]/20 shrink-0">
+                                    <Clock className="w-5 h-5 text-[#4A9EFF]" />
+                                </div>
+                                <div>
+                                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest text-right">Duration</p>
+                                    <p className="text-sm text-white font-bold text-right">{stayDuration} Night{stayDuration > 1 ? 's' : ''}</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-4 pt-4 border-t border-white/5">
+                        {/* SELECTED ROOMS */}
+                        <div className="space-y-3 pt-3 border-t border-white/5">
                             <div className="flex items-center justify-between ml-1">
-                                <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">SELECTED ROOMS ({selectedRooms.length})</p>
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">SELECTED ROOMS ({selectedRooms.length})</p>
                                 <Plus className="w-3.5 h-3.5 text-[#4A9EFF]" />
                             </div>
                             {selectedRooms.length > 0 ? (
@@ -886,7 +909,6 @@ function NewBookingContent() {
                                                     </div>
                                                 </div>
 
-                                                {/* Custom Nightly Price Editor */}
                                                 <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[10px]">
                                                     <span className="text-gray-400 font-bold flex items-center gap-1">
                                                         <Edit2 className="w-3 h-3 text-[#4A9EFF]" /> Nightly Rate:
@@ -933,56 +955,110 @@ function NewBookingContent() {
                             )}
                         </div>
 
-                        <div className="space-y-4 pt-4 border-t border-white/5">
-                            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest ml-1">SPECIAL REQUESTS</p>
+                        {/* MEAL PLAN */}
+                        <div className="space-y-3 pt-3 border-t border-white/5">
+                            <div className="flex items-center justify-between ml-1">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">MEAL PLAN (EP / CP / MAP / AP)</p>
+                                {mealPlanTotal > 0 && (
+                                    <span className="text-[10px] font-bold text-[#4A9EFF]">+₹{mealPlanTotal.toLocaleString('en-IN')}</span>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { type: 'EP', label: 'EP', sub: 'Room Only', price: 0 },
+                                    { type: 'CP', label: 'CP', sub: 'Breakfast Included', price: mealPlans.find(m => m.type === 'CP')?.pricePerDay ?? 500 },
+                                    { type: 'MAP', label: 'MAP', sub: 'Bfst + Dinner', price: mealPlans.find(m => m.type === 'MAP')?.pricePerDay ?? 1200 },
+                                    { type: 'AP', label: 'AP', sub: 'All 3 Meals', price: mealPlans.find(m => m.type === 'AP')?.pricePerDay ?? 1800 },
+                                ].map(plan => {
+                                    const isSel = selectedMealPlan === plan.type
+                                    return (
+                                        <button
+                                            key={plan.type}
+                                            type="button"
+                                            onClick={() => setSelectedMealPlan(plan.type)}
+                                            className={cn(
+                                                "p-3 rounded-xl border text-left transition-all relative overflow-hidden",
+                                                isSel
+                                                    ? "bg-[#4A9EFF]/15 border-[#4A9EFF] text-white shadow-lg shadow-[#4A9EFF]/10"
+                                                    : "bg-black/30 border-white/5 text-gray-400 hover:border-white/10"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-xs text-white">{plan.label}</span>
+                                                <span className="text-[10px] font-mono text-[#4A9EFF]">
+                                                    {plan.price > 0 ? `+₹${plan.price}/d` : 'Free'}
+                                                </span>
+                                            </div>
+                                            <p className="text-[9px] text-gray-500 font-medium truncate mt-0.5">{plan.sub}</p>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* SPECIAL REQUESTS */}
+                        <div className="space-y-3 pt-3 border-t border-white/5">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">SPECIAL REQUESTS</p>
                             <textarea
                                 value={bookingDetails.specialRequests}
                                 onChange={(e) => setBookingDetails({ ...bookingDetails, specialRequests: e.target.value })}
-                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-6 text-[13px] font-bold text-gray-300 min-h-[120px] resize-none outline-none focus:border-[#4A9EFF] shadow-inner"
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs font-bold text-gray-300 min-h-[90px] resize-none outline-none focus:border-[#4A9EFF] shadow-inner"
                                 placeholder="Add guest preferences or allergies..."
                             />
                         </div>
+
+                        {/* FINANCIAL BREAKDOWN */}
+                        <div className="space-y-2 pt-3 border-t border-white/5 text-xs font-semibold">
+                            <div className="flex items-center justify-between text-gray-400">
+                                <span>Room Charges ({stayDuration} nt)</span>
+                                <span className="text-white">₹{subtotal.toLocaleString('en-IN')}</span>
+                            </div>
+                            {mealPlanTotal > 0 && (
+                                <div className="flex items-center justify-between text-gray-400">
+                                    <span>Meal Plan ({selectedMealPlan})</span>
+                                    <span className="text-[#4A9EFF]">+₹{mealPlanTotal.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {gstAmount > 0 && (
+                                <div className="flex items-center justify-between text-gray-400">
+                                    <span>GST ({pricingSettings.gstPercent}%)</span>
+                                    <span className="text-white">+₹{gstAmount.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {serviceChargeAmount > 0 && (
+                                <div className="flex items-center justify-between text-gray-400">
+                                    <span>Service Charge ({pricingSettings.serviceChargePercent}%)</span>
+                                    <span className="text-white">+₹{serviceChargeAmount.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {luxuryTaxAmount > 0 && (
+                                <div className="flex items-center justify-between text-gray-400">
+                                    <span>Luxury Tax ({pricingSettings.luxuryTaxPercent}%)</span>
+                                    <span className="text-white">+₹{luxuryTaxAmount.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {discountAmount > 0 && (
+                                <div className="flex items-center justify-between text-gray-400">
+                                    <span>{pricingSettings.discountLabel} ({pricingSettings.defaultDiscountPercent}%)</span>
+                                    <span className="text-emerald-400">-₹{discountAmount.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="pt-10 space-y-3 border-t border-white/10">
-                        <div className="flex items-center justify-between text-gray-600 font-bold uppercase tracking-widest text-[10px]">
-                            <span>Room Charges ({stayDuration} night{stayDuration > 1 ? 's' : ''})</span>
-                            <span className="text-white text-sm">₹{subtotal.toLocaleString('en-IN')}</span>
-                        </div>
-                        {gstAmount > 0 && (
-                            <div className="flex items-center justify-between text-gray-600 font-bold uppercase tracking-widest text-[10px]">
-                                <span>GST ({pricingSettings.gstPercent}%)</span>
-                                <span className="text-white text-sm">+₹{gstAmount.toLocaleString('en-IN')}</span>
-                            </div>
-                        )}
-                        {serviceChargeAmount > 0 && (
-                            <div className="flex items-center justify-between text-gray-600 font-bold uppercase tracking-widest text-[10px]">
-                                <span>Service Charge ({pricingSettings.serviceChargePercent}%)</span>
-                                <span className="text-white text-sm">+₹{serviceChargeAmount.toLocaleString('en-IN')}</span>
-                            </div>
-                        )}
-                        {luxuryTaxAmount > 0 && (
-                            <div className="flex items-center justify-between text-gray-600 font-bold uppercase tracking-widest text-[10px]">
-                                <span>Luxury Tax ({pricingSettings.luxuryTaxPercent}%)</span>
-                                <span className="text-white text-sm">+₹{luxuryTaxAmount.toLocaleString('en-IN')}</span>
-                            </div>
-                        )}
-                        {discountAmount > 0 && (
-                            <div className="flex items-center justify-between text-gray-600 font-bold uppercase tracking-widest text-[10px]">
-                                <span>{pricingSettings.discountLabel} ({pricingSettings.defaultDiscountPercent}%)</span>
-                                <span className="text-emerald-400 text-sm">-₹{discountAmount.toLocaleString('en-IN')}</span>
-                            </div>
-                        )}
-                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                            <span className="text-xl font-bold text-white tracking-tight uppercase">Total</span>
-                            <span className="text-2xl font-bold text-[#4A9EFF] tracking-tight leading-none">₹{grandTotal.toLocaleString('en-IN')}</span>
+                    {/* 3. Footer Action Section (Pinned to bottom of card, ALWAYS visible on screen) */}
+                    <div className="pt-4 border-t border-white/10 shrink-0 bg-[#0d151c]/90 backdrop-blur-md space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-white tracking-tight uppercase">Total</span>
+                            <span className="text-2xl font-black text-[#4A9EFF] tracking-tight leading-none">₹{grandTotal.toLocaleString('en-IN')}</span>
                         </div>
                         <button
-                            className="w-full h-14 bg-[#4A9EFF] hover:bg-[#3A8EEF] rounded-xl text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-xl shadow-[#4A9EFF]/20 mt-6 active:scale-95"
+                            className="w-full h-14 bg-[#4A9EFF] hover:bg-[#3A8EEF] disabled:bg-gray-800 disabled:text-gray-600 disabled:opacity-50 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-3 transition-all shadow-xl shadow-[#4A9EFF]/20 active:scale-95 cursor-pointer"
                             onClick={() => setCurrentStep(2)}
                             disabled={selectedRooms.length === 0}
                         >
-                            Review & Finalize <ArrowRight className="w-5 h-5 stroke-[2.5px]" />
+                            <span>Review & Finalize</span>
+                            <ArrowRight className="w-5 h-5 stroke-[2.5px]" />
                         </button>
                     </div>
                 </div>

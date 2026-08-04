@@ -180,6 +180,7 @@ model Property {
   lostItems       LostItem[]       @relation("PropertyToLostItem")
   dashboardServices DashboardService[] @relation("PropertyToDashboardService")
   otaConnections  OtaConnection[]  @relation("PropertyToOtaConnection")
+  mealPlans       MealPlan[]       @relation("PropertyToMealPlan")
 
   @@map("properties")
 }
@@ -284,6 +285,10 @@ model Booking {
   discountAmount     Float?   // Discount amount
   finalAmount        Float?   // totalAmount after all taxes & discounts
   guestGstNumber     String?  // Guest GSTIN for B2B tax invoice
+
+  // Meal plan
+  mealPlan        String?  // EP, CP, MAP, AP
+  mealPlanAmount  Float?   // Total meal plan cost (pricePerDay × nights)
 
   specialRequests String?
   notes           String?
@@ -1373,4 +1378,33 @@ model CafeOrder {
   @@map("cafe_orders")
 }
 
+// ========================================
+// MEAL PLANS (EP / CP / MAP / AP)
+// ========================================
 
+model MealPlan {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String   @db.ObjectId
+  property    Property @relation("PropertyToMealPlan", fields: [propertyId], references: [id], onDelete: Cascade)
+
+  type        String   // EP, CP, MAP, AP
+  name        String   // European Plan, Continental Plan, etc.
+  description String?
+
+  // Per-day pricing
+  pricePerDay Float    @default(0)
+
+  // Which meals are included
+  includesBreakfast Boolean @default(false)
+  includesLunch     Boolean @default(false)
+  includesDinner    Boolean @default(false)
+
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([propertyId, type])
+  @@index([propertyId])
+  @@map("meal_plans")
+}

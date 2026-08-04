@@ -54,7 +54,13 @@ const navItems: Omit<NavItem, 'badge'>[] = [
   { label: 'Front Desk',           icon: <ClipboardCheck className="w-[18px] h-[18px]" />,  href: '/admin/checkin',              featureKey: 'checkin' },
   { label: 'Amenities',            icon: <Sparkles className="w-[18px] h-[18px]" />,         href: '/admin/content/amenities',    featureKey: 'content' },
   { label: 'Food & Beverage Menu', icon: <UtensilsCrossed className="w-[18px] h-[18px]" />, href: '/admin/content/menu',         featureKey: 'content' },
-  { label: 'Hotel Cafe',           icon: <Coffee className="w-[18px] h-[18px]" />,          href: '/admin/cafe',                 featureKey: 'services' },
+  { label: 'Hotel Cafe',           icon: <Coffee className="w-[18px] h-[18px]" />,          href: '/admin/cafe',                 featureKey: 'services',
+    subItems: [
+      { label: 'Cafe Menu',      icon: <UtensilsCrossed className="w-[14px] h-[14px]" />, href: '/admin/cafe',           featureKey: 'services' },
+      { label: 'Cafe Orders',    icon: <Clock className="w-[14px] h-[14px]" />,            href: '/admin/cafe/orders',    featureKey: 'services' },
+      { label: 'Cafe Analytics', icon: <BarChart3 className="w-[14px] h-[14px]" />,        href: '/admin/cafe/analytics', featureKey: 'services' },
+    ]
+  },
   { label: 'Guests',               icon: <Users className="w-[18px] h-[18px]" />,            href: '/admin/guests',               featureKey: 'guests' },
   { label: 'Rooms',                icon: <BedDouble className="w-[18px] h-[18px]" />,        href: '/admin/rooms',                featureKey: 'rooms' },
   { label: 'Room Occupancy',       icon: <Building2 className="w-[18px] h-[18px]" />,        href: '/admin/occupancy',            featureKey: 'rooms' },
