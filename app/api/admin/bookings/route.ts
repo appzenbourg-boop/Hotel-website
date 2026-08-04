@@ -106,7 +106,11 @@ export async function POST(request: NextRequest) {
             return badRequest('Missing property ID context')
         }
 
-        const { guestId, roomId, checkIn, checkOut, numberOfGuests, totalAmount, source, discountPercent: manualDiscount, mealPlan: mealPlanType } = body
+        const { 
+            guestId, roomId, checkIn, checkOut, numberOfGuests, totalAmount, source, 
+            discountPercent: manualDiscount, mealPlan: mealPlanType, mealPlanPricePerDay: customMealPlanRate,
+            extraAddons: inputExtraAddons
+        } = body
 
         if (!guestId || !roomId || !checkIn || !checkOut) {
             return badRequest('guestId, roomId, checkIn and checkOut are required')
@@ -156,26 +160,43 @@ export async function POST(request: NextRequest) {
         // Calculate meal plan amount
         let mealPlanAmount = 0
         let resolvedMealPlan: string | null = null
+        let mealPlanPricePerDay: number | null = null
+
         if (mealPlanType && mealPlanType !== 'EP') {
-            try {
-                const mealPlan = await prisma.mealPlan.findUnique({
-                    where: {
-                        propertyId_type: {
-                            propertyId: propertyId!,
-                            type: mealPlanType,
+            resolvedMealPlan = mealPlanType
+            if (typeof customMealPlanRate === 'number') {
+                mealPlanPricePerDay = customMealPlanRate
+                mealPlanAmount = customMealPlanRate * nights * (numberOfGuests ?? 1)
+            } else {
+                try {
+                    const mealPlan = await prisma.mealPlan.findUnique({
+                        where: {
+                            propertyId_type: {
+                                propertyId: propertyId!,
+                                type: mealPlanType,
+                            },
                         },
-                    },
-                })
-                if (mealPlan && mealPlan.isActive) {
-                    mealPlanAmount = mealPlan.pricePerDay * nights * (numberOfGuests ?? 1)
-                    resolvedMealPlan = mealPlanType
-                }
-            } catch { /* MealPlan may not exist yet */ }
+                    })
+                    if (mealPlan && mealPlan.isActive) {
+                        mealPlanPricePerDay = mealPlan.pricePerDay
+                        mealPlanAmount = mealPlan.pricePerDay * nights * (numberOfGuests ?? 1)
+                    }
+                } catch { /* MealPlan may not exist yet */ }
+            }
         } else if (mealPlanType === 'EP') {
             resolvedMealPlan = 'EP'
+            mealPlanPricePerDay = 0
         }
 
-        // Apply pricing (on room cost only — meal plan is added separately)
+        // Extra add-ons calculation
+        let extraAddonsAmount = 0
+        let extraAddonsJson: any = null
+        if (Array.isArray(inputExtraAddons) && inputExtraAddons.length > 0) {
+            extraAddonsJson = inputExtraAddons
+            extraAddonsAmount = inputExtraAddons.reduce((sum: number, item: any) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 1)), 0)
+        }
+
+        // Apply pricing (on room cost only — meal plan & extra add-ons added separately)
         const pricing = calculatePricing(baseAmount, pricingSettings, manualDiscount)
 
         const booking = await prisma.booking.create({
@@ -186,7 +207,7 @@ export async function POST(request: NextRequest) {
                 checkIn: new Date(checkIn),
                 checkOut: new Date(checkOut),
                 numberOfGuests: numberOfGuests ?? 1,
-                totalAmount: pricing.totalAmount + mealPlanAmount,
+                totalAmount: pricing.totalAmount + mealPlanAmount + extraAddonsAmount,
                 // Tax breakdown
                 baseAmount: pricing.baseAmount,
                 gstPercent: pricing.gstPercent,
@@ -197,10 +218,14 @@ export async function POST(request: NextRequest) {
                 luxuryTaxAmount: pricing.luxuryTaxAmount,
                 discountPercent: pricing.discountPercent,
                 discountAmount: pricing.discountAmount,
-                finalAmount: pricing.finalAmount + mealPlanAmount,
+                finalAmount: pricing.finalAmount + mealPlanAmount + extraAddonsAmount,
                 // Meal plan
                 mealPlan: resolvedMealPlan,
+                mealPlanPricePerDay: mealPlanPricePerDay,
                 mealPlanAmount: mealPlanAmount > 0 ? mealPlanAmount : null,
+                // Extra add-ons
+                extraAddons: extraAddonsJson,
+                extraAddonsAmount: extraAddonsAmount > 0 ? extraAddonsAmount : null,
                 status: 'RESERVED',
                 source: source ?? 'DIRECT',
             },
@@ -222,7 +247,7 @@ export async function POST(request: NextRequest) {
                 roomNumber: booking.room.roomNumber,
                 checkIn: checkInStr,
                 checkOut: checkOutStr,
-                totalAmount: `₹${totalAmount ?? 0}`,
+                totalAmount: `₹${booking.finalAmount ?? booking.totalAmount ?? 0}`,
                 hotelName: (booking as any).property?.name ?? 'Zenbourg',
             }).catch(() => {})
         }
@@ -237,5 +262,97 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, data: booking }, { status: 201 })
     } catch (error) {
         return serverError(error, 'BOOKINGS_POST')
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    const session = await getServerSession(authOptions)
+    if (!session) return unauthorized()
+
+    try {
+        const body = await request.json()
+        const { bookingId, mealPlan: mealPlanType, mealPlanPricePerDay: customMealPlanRate, extraAddons: inputExtraAddons } = body
+
+        if (!bookingId) return badRequest('bookingId is required')
+
+        const existing = await prisma.booking.findUnique({
+            where: { id: bookingId }
+        })
+        if (!existing) return badRequest('Booking not found')
+
+        const nights = Math.max(1, differenceInCalendarDays(new Date(existing.checkOut), new Date(existing.checkIn)))
+        const guests = existing.numberOfGuests || 1
+
+        let mealPlanAmount = 0
+        let resolvedMealPlan: string | null = existing.mealPlan
+        let mealPlanPricePerDay: number | null = existing.mealPlanPricePerDay
+
+        if (mealPlanType !== undefined) {
+            resolvedMealPlan = mealPlanType
+            if (mealPlanType === 'EP') {
+                mealPlanAmount = 0
+                mealPlanPricePerDay = 0
+            } else if (typeof customMealPlanRate === 'number') {
+                mealPlanPricePerDay = customMealPlanRate
+                mealPlanAmount = customMealPlanRate * nights * guests
+            } else {
+                try {
+                    const mealPlan = await prisma.mealPlan.findUnique({
+                        where: { propertyId_type: { propertyId: existing.propertyId!, type: mealPlanType } },
+                    })
+                    if (mealPlan) {
+                        mealPlanPricePerDay = mealPlan.pricePerDay
+                        mealPlanAmount = mealPlan.pricePerDay * nights * guests
+                    }
+                } catch {}
+            }
+        } else {
+            mealPlanAmount = existing.mealPlanAmount || 0
+        }
+
+        let extraAddonsAmount = existing.extraAddonsAmount || 0
+        let extraAddonsJson: any = existing.extraAddons
+        if (inputExtraAddons !== undefined) {
+            if (Array.isArray(inputExtraAddons)) {
+                extraAddonsJson = inputExtraAddons
+                extraAddonsAmount = inputExtraAddons.reduce((sum: number, item: any) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 1)), 0)
+            } else {
+                extraAddonsJson = null
+                extraAddonsAmount = 0
+            }
+        }
+
+        const baseTotal = existing.baseAmount || existing.totalAmount || 0
+        const pricingSettings = {
+            gstPercent: existing.gstPercent || 0,
+            serviceChargePercent: existing.serviceChargePercent || 0,
+            luxuryTaxPercent: existing.luxuryTaxPercent || 0,
+            defaultDiscountPercent: existing.discountPercent || 0,
+        }
+        const pricing = calculatePricing(baseTotal, pricingSettings, existing.discountPercent || 0)
+        
+        const newTotalAmount = pricing.totalAmount + mealPlanAmount + extraAddonsAmount
+        const newFinalAmount = pricing.finalAmount + mealPlanAmount + extraAddonsAmount
+
+        const updated = await prisma.booking.update({
+            where: { id: bookingId },
+            data: {
+                mealPlan: resolvedMealPlan,
+                mealPlanPricePerDay,
+                mealPlanAmount: mealPlanAmount > 0 ? mealPlanAmount : null,
+                extraAddons: extraAddonsJson,
+                extraAddonsAmount: extraAddonsAmount > 0 ? extraAddonsAmount : null,
+                totalAmount: newTotalAmount,
+                finalAmount: newFinalAmount,
+            },
+            include: {
+                guest: { select: { name: true, phone: true, email: true } },
+                room: { select: { roomNumber: true, type: true } },
+            }
+        })
+
+        return NextResponse.json({ success: true, data: updated })
+    } catch (error) {
+        return serverError(error, 'BOOKINGS_PUT')
     }
 }

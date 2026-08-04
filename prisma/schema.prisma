@@ -287,8 +287,13 @@ model Booking {
   guestGstNumber     String?  // Guest GSTIN for B2B tax invoice
 
   // Meal plan
-  mealPlan        String?  // EP, CP, MAP, AP
-  mealPlanAmount  Float?   // Total meal plan cost (pricePerDay × nights)
+  mealPlan            String?  // EP, CP, MAP, AP
+  mealPlanPricePerDay Float?   // Per-day price override
+  mealPlanAmount      Float?   // Total meal plan cost (pricePerDay × nights)
+
+  // Extra add-ons & requests (extra bed, extra mattress, custom services)
+  extraAddons         Json?    // Array of { id, name, price, qty }
+  extraAddonsAmount   Float?   @default(0)
 
   specialRequests String?
   notes           String?

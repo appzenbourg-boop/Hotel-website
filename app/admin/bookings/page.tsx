@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { startOfWeek, addDays, format, differenceInDays, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Star, Download, Loader2, Calendar, FileText, Printer, Banknote, CreditCard, Smartphone, Building2, HelpCircle, X, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Star, Download, Loader2, Calendar, FileText, Printer, Banknote, CreditCard, Smartphone, Building2, HelpCircle, X, ArrowRight, UtensilsCrossed, Edit2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CheckCircle2, LogOut, XCircle } from 'lucide-react'
@@ -102,6 +102,57 @@ export default function BookingsPage() {
   const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'CASH' | 'CARD' | 'ONLINE' | 'CORPORATE_CLEARANCE' | 'OTHER'>('CASH')
   const [checkoutPaidAmount, setCheckoutPaidAmount] = useState<string>('')
   const [checkoutNotes, setCheckoutNotes] = useState<string>('')
+
+  // Edit Meal Plan & Add-ons Modal State
+  const [showMealPlanModal, setShowMealPlanModal] = useState(false)
+  const [editMealPlanType, setEditMealPlanType] = useState('EP')
+  const [editMealPlanRate, setEditMealPlanRate] = useState(0)
+  const [editExtraAddons, setEditExtraAddons] = useState<any[]>([])
+  const [newAddonName, setNewAddonName] = useState('')
+  const [newAddonPrice, setNewAddonPrice] = useState('')
+
+  const handleSaveMealPlanAndAddons = async () => {
+    if (!selectedBooking) return
+    setIsUpdating(true)
+    try {
+      const res = await fetch('/api/admin/bookings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: selectedBooking.id,
+          mealPlan: editMealPlanType,
+          mealPlanPricePerDay: editMealPlanRate,
+          extraAddons: editExtraAddons.filter((a: any) => (a.qty > 0 || a.price > 0) && a.name),
+        })
+      })
+      const json = await res.json()
+      if (json.success) {
+        toast.success("Meal plan & extra add-ons updated successfully!")
+        setShowMealPlanModal(false)
+        if (typeof (window as any).refreshBookingsData === 'function') {
+          (window as any).refreshBookingsData()
+        }
+        if (selectedBooking) {
+          setSelectedBooking((prev: any) => ({
+            ...prev,
+            mealPlan: json.data.mealPlan,
+            mealPlanPricePerDay: json.data.mealPlanPricePerDay,
+            mealPlanAmount: json.data.mealPlanAmount,
+            extraAddons: json.data.extraAddons,
+            extraAddonsAmount: json.data.extraAddonsAmount,
+            totalAmount: json.data.totalAmount,
+            finalAmount: json.data.finalAmount,
+          }))
+        }
+      } else {
+        toast.error(json.error || "Failed to update meal plan")
+      }
+    } catch {
+      toast.error("Failed to update meal plan")
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   const startDate = useMemo(() => {
     let start: Date
@@ -806,10 +857,19 @@ export default function BookingsPage() {
                       Request Extension
                     </button>
                     <button
-                      onClick={() => toast.info('Bill splitting is currently in settlement mode.')}
-                      className="col-span-2 flex items-center justify-center gap-2 py-2.5 bg-white/[0.05] hover:bg-white/[0.1] text-gray-400 text-xs font-bold rounded-xl border border-white/[0.1] transition-all"
+                      onClick={() => {
+                        setEditMealPlanType(selectedBooking.mealPlan || 'EP')
+                        setEditMealPlanRate(selectedBooking.mealPlanPricePerDay || (selectedBooking.mealPlan === 'CP' ? 500 : selectedBooking.mealPlan === 'MAP' ? 1200 : selectedBooking.mealPlan === 'AP' ? 1800 : 0))
+                        setEditExtraAddons(Array.isArray(selectedBooking.extraAddons) ? selectedBooking.extraAddons : [
+                          { id: 'extra_bed', name: 'Extra Bed', price: 500, qty: 0 },
+                          { id: 'extra_mattress', name: 'Extra Mattress', price: 300, qty: 0 },
+                        ])
+                        setShowMealPlanModal(true)
+                      }}
+                      className="col-span-2 flex items-center justify-center gap-2 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold rounded-xl border border-amber-500/20 transition-all cursor-pointer"
                     >
-                      Split Bill / Settlement
+                      <UtensilsCrossed className="w-4 h-4" />
+                      Edit Meal Plan (EP/CP/MAP/AP) & Add-ons
                     </button>
                   </div>
                 </div>
@@ -912,6 +972,172 @@ export default function BookingsPage() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Meal Plan & Add-ons Modal */}
+      {showMealPlanModal && selectedBooking && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowMealPlanModal(false)} />
+          <div className="relative w-full max-w-lg bg-[#182433] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <UtensilsCrossed className="w-5 h-5 text-amber-400" /> Edit Meal Plan & Add-ons
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">Guest: <span className="text-white font-bold">{selectedBooking.guest?.name || selectedBooking.guest}</span> (Room {selectedBooking.room?.roomNumber || selectedBooking.room})</p>
+              </div>
+              <button onClick={() => setShowMealPlanModal(false)} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-all">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+              {/* Meal Plan Select */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Select Meal Plan</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { type: 'EP', label: 'EP', desc: 'Room Only', price: 0 },
+                    { type: 'CP', label: 'CP', desc: 'Breakfast Included', price: 500 },
+                    { type: 'MAP', label: 'MAP', desc: 'Breakfast + Dinner', price: 1200 },
+                    { type: 'AP', label: 'AP', desc: 'All 3 Meals', price: 1800 },
+                  ].map(plan => (
+                    <button
+                      key={plan.type}
+                      type="button"
+                      onClick={() => {
+                        setEditMealPlanType(plan.type)
+                        setEditMealPlanRate(plan.price)
+                      }}
+                      className={cn(
+                        "p-3 rounded-xl border text-left transition-all cursor-pointer",
+                        editMealPlanType === plan.type
+                          ? "bg-amber-500/15 border-amber-500 text-white shadow-lg shadow-amber-500/10"
+                          : "bg-black/30 border-white/5 text-gray-400 hover:border-white/10"
+                      )}
+                    >
+                      <div className="flex items-center justify-between font-bold text-xs">
+                        <span className="text-white">{plan.label}</span>
+                        <span className="text-amber-400 font-mono">{plan.price > 0 ? `₹${plan.price}/d` : 'Free'}</span>
+                      </div>
+                      <p className="text-[9px] text-gray-500 truncate mt-0.5">{plan.desc}</p>
+                    </button>
+                  ))}
+                </div>
+
+                {editMealPlanType !== 'EP' && (
+                  <div className="p-3 bg-black/40 border border-white/10 rounded-xl flex items-center justify-between text-xs mt-2">
+                    <span className="text-gray-400 font-medium">Per-day Rate (₹/guest):</span>
+                    <div className="flex items-center gap-1 bg-black/60 border border-white/15 rounded-lg px-2 py-1">
+                      <span className="text-amber-400 font-bold">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editMealPlanRate}
+                        onChange={(e) => setEditMealPlanRate(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="w-20 bg-transparent text-right font-mono font-bold text-white outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Extra Requests & Add-ons */}
+              <div className="space-y-3 pt-3 border-t border-white/10">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Extra Requests & Add-ons (Extra Bed, Mattress, etc.)</label>
+                <div className="space-y-2">
+                  {editExtraAddons.map((item: any, idx: number) => (
+                    <div key={idx} className="p-3 bg-black/30 border border-white/5 rounded-xl flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">{item.name}</p>
+                        <div className="flex items-center gap-1 mt-1 text-[10px]">
+                          <span className="text-gray-500">Rate: ₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.price}
+                            onChange={(e) => {
+                              const p = Math.max(0, parseFloat(e.target.value) || 0)
+                              setEditExtraAddons((prev: any[]) => prev.map((a, i) => i === idx ? { ...a, price: p } : a))
+                            }}
+                            className="w-16 bg-black/60 border border-white/10 rounded px-1.5 py-0.5 text-right font-mono text-white text-[10px]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 bg-black/60 border border-white/10 rounded-lg p-1">
+                        <button
+                          type="button"
+                          onClick={() => setEditExtraAddons((prev: any[]) => prev.map((a, i) => i === idx ? { ...a, qty: Math.max(0, a.qty - 1) } : a))}
+                          className="w-5 h-5 rounded bg-white/5 text-white font-bold text-xs flex items-center justify-center hover:bg-white/10"
+                        >-</button>
+                        <span className="text-xs font-bold text-white w-4 text-center">{item.qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditExtraAddons((prev: any[]) => prev.map((a, i) => i === idx ? { ...a, qty: a.qty + 1 } : a))}
+                          className="w-5 h-5 rounded bg-amber-500/20 text-amber-400 font-bold text-xs flex items-center justify-center hover:bg-amber-500/30"
+                        >+</button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add Custom Add-on */}
+                  <div className="p-3 bg-black/20 border border-dashed border-white/10 rounded-xl space-y-2">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Add Custom Add-on / Fee</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Item Name (e.g. Extra Bed)"
+                        value={newAddonName}
+                        onChange={(e) => setNewAddonName(e.target.value)}
+                        className="flex-1 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none"
+                      />
+                      <input
+                        type="number"
+                        placeholder="₹ Rate"
+                        value={newAddonPrice}
+                        onChange={(e) => setNewAddonPrice(e.target.value)}
+                        className="w-20 bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newAddonName) return toast.error("Enter item name")
+                          const price = parseFloat(newAddonPrice) || 0
+                          setEditExtraAddons((prev: any[]) => [...prev, { id: `addon_${Date.now()}`, name: newAddonName, price, qty: 1 }])
+                          setNewAddonName('')
+                          setNewAddonPrice('')
+                        }}
+                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs rounded-lg transition-all"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-black/30 border-t border-white/10 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowMealPlanModal(false)}
+                className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isUpdating}
+                onClick={handleSaveMealPlanAndAddons}
+                className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs rounded-xl shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

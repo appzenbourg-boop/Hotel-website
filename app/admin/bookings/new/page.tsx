@@ -74,6 +74,15 @@ function NewBookingContent() {
     // Meal plans state
     const [mealPlans, setMealPlans] = useState<any[]>([])
     const [selectedMealPlan, setSelectedMealPlan] = useState<string>('EP')
+    const [customMealPlanRates, setCustomMealPlanRates] = useState<Record<string, number>>({})
+
+    // Extra Add-ons state (Extra Bed, Extra Mattress, Custom Add-ons)
+    const [extraAddons, setExtraAddons] = useState<Array<{ id: string; name: string; price: number; qty: number }>>([
+        { id: 'extra_bed', name: 'Extra Bed', price: 500, qty: 0 },
+        { id: 'extra_mattress', name: 'Extra Mattress', price: 300, qty: 0 },
+    ])
+    const [customAddonName, setCustomAddonName] = useState('')
+    const [customAddonPrice, setCustomAddonPrice] = useState('')
 
     // Filter state
     const [roomTypeFilter, setRoomTypeFilter] = useState('All Rooms')
@@ -285,10 +294,20 @@ function NewBookingContent() {
         return mealPlans.find(mp => mp.type === selectedMealPlan)
     }, [mealPlans, selectedMealPlan])
 
+    const activeMealPlanRate = useMemo(() => {
+        if (selectedMealPlan === 'EP') return 0
+        if (customMealPlanRates[selectedMealPlan] !== undefined) return customMealPlanRates[selectedMealPlan]
+        return activeMealPlanObj?.pricePerDay ?? (selectedMealPlan === 'CP' ? 500 : selectedMealPlan === 'MAP' ? 1200 : 1800)
+    }, [selectedMealPlan, customMealPlanRates, activeMealPlanObj])
+
     const mealPlanTotal = useMemo(() => {
-        if (!activeMealPlanObj || activeMealPlanObj.type === 'EP') return 0
-        return (activeMealPlanObj.pricePerDay || 0) * stayDuration * (bookingDetails.guests || 1)
-    }, [activeMealPlanObj, stayDuration, bookingDetails.guests])
+        if (selectedMealPlan === 'EP') return 0
+        return activeMealPlanRate * stayDuration * (bookingDetails.guests || 1)
+    }, [selectedMealPlan, activeMealPlanRate, stayDuration, bookingDetails.guests])
+
+    const extraAddonsTotal = useMemo(() => {
+        return extraAddons.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 0)), 0)
+    }, [extraAddons])
 
     // Real tax calculation from property settings
     const gstAmount = Math.round(subtotal * pricingSettings.gstPercent / 100 * 100) / 100
@@ -296,7 +315,7 @@ function NewBookingContent() {
     const luxuryTaxAmount = Math.round(subtotal * pricingSettings.luxuryTaxPercent / 100 * 100) / 100
     const totalBeforeDiscount = subtotal + gstAmount + serviceChargeAmount + luxuryTaxAmount
     const discountAmount = Math.round(totalBeforeDiscount * pricingSettings.defaultDiscountPercent / 100 * 100) / 100
-    const grandTotal = Math.round((totalBeforeDiscount - discountAmount + mealPlanTotal) * 100) / 100
+    const grandTotal = Math.round((totalBeforeDiscount - discountAmount + mealPlanTotal + extraAddonsTotal) * 100) / 100
 
     // Fetch pricing & meal plan settings when session is ready
     useEffect(() => {
@@ -382,6 +401,9 @@ function NewBookingContent() {
                         notes: bookingDetails.notes,
                         specialRequests: bookingDetails.specialRequests,
                         mealPlan: selectedMealPlan,
+                        mealPlanPricePerDay: activeMealPlanRate,
+                        extraAddons: extraAddons.filter(a => (a.qty > 0 || a.price > 0) && a.name),
+                        extraAddonsAmount: extraAddonsTotal,
                     })
                 })
             ))
@@ -965,12 +987,13 @@ function NewBookingContent() {
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 {[
-                                    { type: 'EP', label: 'EP', sub: 'Room Only', price: 0 },
-                                    { type: 'CP', label: 'CP', sub: 'Breakfast Included', price: mealPlans.find(m => m.type === 'CP')?.pricePerDay ?? 500 },
-                                    { type: 'MAP', label: 'MAP', sub: 'Bfst + Dinner', price: mealPlans.find(m => m.type === 'MAP')?.pricePerDay ?? 1200 },
-                                    { type: 'AP', label: 'AP', sub: 'All 3 Meals', price: mealPlans.find(m => m.type === 'AP')?.pricePerDay ?? 1800 },
+                                    { type: 'EP', label: 'EP', sub: 'Room Only', defaultPrice: 0 },
+                                    { type: 'CP', label: 'CP', sub: 'Breakfast Included', defaultPrice: mealPlans.find(m => m.type === 'CP')?.pricePerDay ?? 500 },
+                                    { type: 'MAP', label: 'MAP', sub: 'Bfst + Dinner', defaultPrice: mealPlans.find(m => m.type === 'MAP')?.pricePerDay ?? 1200 },
+                                    { type: 'AP', label: 'AP', sub: 'All 3 Meals', defaultPrice: mealPlans.find(m => m.type === 'AP')?.pricePerDay ?? 1800 },
                                 ].map(plan => {
                                     const isSel = selectedMealPlan === plan.type
+                                    const currentRate = customMealPlanRates[plan.type] ?? plan.defaultPrice
                                     return (
                                         <button
                                             key={plan.type}
@@ -986,7 +1009,7 @@ function NewBookingContent() {
                                             <div className="flex items-center justify-between">
                                                 <span className="font-bold text-xs text-white">{plan.label}</span>
                                                 <span className="text-[10px] font-mono text-[#4A9EFF]">
-                                                    {plan.price > 0 ? `+₹${plan.price}/d` : 'Free'}
+                                                    {currentRate > 0 ? `+₹${currentRate}/d` : 'Free'}
                                                 </span>
                                             </div>
                                             <p className="text-[9px] text-gray-500 font-medium truncate mt-0.5">{plan.sub}</p>
@@ -994,15 +1017,126 @@ function NewBookingContent() {
                                     )
                                 })}
                             </div>
+
+                            {selectedMealPlan !== 'EP' && (
+                                <div className="p-3 bg-black/40 border border-white/10 rounded-xl space-y-1.5 mt-2">
+                                    <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-gray-400 font-bold flex items-center gap-1">
+                                            <Edit2 className="w-3 h-3 text-[#4A9EFF]" /> {selectedMealPlan} Rate per guest / day:
+                                        </span>
+                                        <div className="flex items-center gap-1 bg-black/80 border border-white/15 rounded-lg px-2 py-0.5">
+                                            <span className="text-[#4A9EFF] font-bold">₹</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={activeMealPlanRate}
+                                                onChange={(e) => {
+                                                    const val = Math.max(0, parseFloat(e.target.value) || 0)
+                                                    setCustomMealPlanRates(prev => ({ ...prev, [selectedMealPlan]: val }))
+                                                }}
+                                                className="w-16 bg-transparent text-right font-mono font-bold text-white outline-none text-xs"
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-[9px] text-gray-500 italic">Total: ₹{activeMealPlanRate} × {stayDuration} night(s) × {bookingDetails.guests || 1} guest(s)</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* EXTRA REQUESTS & ADD-ONS (EXTRA BED, MATTRESS, ETC.) */}
+                        <div className="space-y-3 pt-3 border-t border-white/5">
+                            <div className="flex items-center justify-between ml-1">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">EXTRA REQUESTS & ADD-ONS</p>
+                                {extraAddonsTotal > 0 && (
+                                    <span className="text-[10px] font-bold text-[#4A9EFF]">+₹{extraAddonsTotal.toLocaleString('en-IN')}</span>
+                                )}
+                            </div>
+
+                            <div className="space-y-2">
+                                {extraAddons.map((item, idx) => (
+                                    <div key={item.id || idx} className="p-3 bg-black/30 border border-white/5 rounded-xl flex items-center justify-between gap-2">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-bold text-white truncate">{item.name}</p>
+                                            <div className="flex items-center gap-1 mt-1 text-[10px]">
+                                                <span className="text-gray-500">Rate: ₹</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={item.price}
+                                                    onChange={(e) => {
+                                                        const p = Math.max(0, parseFloat(e.target.value) || 0)
+                                                        setExtraAddons(prev => prev.map((a, i) => i === idx ? { ...a, price: p } : a))
+                                                    }}
+                                                    className="w-14 bg-black/60 border border-white/10 rounded px-1 text-right font-mono text-white text-[10px]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <div className="flex items-center gap-1.5 bg-black/60 border border-white/10 rounded-lg p-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExtraAddons(prev => prev.map((a, i) => i === idx ? { ...a, qty: Math.max(0, a.qty - 1) } : a))}
+                                                    className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 text-white font-bold text-xs flex items-center justify-center"
+                                                >
+                                                    -
+                                                </button>
+                                                <span className="text-xs font-bold text-white w-4 text-center">{item.qty}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExtraAddons(prev => prev.map((a, i) => i === idx ? { ...a, qty: a.qty + 1 } : a))}
+                                                    className="w-5 h-5 rounded bg-[#4A9EFF]/20 text-[#4A9EFF] hover:bg-[#4A9EFF]/30 font-bold text-xs flex items-center justify-center"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Custom Add-on Input */}
+                                <div className="p-3 bg-black/20 border border-dashed border-white/10 rounded-xl space-y-2">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Add Custom Extra Request</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Baby Cot, Airport Taxi"
+                                            value={customAddonName}
+                                            onChange={(e) => setCustomAddonName(e.target.value)}
+                                            className="flex-1 bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none"
+                                        />
+                                        <input
+                                            type="number"
+                                            placeholder="₹ Rate"
+                                            value={customAddonPrice}
+                                            onChange={(e) => setCustomAddonPrice(e.target.value)}
+                                            className="w-16 bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-white font-mono outline-none"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!customAddonName) return toast.error("Enter item name")
+                                                const p = parseFloat(customAddonPrice) || 0
+                                                setExtraAddons(prev => [...prev, { id: `custom_${Date.now()}`, name: customAddonName, price: p, qty: 1 }])
+                                                setCustomAddonName('')
+                                                setCustomAddonPrice('')
+                                            }}
+                                            className="px-2.5 py-1 bg-[#4A9EFF] text-white font-bold text-xs rounded-lg hover:bg-[#3A8EEF]"
+                                        >
+                                            Add
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* SPECIAL REQUESTS */}
                         <div className="space-y-3 pt-3 border-t border-white/5">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">SPECIAL REQUESTS</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">SPECIAL REQUESTS / NOTES</p>
                             <textarea
                                 value={bookingDetails.specialRequests}
                                 onChange={(e) => setBookingDetails({ ...bookingDetails, specialRequests: e.target.value })}
-                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs font-bold text-gray-300 min-h-[90px] resize-none outline-none focus:border-[#4A9EFF] shadow-inner"
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-xs font-bold text-gray-300 min-h-[80px] resize-none outline-none focus:border-[#4A9EFF] shadow-inner"
                                 placeholder="Add guest preferences or allergies..."
                             />
                         </div>
@@ -1017,6 +1151,12 @@ function NewBookingContent() {
                                 <div className="flex items-center justify-between text-gray-400">
                                     <span>Meal Plan ({selectedMealPlan})</span>
                                     <span className="text-[#4A9EFF]">+₹{mealPlanTotal.toLocaleString('en-IN')}</span>
+                                </div>
+                            )}
+                            {extraAddonsTotal > 0 && (
+                                <div className="flex items-center justify-between text-gray-400">
+                                    <span>Extra Add-ons</span>
+                                    <span className="text-[#4A9EFF]">+₹{extraAddonsTotal.toLocaleString('en-IN')}</span>
                                 </div>
                             )}
                             {gstAmount > 0 && (
