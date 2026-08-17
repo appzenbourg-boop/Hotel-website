@@ -13,7 +13,7 @@ import Button from '@/components/ui/Button'
 import Avatar from '@/components/common/Avatar'
 import { cn, formatCurrency } from '@/lib/utils'
 import {
-  LogIn, LogOut, BedDouble, Plus, Bell, Search, Send, MoreHorizontal, MessageSquare, Sparkles, BarChart3, IndianRupee, Crown, Building2
+  LogIn, LogOut, BedDouble, Plus, Bell, Search, Send, MoreHorizontal, MessageSquare, BarChart3, IndianRupee, Crown, Building2
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -25,15 +25,13 @@ export default function AdminDashboard() {
   const [drillDown, setDrillDown] = useState<{ type: string | null, title: string, data: any[] }>({ type: null, title: '', data: [] })
   const [searchQuery, setSearchQuery] = useState('')
   const [serviceForm, setServiceForm] = useState({
-    roomId: '', type: 'HOUSEKEEPING', title: '', description: '', priority: 'NORMAL',
-  })
+    roomId: '', type: 'HOUSEKEEPING', title: '', description: '', priority: 'NORMAL' })
 
   const requireHotel = (actionName = 'this action') => {
     if (session?.user?.role !== 'SUPER_ADMIN') return false
     if (igc()) {
       toast.error('Please select a hotel first', {
-        description: `"${actionName}" requires a specific hotel.`,
-      })
+        description: `"${actionName}" requires a specific hotel.` })
       return true
     }
     return false
@@ -76,8 +74,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/admin/services', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serviceForm),
-      })
+        body: JSON.stringify(serviceForm) })
       if (res.ok) {
         toast.success('Service ticket raised')
         setShowServiceModal(false)
@@ -90,8 +87,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/admin/bookings/status', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, action: 'CHECK_IN' }),
-      })
+        body: JSON.stringify({ bookingId, action: 'CHECK_IN' }) })
       if (res.ok) {
         toast.success('Guest checked in')
         setShowCheckInModal(false)
@@ -104,8 +100,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch('/api/admin/bookings/status', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, action: 'CHECK_OUT' }),
-      })
+        body: JSON.stringify({ bookingId, action: 'CHECK_OUT' }) })
       if (res.ok) { toast.success('Guest checked out'); fetchStats() }
       else toast.error('Failed to check out')
     } catch { toast.error('Something went wrong') }
@@ -118,8 +113,7 @@ export default function AdminDashboard() {
     const map: Record<string, { bg: string; text: string; label: string }> = {
       CHECKED_IN: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Checked In' },
       RESERVED: { bg: 'bg-amber-500/15', text: 'text-amber-400', label: 'Pending' },
-      CHECKED_OUT: { bg: 'bg-orange-500/15', text: 'text-orange-400', label: 'Checked Out' },
-    }
+      CHECKED_OUT: { bg: 'bg-orange-500/15', text: 'text-orange-400', label: 'Checked Out' } }
     const s = map[status] || map.RESERVED
     return (
       <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', s.bg, s.text)}>
@@ -193,7 +187,7 @@ export default function AdminDashboard() {
               onClick={() => router.push('/admin/subscription-plans')}
               className="w-full md:w-auto px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md active:scale-95"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" /> Plan Designer
+               Plan Designer
             </button>
           </div>
         </div>
@@ -316,7 +310,7 @@ export default function AdminDashboard() {
           <div className="bg-[#233648] border border-white/[0.07] rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                
                 <h2 className="text-[14px] font-semibold text-white">Today&apos;s Arrivals</h2>
               </div>
               <button 

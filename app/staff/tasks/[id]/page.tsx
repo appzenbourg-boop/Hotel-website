@@ -6,7 +6,7 @@ import {
     ChevronLeft, MapPin, Clock,
     CheckCircle2, AlertCircle, MessageSquare,
     Loader2, Camera, Info, ArrowRight,
-    Star, Sparkles, Building2, Zap
+    Star, Building2, Zap
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -126,8 +126,7 @@ export default function TaskDetailsPage() {
             })
             if (res.ok) {
                 toast.success('Task successfully completed!', {
-                    description: 'Deployment report submitted to HQ.',
-                    icon: <Sparkles className="w-4 h-4 text-emerald-500" />
+                    description: 'Deployment report submitted to HQ.'
                 })
                 router.push('/staff/tasks')
             } else {
@@ -185,7 +184,7 @@ export default function TaskDetailsPage() {
                     <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-0.5">TASK-ID: {task.id.slice(-6).toUpperCase()}</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-500 relative">
-                    <Sparkles className="w-4 h-4" />
+                    
                     <div className="absolute inset-0 bg-blue-500/20 blur-xl animate-pulse"></div>
                 </div>
             </div>
@@ -296,7 +295,7 @@ export default function TaskDetailsPage() {
                 {/* Final Completion Notes */}
                 <div className="space-y-4 pt-2">
                     <div className="flex items-center gap-2 ml-1">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        
                         <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Completion Notes</span>
                     </div>
                     <textarea 
@@ -327,7 +326,7 @@ export default function TaskDetailsPage() {
                         <CheckCircle2 className="w-6 h-6 relative z-10 group-hover:text-white transition-colors" />
                         <span className="text-[11px] font-black uppercase tracking-[0.4em] relative z-10 group-hover:text-white transition-colors ">Task Completed</span>
                         <div className="absolute top-0 right-10 bottom-0 flex items-center opacity-10 group-hover:opacity-30 group-hover:translate-x-2 transition-all">
-                            <Sparkles className="w-10 h-10 group-hover:text-white" />
+                            
                         </div>
                     </>
                 )}

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { 
     ChevronLeft, Info, BookOpen, ShieldCheck, 
-    Clock, Zap, Sparkles, Sliders, CheckCircle2,
+    Clock, Zap, Sliders, CheckCircle2,
     Lock, Smartphone, MessageCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -62,7 +62,7 @@ export default function OperationalSOPPage() {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full translate-x-16 -translate-y-16"></div>
                 <div className="relative z-10 flex items-start gap-5">
                     <div className="w-14 h-14 bg-[#161b22] rounded-2xl flex items-center justify-center border border-white/5 shadow-inner shrink-0 transition-transform group-hover:scale-110">
-                        <Sparkles className="w-7 h-7 text-purple-500" />
+                        
                     </div>
                     <div>
                         <h4 className="text-lg font-black text-white  tracking-tight mb-2">Protocol Intelligence</h4>

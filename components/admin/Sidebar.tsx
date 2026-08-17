@@ -26,13 +26,14 @@ import {
   Activity,
   Upload,
   MessageSquare,
-  Sparkles,
   X,
   Lock,
   ChevronRight,
   ChevronDown,
   Crown,
-  Coffee
+  Coffee,
+  Star,
+  Plus
 } from 'lucide-react'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 import { type PlanTier } from '@/lib/plan-features'
@@ -52,13 +53,13 @@ const navItems: Omit<NavItem, 'badge'>[] = [
   { label: 'Reservations',         icon: <CalendarDays className="w-[18px] h-[18px]" />,    href: '/admin/bookings',             featureKey: 'bookings' },
   { label: 'Approvals',            icon: <ClipboardCheck className="w-[18px] h-[18px]" />,  href: '/admin/approvals',            featureKey: 'bookings' },
   { label: 'Front Desk',           icon: <ClipboardCheck className="w-[18px] h-[18px]" />,  href: '/admin/checkin',              featureKey: 'checkin' },
-  { label: 'Amenities',            icon: <Sparkles className="w-[18px] h-[18px]" />,         href: '/admin/content/amenities',    featureKey: 'content' },
+  { label: 'Amenities',            icon: <Star className="w-[18px] h-[18px]" />,         href: '/admin/content/amenities',    featureKey: 'content' },
   { label: 'Food & Beverage Menu', icon: <UtensilsCrossed className="w-[18px] h-[18px]" />, href: '/admin/content/menu',         featureKey: 'content' },
-  { label: 'Hotel Cafe',           icon: <Coffee className="w-[18px] h-[18px]" />,          href: '/admin/cafe',                 featureKey: 'services',
+  { label: 'Concierge Ops',        icon: <Coffee className="w-[18px] h-[18px]" />,          href: '/admin/procurement',                 featureKey: 'services',
     subItems: [
-      { label: 'Cafe Menu',      icon: <UtensilsCrossed className="w-[14px] h-[14px]" />, href: '/admin/cafe',           featureKey: 'services' },
-      { label: 'Cafe Orders',    icon: <Clock className="w-[14px] h-[14px]" />,            href: '/admin/cafe/orders',    featureKey: 'services' },
-      { label: 'Cafe Analytics', icon: <BarChart3 className="w-[14px] h-[14px]" />,        href: '/admin/cafe/analytics', featureKey: 'services' },
+      { label: 'PO Dashboard',       icon: <LayoutDashboard className="w-[14px] h-[14px]" />, href: '/admin/procurement',           featureKey: 'services' },
+      { label: 'Create PO',          icon: <Plus className="w-[14px] h-[14px]" />,            href: '/admin/procurement/new',       featureKey: 'services' },
+      { label: 'Vendors & Suppliers', icon: <Building2 className="w-[14px] h-[14px]" />,      href: '/admin/procurement/vendors',   featureKey: 'services' },
     ]
   },
   { label: 'Guests',               icon: <Users className="w-[18px] h-[18px]" />,            href: '/admin/guests',               featureKey: 'guests' },
@@ -78,6 +79,18 @@ const navItems: Omit<NavItem, 'badge'>[] = [
   { label: 'Leave Approvals',      icon: <CalendarDays className="w-[18px] h-[18px]" />,    href: '/admin/leaves',               featureKey: 'leaves' },
   { label: 'Attendance',           icon: <Clock className="w-[18px] h-[18px]" />,            href: '/admin/attendance',           featureKey: 'attendance' },
   { label: 'Payroll',              icon: <IndianRupee className="w-[18px] h-[18px]" />,      href: '/admin/payroll',              featureKey: 'payroll' },
+  { 
+    label: 'Audit & Financials', 
+    icon: <Activity className="w-[18px] h-[18px]" />, 
+    href: '/admin/audit', 
+    featureKey: 'payroll', // Requires similar access to payroll
+    subItems: [
+        { label: 'Night Audit', icon: <Clock className="w-[14px] h-[14px]" />, href: '/admin/audit/night-audit', featureKey: 'payroll' },
+        { label: 'Transaction Ledger', icon: <ClipboardCheck className="w-[14px] h-[14px]" />, href: '/admin/audit/ledger', featureKey: 'payroll' },
+        { label: 'Audit Reports', icon: <BarChart3 className="w-[14px] h-[14px]" />, href: '/admin/audit/reports', featureKey: 'payroll' },
+        { label: 'ERP Integrations', icon: <Settings className="w-[14px] h-[14px]" />, href: '/admin/audit/integrations', featureKey: 'payroll' },
+    ]
+  },
   { label: 'Lost & Found',         icon: <Search className="w-[18px] h-[18px]" />,           href: '/admin/lost-found',           featureKey: 'lost_found' },
   { label: 'Marketing',            icon: <Megaphone className="w-[18px] h-[18px]" />,        href: '/admin/marketing',            featureKey: 'marketing' },
   { label: 'Bulk Import',          icon: <Upload className="w-[18px] h-[18px]" />,           href: '/admin/bulk-import',          featureKey: 'bulk_import' },
@@ -87,7 +100,7 @@ const navItems: Omit<NavItem, 'badge'>[] = [
   { label: 'Infrastructure',       icon: <Activity className="w-[18px] h-[18px]" />,         href: '/admin/infrastructure',       featureKey: 'infrastructure' },
   { label: 'Support',              icon: <MessageSquare className="w-[18px] h-[18px]" />,    href: '/admin/support',              featureKey: 'support' },
   { label: 'Properties',           icon: <Building2 className="w-[18px] h-[18px]" />,        href: '/admin/properties',           featureKey: 'properties' },
-  { label: 'Subscription Plans',   icon: <Sparkles className="w-[18px] h-[18px]" />,         href: '/admin/subscription-plans',   featureKey: 'subscription_plans' },
+  { label: 'Subscription Plans',   icon: <Star className="w-[18px] h-[18px]" />,         href: '/admin/subscription-plans',   featureKey: 'subscription_plans' },
 ]
 
 interface SidebarProps {
@@ -204,8 +217,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         ? serviceCount
         : item.href === '/admin/support'
         ? unreadMessages
-        : undefined,
-    }))
+        : undefined }))
 
   return (
     <aside
@@ -274,7 +286,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 'shrink-0 transition-colors p-1.5 rounded-lg',
                 pathname === '/admin/subscription-plans' ? 'bg-purple-500/20 text-purple-300' : 'bg-white/[0.02] text-gray-400 group-hover:text-purple-400'
               )}>
-                <Sparkles className="w-3.5 h-3.5" />
+                
               </span>
               <span className="text-[12.5px] font-medium">Pricing Plan Designer</span>
             </Link>

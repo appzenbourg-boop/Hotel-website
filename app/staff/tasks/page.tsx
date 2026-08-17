@@ -7,8 +7,7 @@ import {
     AlertCircle, CheckCircle2, Clock,
     ChevronLeft, Filter, Search,
     ArrowRight, MapPin, Loader2,
-    Calendar, MoreHorizontal, Sparkles,
-    LayoutGrid, ClipboardList, Info
+    Calendar, MoreHorizontal, LayoutGrid, ClipboardList, Info
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -159,7 +158,7 @@ export default function StaffTasksPage() {
                                 <div className="flex items-center justify-between border-t border-white/[0.03] pt-8">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
-                                            <Sparkles className="w-4 h-4 text-blue-500" />
+                                            
                                         </div>
                                         <span className="text-[9px] font-black text-gray-700 uppercase tracking-[0.2em] ">Directives Ready</span>
                                     </div>

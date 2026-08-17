@@ -1,5 +1,5 @@
 'use client'
-import { Utensils, Sparkles, LogOut, Bell, Wifi, Phone, ConciergeBell, ClipboardList, Loader2 } from 'lucide-react'
+import { Utensils, LogOut, Bell, Wifi, Phone, ConciergeBell, ClipboardList, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { format } from 'date-fns'
@@ -132,7 +132,7 @@ export default function GuestDashboardPage() {
 
                         <Link href="/guest/services?category=HOUSEKEEPING" className="p-5 bg-surface border border-white/[0.08] rounded-2xl hover:bg-surface-hover hover:border-purple-500/30 hover:scale-[1.02] transition-all group flex flex-col items-center justify-center gap-3">
                             <div className="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center text-purple-400 group-hover:bg-purple-500/20 transition-colors">
-                                <Sparkles className="w-6 h-6" />
+                                
                             </div>
                             <span className="font-medium text-text-primary text-sm">Housekeeping</span>
                         </Link>

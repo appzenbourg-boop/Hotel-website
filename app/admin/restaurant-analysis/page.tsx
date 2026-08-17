@@ -27,13 +27,11 @@ export default function RestaurantAnalysisPage() {
         'Current Month': 'month',
         'Last Month': 'lastMonth',
         '90 Days': 'quarter',
-        'This Year': 'year',
-    }
+        'This Year': 'year' }
 
     const apiUrl = buildContextUrl(`/api/admin/analytics/restaurant`, {
         tab: activeTab,
-        range: rangeMap[timeRange],
-    })
+        range: rangeMap[timeRange] })
 
     const { data: raw, error, isLoading, mutate: revalidate } = useSWR(apiUrl, fetcher)
     const analysisData = raw?.data ?? raw
@@ -135,8 +133,7 @@ export default function RestaurantAnalysisPage() {
                 ],
                 theme: 'striped',
                 headStyles: { fillColor: [37, 99, 235] },
-                styles: { fontSize: 9 },
-            })
+                styles: { fontSize: 9 } })
 
             doc.save(`Restaurant_Analysis_${new Date().toISOString().split('T')[0]}.pdf`)
             toast.success('Report exported')
@@ -153,8 +150,7 @@ export default function RestaurantAnalysisPage() {
             const res = await fetch('/api/admin/content/menu', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: itemId, margin: newMargin }),
-            })
+                body: JSON.stringify({ id: itemId, margin: newMargin }) })
             if (res.ok) {
                 toast.success('Margin updated')
                 setEditingId(null)

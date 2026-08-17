@@ -7,8 +7,7 @@ import {
     ChevronLeft, CreditCard, Download,
     FileText, Calendar, Wallet,
     ArrowUpRight, ArrowDownRight,
-    Search, Filter, Loader2, Sparkles,
-    ShieldCheck, Info, Receipt,
+    Search, Filter, Loader2, ShieldCheck, Info, Receipt,
     Building2, User
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

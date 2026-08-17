@@ -17,50 +17,42 @@ const TOUR_STEPS: TourStep[] = [
         target: 'body',
         title: 'Welcome to Zenbourg Admin',
         message: 'Let us take a quick look at your dashboard features. This will only take a minute.',
-        position: 'center',
-    },
+        position: 'center' },
     {
         target: '[data-tour="sidebar"]',
         title: 'Main Navigation',
         message: 'Access your properties, staff, and settings from the sidebar. You can collapse it to save space.',
-        position: 'right',
-    },
+        position: 'right' },
     {
         target: '[data-tour="new-booking"]',
         title: 'Create Reservations',
         message: 'Quickly add new guest bookings or walk-ins from this shortcut.',
-        position: 'bottom',
-    },
+        position: 'bottom' },
     {
         target: '[data-tour="guest-checkin"]',
         title: 'Guest Check-in',
         message: 'Use this for fast check-ins. You can scan IDs and assign rooms digitally.',
-        position: 'bottom',
-    },
+        position: 'bottom' },
     {
         target: '[data-tour="raise-service"]',
         title: 'Service Requests',
         message: 'Directly create housekeeping or maintenance tasks for any room.',
-        position: 'bottom',
-    },
+        position: 'bottom' },
     {
         target: '[data-tour="stats-grid"]',
         title: 'Real-time Metrics',
         message: 'Monitor occupancy, revenue, and active services at a glance.',
-        position: 'bottom',
-    },
+        position: 'bottom' },
     {
         target: '[data-tour="quick-actions"]',
         title: 'Quick Actions',
         message: 'Perform common daily tasks quickly without searching through menus.',
-        position: 'left',
-    },
+        position: 'left' },
     {
         target: 'body',
         title: 'Configuration Complete',
         message: 'You are all set. You can restart this tour anytime from the Help section.',
-        position: 'center',
-    },
+        position: 'center' },
 ]
 
 export default function OnboardingTour() {
@@ -106,8 +98,7 @@ export default function OnboardingTour() {
                 top: rect.top + window.scrollY,
                 left: rect.left + window.scrollX,
                 width: rect.width,
-                height: rect.height,
-            })
+                height: rect.height })
             el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }
     }, [active, stepIndex])
@@ -157,8 +148,7 @@ export default function OnboardingTour() {
                         top: coords.top - 4,
                         left: coords.left - 4,
                         width: coords.width + 8,
-                        height: coords.height + 8,
-                    }}
+                        height: coords.height + 8 }}
                 />
             )}
 
@@ -174,8 +164,7 @@ export default function OnboardingTour() {
                             coords.top + (coords.height / 2) - 80,
                     left: step.position === 'right' ? coords.left + coords.width + 20 :
                         step.position === 'left' ? coords.left - 340 :
-                            coords.left + (coords.width / 2) - 160,
-                } : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                            coords.left + (coords.width / 2) - 160 } : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
             >
                 <div className="w-[320px] bg-white rounded-xl shadow-2xl overflow-hidden border border-border">
                     {/* Header */}

@@ -27,8 +27,7 @@ const STATUS_CONFIG: Record<string, { bar: string; label: string; dot: string; t
   YATRA: { bar: 'bg-[#3f1406] border-l-[3px] border-[#ea4c16]', label: 'YATRA', dot: 'bg-[#ea4c16]', text: 'text-[#ffab91]' },
   IXIGO: { bar: 'bg-[#441c00] border-l-[3px] border-[#ff6600]', label: 'IXIGO', dot: 'bg-[#ff6600]', text: 'text-[#ffcc80]' },
   TRIVAGO: { bar: 'bg-[#002f42] border-l-[3px] border-[#007faf]', label: 'TRIVAGO', dot: 'bg-[#007faf]', text: 'text-[#80d8ff]' },
-  DIRECT: { bar: 'bg-[#1a3a5c] border-l-[3px] border-[#3b82f6]', label: 'DIRECT', dot: 'bg-[#3b82f6]', text: 'text-[#60a5fa]' },
-}
+  DIRECT: { bar: 'bg-[#1a3a5c] border-l-[3px] border-[#3b82f6]', label: 'DIRECT', dot: 'bg-[#3b82f6]', text: 'text-[#60a5fa]' } }
 
 function getBookingConfig(status: string, source: string, notes: string | null) {
   if (status === 'CANCELLED') return STATUS_CONFIG['CANCELLED']
@@ -50,8 +49,7 @@ function getBookingConfig(status: string, source: string, notes: string | null) 
 const ROOM_STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   CLEAN: { label: 'Clean', cls: 'bg-[#0d3d1e] text-[#4ade80] border border-[#1db954]/30' },
   DIRTY: { label: 'Dirty', cls: 'bg-[#3d0d0d] text-[#fc8181] border border-[#e53e3e]/30' },
-  INSPECT: { label: 'Inspect', cls: 'bg-[#3d2800] text-[#fbbf24] border border-[#f59e0b]/30' },
-}
+  INSPECT: { label: 'Inspect', cls: 'bg-[#3d2800] text-[#fbbf24] border border-[#f59e0b]/30' } }
 
 const LEGEND = [
   { label: 'Reserved', cls: 'bg-[#d4aa00]' },
@@ -122,8 +120,7 @@ export default function BookingsPage() {
           bookingId: selectedBooking.id,
           mealPlan: editMealPlanType,
           mealPlanPricePerDay: editMealPlanRate,
-          extraAddons: editExtraAddons.filter((a: any) => (a.qty > 0 || a.price > 0) && a.name),
-        })
+          extraAddons: editExtraAddons.filter((a: any) => (a.qty > 0 || a.price > 0) && a.name) })
       })
       const json = await res.json()
       if (json.success) {
@@ -141,8 +138,7 @@ export default function BookingsPage() {
             extraAddons: json.data.extraAddons,
             extraAddonsAmount: json.data.extraAddonsAmount,
             totalAmount: json.data.totalAmount,
-            finalAmount: json.data.finalAmount,
-          }))
+            finalAmount: json.data.finalAmount }))
         }
       } else {
         toast.error(json.error || "Failed to update meal plan")
@@ -446,8 +442,7 @@ export default function BookingsPage() {
 
     return {
       left:  `calc(${(leftOffset / totalDays) * 100}% + 1px)`,
-      width: `calc(${(width   / totalDays) * 100}% - 2px)`,
-    }
+      width: `calc(${(width   / totalDays) * 100}% - 2px)` }
   }
 
   // Unique floors derived from room data
@@ -1328,16 +1323,14 @@ function InvoiceModal({ booking, onClose }: { booking: any; onClose: () => void 
         paymentStatus: booking.paymentStatus || 'PAID',
         status: booking.status,
         specialRequests: booking.specialRequests,
-        createdAt: booking.createdAt,
-      }, {
+        createdAt: booking.createdAt }, {
         name: hotelName,
         address: booking.property?.address || 'Main Hotel Boulevard',
         city: booking.property?.city || 'India',
         phone: booking.property?.phone || '',
         email: booking.property?.email || '',
         logo: booking.property?.logo || null,
-        coverImage: booking.room?.images?.[0] || booking.property?.images?.[0] || booking.property?.coverImage || null,
-      })
+        coverImage: booking.room?.images?.[0] || booking.property?.images?.[0] || booking.property?.coverImage || null })
       toast.success('PDF Voucher downloaded successfully!', { id: toastId })
     } catch (err) {
       console.error('PDF generation error:', err)

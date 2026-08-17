@@ -39,21 +39,18 @@ const DEFAULT_ROOM_IMAGES: Record<string, string[]> = {
     EXECUTIVE: [
         'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&q=80',
         'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800&q=80',
-    ],
-}
+    ] }
 
 const STATUS_STYLE: Record<string, string> = {
     AVAILABLE: 'bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20',
     OCCUPIED: 'bg-[#4A9EFF]/10 text-[#4A9EFF] border-[#4A9EFF]/20',
     BOOKED: 'bg-[#8A5CF5]/10 text-[#8A5CF5] border-[#8A5CF5]/20',
     CLEANING: 'bg-[#d4aa00]/10 text-[#d4aa00] border-[#d4aa00]/20',
-    MAINTENANCE: 'bg-[#e53e3e]/10 text-[#e53e3e] border-[#e53e3e]/20',
-}
+    MAINTENANCE: 'bg-[#e53e3e]/10 text-[#e53e3e] border-[#e53e3e]/20' }
 const STATUS_DOT: Record<string, string> = {
     AVAILABLE: 'bg-[#1db954]', OCCUPIED: 'bg-[#4A9EFF]',
     BOOKED: 'bg-[#8A5CF5]',
-    CLEANING: 'bg-[#d4aa00]', MAINTENANCE: 'bg-[#e53e3e]',
-}
+    CLEANING: 'bg-[#d4aa00]', MAINTENANCE: 'bg-[#e53e3e]' }
 const AMENITY_ICONS: Record<string, any> = { WiFi: Wifi, AC: Wind, TV: Tv, Coffee: Coffee }
 const AMENITIES_OPTS = ['WiFi', 'Air Conditioning', 'Mini Bar', 'Room Service', 'Balcony', 'Sea View', 'Bathtub', 'Jacuzzi', 'Kitchenette', 'Safe', 'Smart TV', 'Coffee Maker', 'Iron', 'Hair Dryer', 'Workspace']
 
@@ -75,8 +72,7 @@ export default function RoomsPage() {
         maxOccupancy: '2', description: '', status: 'AVAILABLE' as RoomStatus,
         visibleOnline: true, petFriendly: false, smokingAllowed: false, adaCompliant: false,
         amenities: [] as string[],
-        images: [] as string[],
-    })
+        images: [] as string[] })
     const [newForm, setNewForm] = useState({ roomNumber: '', floor: '1', category: 'STANDARD', type: 'Standard King', basePrice: '150', maxOccupancy: '2', images: [], description: '' })
     const [uploading, setUploading] = useState(false)
     const [amenitiesList, setAmenitiesList] = useState<string[]>([])
@@ -221,8 +217,7 @@ export default function RoomsPage() {
             smokingAllowed: room.smokingAllowed ?? false, 
             adaCompliant: room.adaCompliant ?? false,
             amenities: room.amenities || [],
-            images: room.images || [],
-        })
+            images: room.images || [] })
         setTab('general')
         setShowConfig(true)
     }
@@ -248,9 +243,7 @@ export default function RoomsPage() {
                     petFriendly: cfgForm.petFriendly,
                     smokingAllowed: cfgForm.smokingAllowed,
                     adaCompliant: cfgForm.adaCompliant,
-                    weekendSurcharge: parseFloat(cfgForm.weekendSurcharge),
-                }),
-            })
+                    weekendSurcharge: parseFloat(cfgForm.weekendSurcharge) }) })
             if (res.ok) { toast.success('Room saved'); setShowConfig(false); fetchRooms() }
             else toast.error('Failed to save')
         } catch { toast.error('Error') }
@@ -951,8 +944,7 @@ export default function RoomsPage() {
                     className="fixed z-50 w-80 bg-[#182433]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden p-3.5 animate-fade-in pointer-events-auto"
                     style={{
                         top: `${hoverPos.top}px`,
-                        left: `${hoverPos.left}px`,
-                    }}
+                        left: `${hoverPos.left}px` }}
                     onMouseEnter={handlePopoverMouseEnter}
                     onMouseLeave={handlePopoverMouseLeave}
                 >

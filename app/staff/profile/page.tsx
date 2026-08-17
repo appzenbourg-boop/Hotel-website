@@ -44,8 +44,7 @@ export default function StaffProfilePage() {
                     emergencyContactPhone: p.emergencyContactPhone || '',
                     bankName: p.bankName || '',
                     accountNumber: p.accountNumber || '',
-                    ifscCode: p.ifscCode || '',
-                })
+                    ifscCode: p.ifscCode || '' })
             }
         } catch { /* silent */ } finally { setLoading(false) }
     }, [])
@@ -68,8 +67,7 @@ export default function StaffProfilePage() {
             const res = await fetch('/api/staff/me', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profilePhoto: result.url }),
-            })
+                body: JSON.stringify({ profilePhoto: result.url }) })
             if (res.ok) {
                 setProfilePhoto(result.url)
                 toast.success('Profile photo updated')
@@ -90,8 +88,7 @@ export default function StaffProfilePage() {
             const res = await fetch('/api/staff/me', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editForm),
-            })
+                body: JSON.stringify(editForm) })
             if (res.ok) {
                 toast.success('Profile updated')
                 setEditing(false)
@@ -109,8 +106,7 @@ export default function StaffProfilePage() {
             const res = await fetch('/api/staff/me', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw }),
-            })
+                body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.newPw }) })
             const data = await res.json()
             if (res.ok) {
                 toast.success('Password changed successfully')
@@ -133,8 +129,7 @@ export default function StaffProfilePage() {
             const res = await fetch('/api/staff/verify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(verifyForm),
-            })
+                body: JSON.stringify(verifyForm) })
             if (res.ok) {
                 toast.success('Verification request sent to manager')
                 setShowVerifyForm(false)

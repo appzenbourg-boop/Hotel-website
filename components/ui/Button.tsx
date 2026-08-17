@@ -27,14 +27,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       secondary: 'bg-surface-light text-text-primary hover:bg-border border border-border',
       danger: 'bg-danger text-white hover:bg-danger/90',
       ghost: 'bg-transparent hover:bg-surface-light',
-      outline: 'bg-transparent border-2 border-primary text-primary hover:bg-primary/10',
-    }
+      outline: 'bg-transparent border-2 border-primary text-primary hover:bg-primary/10' }
 
     const sizeStyles = {
       sm: 'px-3 py-1.5 text-xs',
       md: 'px-4 py-2.5 text-sm',
-      lg: 'px-6 py-3 text-base',
-    }
+      lg: 'px-6 py-3 text-base' }
 
     return (
       <button

@@ -35,8 +35,7 @@ export default function ReportsPage() {
         this_month: 'This Month',
         last_month: 'Last Month',
         last_3_months: 'Last 3 Months',
-        this_year: 'This Year',
-    }
+        this_year: 'This Year' }
 
     const fetchReports = async (selectedRange = range) => {
         setLoading(true)

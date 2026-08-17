@@ -5,8 +5,7 @@ import { useSession } from 'next-auth/react'
 import { 
     Award, Plus, Search, Filter, Trash2, Calendar, 
     User, IndianRupee, Clock, CheckCircle2, AlertTriangle,
-    ArrowUpRight, Loader2, ChevronRight, X, Sparkles
-} from 'lucide-react'
+    ArrowUpRight, Loader2, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { format } from 'date-fns'

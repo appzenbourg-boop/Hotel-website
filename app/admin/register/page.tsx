@@ -161,8 +161,7 @@ export default function AdminRegisterPage() {
                             plan: formData.plan,
                             propertyId: propId,
                             userId: userObj?.id,
-                            trialPeriod: formData.trialPeriod,
-                        })
+                            trialPeriod: formData.trialPeriod })
                     })
                     const order = await orderRes.json()
                     toast.dismiss()
@@ -191,8 +190,7 @@ export default function AdminRegisterPage() {
                                             propertyId: propId,
                                             userId: userObj?.id,
                                             trialPeriod: formData.trialPeriod,
-                                            upiId: formData.upiId,
-                                        })
+                                            upiId: formData.upiId })
                                     })
                                     const verifyData = await verifyRes.json()
                                     if (verifyData.success) resolve(true)
@@ -224,8 +222,7 @@ export default function AdminRegisterPage() {
                 const result = await signIn('credentials', {
                     email: formData.email,
                     password: formData.password,
-                    redirect: false,
-                })
+                    redirect: false })
 
                 if (result?.ok) {
                     toast.success('Registration successful! Welcome to Zenbourg.')

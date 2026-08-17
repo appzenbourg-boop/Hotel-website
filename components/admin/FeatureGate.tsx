@@ -16,12 +16,10 @@ interface FeatureGateProps {
 }
 
 const PLAN_LABELS: Record<string, string> = {
-    BASE: 'Base', STARTER: 'Starter', STANDARD: 'Standard', ENTERPRISE: 'Enterprise',
-}
+    BASE: 'Base', STARTER: 'Starter', STANDARD: 'Standard', ENTERPRISE: 'Enterprise' }
 const PLAN_COLORS: Record<string, string> = {
     BASE: 'text-slate-400', STARTER: 'text-blue-400',
-    STANDARD: 'text-amber-400', ENTERPRISE: 'text-purple-400',
-}
+    STANDARD: 'text-amber-400', ENTERPRISE: 'text-purple-400' }
 
 export default function FeatureGate({ feature, minPlan, showLocked = true, children }: FeatureGateProps) {
     const { hasFeature, planMeets, plan, loading } = usePermissions()

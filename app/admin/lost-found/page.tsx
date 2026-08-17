@@ -16,8 +16,7 @@ import { getAdminContext } from '@/lib/admin-context'
 const STATUS_STYLE: Record<string, string> = {
     FOUND:    'bg-amber-500/15 text-amber-400 border-amber-500/20',
     CLAIMED:  'bg-emerald-500/15 text-emerald-400 border-emerald-500/20',
-    DISPOSED: 'bg-slate-500/15 text-slate-400 border-slate-500/20',
-}
+    DISPOSED: 'bg-slate-500/15 text-slate-400 border-slate-500/20' }
 
 const CATEGORIES = ['ELECTRONICS', 'CLOTHING', 'PERSONAL', 'ID_DOCUMENTS', 'JEWELLERY', 'BAGS', 'OTHER']
 
@@ -145,8 +144,7 @@ export default function LostFoundPage() {
     const counts = useMemo(() => ({
         FOUND: items.filter(i => i.status === 'FOUND').length,
         CLAIMED: items.filter(i => i.status === 'CLAIMED').length,
-        DISPOSED: items.filter(i => i.status === 'DISPOSED').length,
-    }), [items])
+        DISPOSED: items.filter(i => i.status === 'DISPOSED').length }), [items])
 
     if (!mounted || !session) return null
 

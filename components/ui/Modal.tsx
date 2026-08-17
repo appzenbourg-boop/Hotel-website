@@ -24,8 +24,7 @@ export default function Modal({
   children,
   size = 'md',
   footer,
-  showClose = true,
-}: ModalProps) {
+  showClose = true }: ModalProps) {
   if (!isOpen) return null
 
   const sizeStyles = {
@@ -33,8 +32,7 @@ export default function Modal({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
-    full: 'max-w-full mx-4',
-  }
+    full: 'max-w-full mx-4' }
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">

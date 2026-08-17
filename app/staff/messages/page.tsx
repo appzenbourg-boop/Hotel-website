@@ -84,8 +84,7 @@ export default function MessagesPage() {
                 messages: sorted,
                 lastMessage: lastMsg,
                 unreadCount: msgs.filter(m => !m.isRead && m.senderId !== myUserId).length,
-                isService: !!serviceRequest,
-            }
+                isService: !!serviceRequest }
         }).sort((a, b) =>
             new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime()
         )
@@ -133,8 +132,7 @@ export default function MessagesPage() {
             await fetch('/api/staff/messages', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            })
+                body: JSON.stringify(body) })
         } catch { /* non-critical */ }
     }, [myUserId])
 
@@ -156,9 +154,7 @@ export default function MessagesPage() {
                     category: conv?.category || 'CHAT',
                     serviceRequestId: conv?.isService ? selectedConversation : undefined,
                     content: replyContent,
-                    type: 'TEXT',
-                }),
-            })
+                    type: 'TEXT' }) })
             if (res.ok) {
                 setReplyContent('')
                 fetchMessages()

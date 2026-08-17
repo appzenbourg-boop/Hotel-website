@@ -15,8 +15,7 @@ export default function SearchInput({
   placeholder = 'Search...',
   onSearch,
   debounceMs = 300,
-  className,
-}: SearchInputProps) {
+  className }: SearchInputProps) {
   const [value, setValue] = useState('')
 
   useEffect(() => {

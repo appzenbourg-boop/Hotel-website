@@ -28,13 +28,11 @@ export default function AttendancePage() {
 
     const { data: attRaw, isValidating: loading } = useSWR('/api/staff/attendance', fetcher, {
         revalidateOnFocus: true,
-        dedupingInterval: 5000,
-    })
+        dedupingInterval: 5000 })
 
     const { data: meRaw } = useSWR('/api/staff/me', fetcher, {
         revalidateOnFocus: false,
-        dedupingInterval: 30000,
-    })
+        dedupingInterval: 30000 })
 
     const allRecords: any[] = Array.isArray(attRaw) ? attRaw : []
     const staffInfo = meRaw?.profile || null
@@ -63,16 +61,14 @@ export default function AttendancePage() {
                     return sum + parseFloat(a.hours)
                 }
                 return sum
-            }, 0),
-        };
+            }, 0) };
     }, [filtered])
 
     // ── Chart: last 7 records (reversed = oldest first) ──────────────────────
     const chartData = useMemo(() => {
         return [...allRecords].slice(0, 7).reverse().map(item => ({
             name: format(new Date(item.date), 'dd MMM'),
-            hours: item.hours !== '-' ? parseFloat(item.hours) : 0,
-        }))
+            hours: item.hours !== '-' ? parseFloat(item.hours) : 0 }))
     }, [allRecords])
 
     // ── Pagination ────────────────────────────────────────────────────────────
@@ -240,8 +236,7 @@ export default function AttendancePage() {
                             LATE:     { stripe: 'bg-amber-500',   badge: 'bg-amber-500/10  text-amber-400  border-amber-500/20'  },
                             ABSENT:   { stripe: 'bg-rose-500',    badge: 'bg-rose-500/10   text-rose-400   border-rose-500/20'   },
                             ON_LEAVE: { stripe: 'bg-blue-500',    badge: 'bg-blue-500/10   text-blue-400   border-blue-500/20'   },
-                            HALF_DAY: { stripe: 'bg-purple-500',  badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
-                        } as Record<string, { stripe: string; badge: string }>)[item.status] ?? { stripe: 'bg-gray-600', badge: 'bg-white/5 text-gray-400 border-white/10' }
+                            HALF_DAY: { stripe: 'bg-purple-500',  badge: 'bg-purple-500/10 text-purple-400 border-purple-500/20' } } as Record<string, { stripe: string; badge: string }>)[item.status] ?? { stripe: 'bg-gray-600', badge: 'bg-white/5 text-gray-400 border-white/10' }
 
                         return (
                             <div

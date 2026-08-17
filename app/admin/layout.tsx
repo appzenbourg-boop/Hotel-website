@@ -6,7 +6,7 @@ import { useSession, signOut } from 'next-auth/react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import OnboardingTour from '@/components/common/OnboardingTour'
-import { Clock, CreditCard, LogOut, Sparkles, CheckCircle2, ShieldCheck, ArrowRight } from 'lucide-react'
+import { Clock, CreditCard, LogOut, CheckCircle2, ShieldCheck, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -186,7 +186,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         
         <div className="absolute top-8 left-8 md:left-12 flex items-center gap-3">
           <div className="w-9 h-9 bg-gradient-to-br from-[#4A9EFF] to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-[#4A9EFF]/20">
-            <Sparkles size={18} className="text-white" />
+            
           </div>
           <span className="text-xl font-bold tracking-tight text-white">Zenbourg <span className="text-[#4A9EFF]">OS</span></span>
         </div>
@@ -243,7 +243,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                  <div className="bg-[#4A9EFF]/5 border border-[#4A9EFF]/20 rounded-2xl p-6 mb-8 flex flex-col items-center relative overflow-hidden">
                   {allowsTrial && (
                     <div className="absolute top-0 left-0 w-full py-1 bg-purple-600/20 border-b border-purple-500/20 text-[9px] font-extrabold uppercase text-purple-300 tracking-widest flex items-center justify-center gap-1">
-                      <Sparkles size={10} className="text-purple-400 animate-pulse" /> 14-Day Free Trial Available <Sparkles size={10} className="text-purple-400 animate-pulse" />
+                       14-Day Free Trial Available 
                     </div>
                   )}
                   
@@ -265,7 +265,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <>
-                          <Sparkles size={16} className="text-white animate-pulse" /> Start 14-Day Free Trial (UPI) <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                           Start 14-Day Free Trial (UPI) <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                         </>
                       )}
                     </button>
@@ -336,7 +336,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col md:ml-60 ml-0 overflow-hidden w-full relative">
+      <div className="flex-1 flex flex-col md:ml-60 ml-0 overflow-hidden w-full relative bg-[#0f1115]">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 w-full custom-scrollbar relative">
           {children}

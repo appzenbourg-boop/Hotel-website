@@ -19,19 +19,16 @@ import {
 const STATUS_DOT: Record<string, string> = {
     Live: 'bg-emerald-400',
     'Not Configured': 'bg-slate-500',
-    Offline: 'bg-red-400',
-}
+    Offline: 'bg-red-400' }
 const STATUS_TEXT: Record<string, string> = {
     Live: 'text-emerald-400',
     'Not Configured': 'text-slate-400',
-    Offline: 'text-red-400',
-}
+    Offline: 'text-red-400' }
 const GATEWAY_ICONS: Record<string, React.ElementType> = {
     Razorpay:       CreditCard,
     Twilio:         MessageSquare,
     Database:       Database,
-    Authentication: ShieldCheck,
-}
+    Authentication: ShieldCheck }
 
 export default function InfrastructurePage() {
     const { data: session } = useSession()
@@ -109,8 +106,7 @@ export default function InfrastructurePage() {
                         icon: Users,
                         color: live.staffOnDuty > 0 ? 'text-emerald-400' : 'text-slate-400',
                         bg: live.staffOnDuty > 0 ? 'bg-emerald-500/10' : 'bg-slate-500/10',
-                        dot: live.staffOnDuty > 0,
-                    },
+                        dot: live.staffOnDuty > 0 },
                     {
                         label: 'Guests In-House',
                         value: live.guestsInHouse,
@@ -118,8 +114,7 @@ export default function InfrastructurePage() {
                         icon: BedDouble,
                         color: live.occupancyRate > 70 ? 'text-blue-400' : 'text-amber-400',
                         bg: 'bg-blue-500/10',
-                        dot: live.guestsInHouse > 0,
-                    },
+                        dot: live.guestsInHouse > 0 },
                     {
                         label: 'Service Requests',
                         value: live.pendingServices,
@@ -127,8 +122,7 @@ export default function InfrastructurePage() {
                         icon: Bell,
                         color: live.slaBreaches > 0 ? 'text-red-400' : live.pendingServices > 0 ? 'text-amber-400' : 'text-emerald-400',
                         bg: live.slaBreaches > 0 ? 'bg-red-500/10' : 'bg-amber-500/10',
-                        dot: live.pendingServices > 0,
-                    },
+                        dot: live.pendingServices > 0 },
                     {
                         label: 'Rooms Status',
                         value: `${live.cleaningRooms + live.maintenanceRooms}`,
@@ -136,8 +130,7 @@ export default function InfrastructurePage() {
                         icon: Wrench,
                         color: live.maintenanceRooms > 0 ? 'text-amber-400' : 'text-slate-400',
                         bg: 'bg-slate-500/10',
-                        dot: false,
-                    },
+                        dot: false },
                 ].map((s, i) => (
                     <div key={i} className="bg-surface border border-border rounded-2xl p-5">
                         <div className="flex items-center justify-between mb-3">

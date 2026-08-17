@@ -15,8 +15,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-  })
+    password: '' })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,8 +25,7 @@ export default function AdminLoginPage() {
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
-        redirect: false,
-      })
+        redirect: false })
 
       if (result?.error) {
         toast.error('Invalid credentials')

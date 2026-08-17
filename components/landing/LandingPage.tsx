@@ -15,7 +15,6 @@ import {
   Menu,
   X,
   ArrowRight,
-  Sparkles,
   Check,
   Minus,
   Info,
@@ -45,7 +44,8 @@ import {
   HelpCircle,
   ChevronDown,
   Trash2,
-  Edit
+  Edit,
+  Star
 } from 'lucide-react'
 import { usePwaInstall } from '@/lib/hooks/usePwaInstall'
 import { cn } from '@/lib/utils'
@@ -203,8 +203,7 @@ function RegistrationWizard({
     hotelAddress: '',
     latitude: null as number | null,
     longitude: null as number | null,
-    trialPeriod: true,
-  })
+    trialPeriod: true })
 
   const planUpper = selectedPlanId.toUpperCase() as 'BASE' | 'STARTER' | 'STANDARD' | 'ENTERPRISE'
   const planData = PLANS.find(p => p.id === selectedPlanId)
@@ -281,8 +280,7 @@ function RegistrationWizard({
               plan: planUpper,
               propertyId: regData.propertyId,
               userId: regData.user?.id,
-              trialPeriod: formData.trialPeriod,
-            })
+              trialPeriod: formData.trialPeriod })
           })
 
           const order = await orderRes.json()
@@ -311,8 +309,7 @@ function RegistrationWizard({
                       plan: planUpper,
                       propertyId: regData.propertyId,
                       userId: regData.user?.id,
-                      trialPeriod: formData.trialPeriod,
-                    })
+                      trialPeriod: formData.trialPeriod })
                   })
                   const verifyData = await verifyRes.json()
                   resolve(verifyData.success)
@@ -338,8 +335,7 @@ function RegistrationWizard({
       const loginResult = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
-        redirect: false,
-      })
+        redirect: false })
 
       if (loginResult?.ok) {
         toast.success('Registration completed successfully! Transferring to dashboard...')
@@ -754,7 +750,7 @@ function RegistrationWizard({
 
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-white">
-                  <Sparkles size={14} className="text-[#4A9EFF]" />
+                  
                   <h4 className="text-[11px] font-extrabold uppercase tracking-wide">Loyalty & Wallet</h4>
                 </div>
                 <p className="text-[10px] text-white/35 leading-normal pl-5.5">Automated guest cashbacks, unified wallet ledger, and referrals.</p>
@@ -911,8 +907,7 @@ export default function LandingPage() {
         animate={{
           x: [0, 80, -40, 0],
           y: [0, -60, 40, 0],
-          scale: [1, 1.15, 0.9, 1],
-        }}
+          scale: [1, 1.15, 0.9, 1] }}
         transition={{
           duration: 25,
           repeat: Infinity,
@@ -924,8 +919,7 @@ export default function LandingPage() {
         animate={{
           x: [0, -60, 80, 0],
           y: [0, 50, -70, 0],
-          scale: [1, 0.9, 1.1, 1],
-        }}
+          scale: [1, 0.9, 1.1, 1] }}
         transition={{
           duration: 30,
           repeat: Infinity,
@@ -936,8 +930,7 @@ export default function LandingPage() {
       <motion.div 
         animate={{
           x: [0, 30, -30, 0],
-          y: [0, -30, 30, 0],
-        }}
+          y: [0, -30, 30, 0] }}
         transition={{
           duration: 20,
           repeat: Infinity,
@@ -1090,7 +1083,7 @@ export default function LandingPage() {
                       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
                       { id: 'reservations', label: 'Reservations', icon: Calendar },
                       { id: 'frontdesk', label: 'Front Desk', icon: ShieldCheck },
-                      { id: 'amenities', label: 'Amenities', icon: Sparkles },
+                      { id: 'amenities', label: 'Amenities', icon: Star },
                       { id: 'fbmenu', label: 'F&B Menu', icon: UtensilsCrossed },
                       { id: 'guests', label: 'Guests', icon: Users },
                       { id: 'staff', label: 'Staff Management', icon: Users },
@@ -2871,7 +2864,7 @@ export default function LandingPage() {
               <div className="col-span-2 text-center font-extrabold text-[11px] text-white font-outfit uppercase tracking-wider">Base</div>
               <div className="col-span-2 text-center font-extrabold text-[11px] text-white font-outfit uppercase tracking-wider">Starter</div>
               <div className="col-span-2 text-center font-extrabold text-[11px] text-amber-400 font-outfit uppercase tracking-wider flex items-center justify-center gap-1.5 bg-amber-400/[0.02] py-1 border-x border-amber-400/10">
-                Standard <Sparkles size={11} className="text-amber-400" />
+                Standard 
               </div>
               <div className="col-span-2 text-center font-extrabold text-[11px] text-white font-outfit uppercase tracking-wider">Enterprise</div>
             </div>
@@ -3100,7 +3093,7 @@ export default function LandingPage() {
               {/* Content */}
               <div className="lg:col-span-7 space-y-6 text-left">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20">
-                  <Sparkles size={10} className="text-[#3B82F6]" />
+                  
                   <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#3B82F6]">Direct commission loops</span>
                 </div>
 

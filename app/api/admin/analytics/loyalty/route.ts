@@ -43,6 +43,16 @@ export async function GET(req: NextRequest) {
         let totalRevenue = 0
         bookings.forEach(b => {
             if (!b.guest) return
+            
+            // Skip OTA placeholder accounts so they don't skew loyalty analytics
+            const isPlaceholder = 
+                b.guest.name.toLowerCase().includes('airbnb guest') ||
+                b.guest.name.toLowerCase().includes('booking.com') ||
+                b.guest.name.toLowerCase() === 'walk in' ||
+                (b.guest.email && b.guest.email.toLowerCase().includes('airbnb-guest'));
+                
+            if (isPlaceholder) return;
+
             const gid = b.guestId
             if (!guestStats[gid]) {
                 guestStats[gid] = { 

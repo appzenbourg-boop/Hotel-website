@@ -36,8 +36,7 @@ const SOURCE_LABELS: Record<string, string> = {
     EXPEDIA: 'Expedia',
     AIRBNB: 'Airbnb',
     WALK_IN: 'Walk-in',
-    OTHER: 'Other',
-}
+    OTHER: 'Other' }
 
 const CHECKIN_STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
     PENDING:    { label: 'Pending',   color: 'text-gray-400',  dot: 'bg-gray-500' },
@@ -45,8 +44,7 @@ const CHECKIN_STATUS_CONFIG: Record<string, { label: string; color: string; dot:
     LINK_OPENED:{ label: 'Opened',    color: 'text-[#d4aa00]', dot: 'bg-[#d4aa00]' },
     COMPLETED:  { label: 'Completed', color: 'text-[#1db954]', dot: 'bg-[#1db954]' },
     VERIFIED:   { label: 'Verified',  color: 'text-[#1db954]', dot: 'bg-[#1db954]' },
-    NO_BOOKING: { label: 'No Booking',color: 'text-gray-500',  dot: 'bg-gray-600' },
-}
+    NO_BOOKING: { label: 'No Booking',color: 'text-gray-500',  dot: 'bg-gray-600' } }
 
 export default function CheckInManagerPage() {
     const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all')
@@ -215,8 +213,7 @@ export default function CheckInManagerPage() {
                     ...prev,
                     idDocumentFront: side === 'front' ? data.url : prev.idDocumentFront,
                     idDocumentBack: side === 'back' ? data.url : prev.idDocumentBack,
-                    checkInStatus: 'LINK_OPENED',
-                }))
+                    checkInStatus: 'LINK_OPENED' }))
                 toast.success(`${side === 'front' ? 'Front' : 'Back'} document uploaded`)
                 fetchData()
             } else {
@@ -233,8 +230,7 @@ export default function CheckInManagerPage() {
             const res = await fetch(`/api/admin/guests/${activeGuest.guestId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ checkInStatus: 'VERIFIED' }),
-            })
+                body: JSON.stringify({ checkInStatus: 'VERIFIED' }) })
             if (res.ok) {
                 toast.success('Guest ID marked as verified')
                 setActiveGuest((prev: any) => ({ ...prev, checkInStatus: 'VERIFIED' }))

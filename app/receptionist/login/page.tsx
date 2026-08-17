@@ -22,8 +22,7 @@ export default function ReceptionistLoginPage() {
             const result = await signIn('credentials', {
                 redirect: false,
                 email,
-                password,
-            })
+                password })
 
             if (result?.error) {
                 toast.error('Invalid credentials')

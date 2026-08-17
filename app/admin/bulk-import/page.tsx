@@ -78,8 +78,7 @@ export default function BulkImportPage() {
                     _source: (r.source || 'DIRECT').toUpperCase(),
                     _amount: parseFloat(r.total_amount || r.amount || '0') || 0,
                     _errors: errors, _warnings: warnings,
-                    _valid: errors.length === 0,
-                }
+                    _valid: errors.length === 0 }
             })
 
             const validCount = parsed.filter(r => r._valid).length
@@ -98,8 +97,7 @@ export default function BulkImportPage() {
                 source: r._source || 'DIRECT',
                 amount: r._amount > 0 ? `₹${r._amount}` : '—',
                 notes: r._errors.length > 0 ? r._errors[0] : r._warnings.length > 0 ? r._warnings[0] : '✓ OK',
-                _valid: r._valid,
-            })))
+                _valid: r._valid })))
             setRawData(parsed)
             setStep(3) // Auto-advance to preview step
             toast.success(`File processed: ${parsed.length} records found — ${validCount} ready to import`)
@@ -127,14 +125,12 @@ export default function BulkImportPage() {
                 source: r._source,
                 totalAmount: r._amount,
                 notes: r.notes || '',
-                rowNum: r._rowNum,
-            }))
+                rowNum: r._rowNum }))
 
             const res = await fetch('/api/admin/bulk-import', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rows: payload, propertyId }),
-            })
+                body: JSON.stringify({ rows: payload, propertyId }) })
             const data = await res.json()
             if (data.success) {
                 setImportResult(data)

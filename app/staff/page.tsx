@@ -125,8 +125,7 @@ export default function StaffDashboard() {
                     new Notification(title, {
                         body,
                         icon: '/images/icon-192.png',
-                        vibrate: [150, 100, 150],
-                    } as any);
+                        vibrate: [150, 100, 150] } as any);
                 }
             }
         } catch (e) {

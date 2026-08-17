@@ -31,11 +31,9 @@ function avatarColor(name: string) {
 
 const SOURCE_LABELS: Record<string, string> = {
   DIRECT: 'Direct', BOOKING_COM: 'Booking.com', MAKE_MY_TRIP: 'MakeMyTrip',
-  AGODA: 'Agoda', EXPEDIA: 'Expedia', AIRBNB: 'Airbnb', WALK_IN: 'Walk-in', OTHER: 'Other',
-}
+  AGODA: 'Agoda', EXPEDIA: 'Expedia', AIRBNB: 'Airbnb', WALK_IN: 'Walk-in', OTHER: 'Other' }
 const SOURCE_ICON: Record<string, string> = {
-  BOOKING_COM: 'B', EXPEDIA: 'E', AIRBNB: 'A', AGODA: 'AG', MAKE_MY_TRIP: 'MMT', DIRECT: 'D', WALK_IN: 'W',
-}
+  BOOKING_COM: 'B', EXPEDIA: 'E', AIRBNB: 'A', AGODA: 'AG', MAKE_MY_TRIP: 'MMT', DIRECT: 'D', WALK_IN: 'W' }
 
 const PAGE_SIZE = 10
 
@@ -51,8 +49,7 @@ function GuestsContent() {
   const [showAdd, setShowAdd] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [form, setForm] = useState({
-    name: '', phone: '', email: '', idType: '', idNumber: '', address: '', dateOfBirth: '', gstNumber: '',
-  })
+    name: '', phone: '', email: '', idType: '', idNumber: '', address: '', dateOfBirth: '', gstNumber: '' })
 
   const { data: rawGuests, mutate, isValidating: loading } = useSWR('/api/admin/guests', (url) => fetch(url).then(res => res.json()), {
     revalidateOnFocus: true,
@@ -64,8 +61,7 @@ function GuestsContent() {
     return raw.map((d: any) => ({
       ...d,
       checkIn: d.checkIn ? new Date(d.checkIn) : null,
-      checkOut: d.checkOut ? new Date(d.checkOut) : null,
-    }))
+      checkOut: d.checkOut ? new Date(d.checkOut) : null }))
   }, [rawGuests])
 
   const fetchGuests = () => mutate()
@@ -111,8 +107,7 @@ function GuestsContent() {
       const res = await fetch('/api/admin/guests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+        body: JSON.stringify(form) })
       if (res.ok) {
         toast.success('Guest added successfully')
         setShowAdd(false)
@@ -137,8 +132,7 @@ function GuestsContent() {
       PAX: g.guestCount ?? 1,
       'ID Status': g.checkInStatus ?? '',
       Source: g.source ?? '',
-      'Booking Status': g.status ?? '',
-    }))
+      'Booking Status': g.status ?? '' }))
 
     const headers = Object.keys(rows[0])
     const csvContent = [

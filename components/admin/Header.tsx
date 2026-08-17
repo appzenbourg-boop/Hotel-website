@@ -51,8 +51,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
     name: session?.user?.name || 'User',
     email: session?.user?.email || 'user@example.com',
     role: session?.user?.role || 'STAFF',
-    photo: profilePhoto,
-  }
+    photo: profilePhoto }
 
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -87,8 +86,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           title: n.title,
           time: new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           unread: !n.isRead,
-          type: n.type,
-        }))
+          type: n.type }))
 
         if (prevUnreadRef.current !== null && nCnt > prevUnreadRef.current) {
             const newest = formatted.filter((x: any) => x.unread).slice(0, nCnt - prevUnreadRef.current)
@@ -123,8 +121,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       await fetch('/api/admin/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: [notif.id] }),
-      })
+        body: JSON.stringify({ ids: [notif.id] }) })
       setNotifications(prev => prev.map(n => (n.id === notif.id ? { ...n, unread: false } : n)))
       setUnreadCount(prev => Math.max(0, prev - 1))
     } catch (e) { console.error(e) }

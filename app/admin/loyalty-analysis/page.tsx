@@ -23,8 +23,7 @@ const TIER_CONFIG: Record<string, { color: string; bg: string; border: string }>
     PLATINUM: { color: 'text-cyan-400',   bg: 'bg-cyan-400/10',   border: 'border-cyan-400/20' },
     GOLD:     { color: 'text-amber-400',  bg: 'bg-amber-400/10',  border: 'border-amber-400/20' },
     SILVER:   { color: 'text-slate-400',  bg: 'bg-slate-400/10',  border: 'border-slate-400/20' },
-    BRONZE:   { color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/20' },
-}
+    BRONZE:   { color: 'text-orange-400', bg: 'bg-orange-400/10', border: 'border-orange-400/20' } }
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -97,8 +96,7 @@ export default function LoyaltyAnalysisPage() {
                 ],
                 theme: 'striped',
                 headStyles: { fillColor: [37, 99, 235] },
-                styles: { fontSize: 9 },
-            })
+                styles: { fontSize: 9 } })
 
             // Loyalty Formula
             y = (doc as any).lastAutoTable.finalY + 10
@@ -144,8 +142,7 @@ export default function LoyaltyAnalysisPage() {
                 ]),
                 theme: 'grid',
                 headStyles: { fillColor: [37, 99, 235] },
-                styles: { fontSize: 8 },
-            })
+                styles: { fontSize: 8 } })
 
             // Booking Sources
             if (bookingSources?.length > 0) {
@@ -160,8 +157,7 @@ export default function LoyaltyAnalysisPage() {
                     body: bookingSources.map((s: any) => [s.label, `${s.value}%`, s.count.toString()]),
                     theme: 'striped',
                     headStyles: { fillColor: [34, 197, 94] },
-                    styles: { fontSize: 9 },
-                })
+                    styles: { fontSize: 9 } })
             }
 
             doc.save(`Loyalty_Report_${new Date().toISOString().split('T')[0]}.pdf`)

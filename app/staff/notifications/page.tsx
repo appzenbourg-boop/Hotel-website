@@ -6,7 +6,7 @@ import {
     ChevronLeft, Bell, BellOff,
     AlertCircle, ClipboardList, Wallet,
     Clock, CheckCircle2, MoreHorizontal,
-    Zap, Sparkles, LayoutGrid, Loader2, Info, ArrowRight, ShieldCheck
+    Zap, LayoutGrid, Loader2, Info, ArrowRight, ShieldCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { format, isToday, isYesterday } from 'date-fns'

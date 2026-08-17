@@ -5,8 +5,7 @@ import {
     Building2, Zap, Star, Crown, Infinity,
     CheckCircle2, Edit3, Save, X, Loader2,
     Users, BedDouble, Percent, IndianRupee,
-    ChevronDown, ChevronUp,
-} from 'lucide-react'
+    ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, formatCurrency } from '@/lib/utils'
 import Button from '@/components/ui/Button'
@@ -23,8 +22,7 @@ const PLAN_META: Record<string, {
     BASE:       { icon: Building2, color: 'text-slate-400',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
     STARTER:    { icon: Zap,       color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',  badge: 'Popular' },
     STANDARD:   { icon: Star,      color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20', badge: 'Best Value' },
-    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-}
+    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' } }
 
 const ALL_FEATURES = [
     { id: 'BASIC_OPS', label: 'Core PMS & Reservations' },
@@ -88,8 +86,7 @@ export default function SubscriptionPlansPage() {
             const res = await fetch('/api/admin/subscription-plans', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingPlan),
-            })
+                body: JSON.stringify(editingPlan) })
             const json = await res.json()
             if (json.success) {
                 toast.success(`${editingPlan.displayName} plan updated`)
@@ -112,8 +109,7 @@ export default function SubscriptionPlansPage() {
             ...editingPlan,
             features: has
                 ? editingPlan.features.filter(f => f !== featureId)
-                : [...editingPlan.features, featureId],
-        })
+                : [...editingPlan.features, featureId] })
     }
 
     if (loading) {

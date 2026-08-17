@@ -38,6 +38,10 @@ model User {
   approvedBookingRequests  BookingRequest[] @relation("ApprovedBy")
   rejectedBookingRequests  BookingRequest[] @relation("RejectedBy")
 
+  postedTransactions   LedgerTransaction[] @relation("UserToLedgerTransaction")
+  startedAuditRuns     AuditRun[]          @relation("UserToAuditRunStarted")
+  resolvedExceptions   AuditException[]    @relation("UserToAuditExceptionResolved")
+
   @@map("users")
 }
 
@@ -182,6 +186,17 @@ model Property {
   otaConnections  OtaConnection[]  @relation("PropertyToOtaConnection")
   mealPlans       MealPlan[]       @relation("PropertyToMealPlan")
 
+  ledgerTransactions LedgerTransaction[] @relation("PropertyToLedgerTransaction")
+  erpIntegrations    ERPIntegration[]    @relation("PropertyToERPIntegration")
+
+  auditRuns          AuditRun[]          @relation("PropertyToAuditRun")
+  auditExceptions    AuditException[]    @relation("PropertyToAuditException")
+  erpSyncLogs        ERPSyncLog[]        @relation("PropertyToERPSyncLog")
+
+  // Procurement & Concierge Ops
+  vendors            Vendor[]            @relation("PropertyToVendor")
+  purchaseOrders     PurchaseOrder[]     @relation("PropertyToPurchaseOrder")
+
   @@map("properties")
 }
 
@@ -305,6 +320,10 @@ model Booking {
   updatedAt DateTime   @updatedAt
   lostItems LostItem[]
   requests  BookingRequest[]
+  
+  ledgerTransactions LedgerTransaction[] @relation("BookingToLedgerTransaction")
+  auditExceptions    AuditException[]    @relation("BookingToAuditException")
+  purchaseOrders     PurchaseOrder[]     @relation("BookingToPurchaseOrder")
 
   @@index([propertyId])
   @@index([status])
@@ -1412,4 +1431,264 @@ model MealPlan {
   @@unique([propertyId, type])
   @@index([propertyId])
   @@map("meal_plans")
+}
+
+// ========================================
+// FINANCIAL AUDIT & LEDGER
+// ========================================
+
+model LedgerTransaction {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  propertyId String   @db.ObjectId
+  property   Property @relation("PropertyToLedgerTransaction", fields: [propertyId], references: [id], onDelete: Cascade)
+
+  amount      Float
+  type        TransactionType // CREDIT (Income), DEBIT (Expense)
+  category    TransactionCategory
+  description String
+  referenceId String? // e.g., Booking ID, Payroll ID, or external ID
+  
+  bookingId   String?  @db.ObjectId
+  booking     Booking? @relation("BookingToLedgerTransaction", fields: [bookingId], references: [id])
+  
+  postedById  String?  @db.ObjectId
+  postedBy    User?    @relation("UserToLedgerTransaction", fields: [postedById], references: [id])
+  
+  terminal    String?  // e.g., "FRONT_DESK_1", "RESTAURANT_POS_1"
+  
+  status      TransactionStatus @default(COMPLETED)
+  timestamp   DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([timestamp])
+  @@index([category])
+  @@map("ledger_transactions")
+}
+
+model ERPIntegration {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  propertyId String   @db.ObjectId
+  property   Property @relation("PropertyToERPIntegration", fields: [propertyId], references: [id], onDelete: Cascade)
+
+  provider    ERPProvider
+  status      ERPStatus @default(INACTIVE)
+  
+  config      Json?     // Store mapping, API keys, etc.
+  lastSyncAt  DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([propertyId, provider])
+  @@map("erp_integrations")
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum TransactionCategory {
+  ROOM_REVENUE
+  FOOD_AND_BEVERAGE
+  SPA_AND_WELLNESS
+  MISC_RETAIL
+  PAYROLL
+  REFUND
+  ADJUSTMENT
+  TAX_LIABILITY
+  MAINTENANCE
+  OTHER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  VOIDED
+}
+
+enum ERPProvider {
+  TALLY_PRIME
+  SAP_S4HANA
+  QUICKBOOKS
+  ZOHO_BOOKS
+  ORACLE_NETSUITE
+}
+
+enum ERPStatus {
+  ACTIVE
+  INACTIVE
+  SYNCING
+  ERROR
+}
+
+// ========================================
+// NIGHT AUDIT ENGINE
+// ========================================
+
+model AuditRun {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String   @db.ObjectId
+  property   Property @relation("PropertyToAuditRun", fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  auditDate  DateTime
+  status     AuditStatus @default(IN_PROGRESS) // IN_PROGRESS, COMPLETED, FAILED
+  
+  startedById String  @db.ObjectId
+  startedBy   User    @relation("UserToAuditRunStarted", fields: [startedById], references: [id])
+  
+  closedAt   DateTime?
+  exceptionsFound Int @default(0)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  exceptions AuditException[] @relation("AuditRunToAuditException")
+
+  @@map("audit_runs")
+}
+
+model AuditException {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String   @db.ObjectId
+  property   Property @relation("PropertyToAuditException", fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  auditRunId String   @db.ObjectId
+  auditRun   AuditRun @relation("AuditRunToAuditException", fields: [auditRunId], references: [id], onDelete: Cascade)
+  
+  type       String   // e.g. "UNPOSTED_TAX", "MISMATCHED_PAYMENT", "UNAUTHORIZED_VOID"
+  severity   String   // HIGH, MEDIUM, LOW
+  
+  transactionId String? @db.ObjectId 
+  bookingId     String? @db.ObjectId
+  booking       Booking? @relation("BookingToAuditException", fields: [bookingId], references: [id])
+  
+  status     ExceptionStatus @default(PENDING) // PENDING, RESOLVED
+  
+  resolvedById String? @db.ObjectId
+  resolvedBy   User?   @relation("UserToAuditExceptionResolved", fields: [resolvedById], references: [id])
+  
+  resolutionNotes String?
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  @@map("audit_exceptions")
+}
+
+model ERPSyncLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String   @db.ObjectId
+  property   Property @relation("PropertyToERPSyncLog", fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  batchId     String
+  destination String // Tally, SAP
+  recordCount Int
+  
+  status      ERPSyncStatus @default(PENDING)
+  errorLog    Json?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("erp_sync_logs")
+}
+
+enum AuditStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum ExceptionStatus {
+  PENDING
+  RESOLVED
+}
+
+enum ERPSyncStatus {
+  PENDING
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
+// ========================================
+// CONCIERGE OPS & PROCUREMENT
+// ========================================
+
+model Vendor {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String   @db.ObjectId
+  property    Property @relation("PropertyToVendor", fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  name        String
+  category    String   // Linen & Textiles, Gastronomy, Wellness & Spa, etc.
+  rating      Float    @default(0)
+  status      String   @default("ACTIVE") // ACTIVE, PENDING
+  
+  contactName String?
+  email       String?
+  phone       String?
+
+  purchaseOrders PurchaseOrder[] @relation("VendorToPurchaseOrder")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("vendors")
+}
+
+model PurchaseOrder {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String   @db.ObjectId
+  property    Property @relation("PropertyToPurchaseOrder", fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  poNumber    String
+  
+  vendorId    String   @db.ObjectId
+  vendor      Vendor   @relation("VendorToPurchaseOrder", fields: [vendorId], references: [id])
+  
+  status      String   @default("DRAFT") // DRAFT, PENDING_APPROVAL, SENT, RECEIVED, CANCELLED
+  
+  issueDate   DateTime @default(now())
+  expectedDelivery DateTime?
+  
+  subtotal    Float    @default(0)
+  tax         Float    @default(0)
+  shipping    Float    @default(0)
+  totalAmount Float    @default(0)
+  
+  notes       String?
+  
+  // Link to Guest/Booking if this is a concierge order billed to a guest
+  bookingId   String?  @db.ObjectId
+  booking     Booking? @relation("BookingToPurchaseOrder", fields: [bookingId], references: [id])
+  
+  items       PurchaseOrderItem[] @relation("POToPOItem")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  purchaseOrderId String   @db.ObjectId
+  purchaseOrder   PurchaseOrder @relation("POToPOItem", fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  
+  description     String
+  quantity        Int
+  unitPrice       Float
+  taxPercent      Float    @default(0)
+  total           Float
+  
+  @@map("purchase_order_items")
 }

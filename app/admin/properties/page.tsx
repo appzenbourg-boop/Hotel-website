@@ -4,7 +4,7 @@ import { useState } from 'react'
 import useSWR from 'swr'
 import {
     Plus, ChevronDown, ChevronRight, Building2, UserCircle, Users,
-    Mail, MapPin, Sparkles, CheckCircle2, Zap, Star, Crown, Lock, Clock,
+    Mail, MapPin, CheckCircle2, Zap, Star, Crown, Lock, Clock,
     Phone, Edit2, Save, X, Loader2, DollarSign, ShieldAlert, Send, RefreshCw
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
@@ -39,8 +39,7 @@ const PLAN_META: Record<string, { icon: React.ElementType; color: string; bg: st
     BASE:       { icon: Building2, color: 'text-slate-400',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20',  label: 'Base' },
     STARTER:    { icon: Zap,       color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   label: 'Starter' },
     STANDARD:   { icon: Star,      color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20',  label: 'Standard' },
-    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', label: 'Enterprise' },
-}
+    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', label: 'Enterprise' } }
 
 // Features that can be individually toggled per property (overrides)
 const FEATURE_FLAGS = [
@@ -89,8 +88,7 @@ export default function PropertiesPage() {
             const res = await fetch('/api/admin/properties', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
-            })
+                body: JSON.stringify(formData) })
             if (res.ok) {
                 toast.success('Property added successfully')
                 setIsModalOpen(false)
@@ -110,8 +108,7 @@ export default function PropertiesPage() {
             const res = await fetch('/api/admin/settings/property', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ propertyId, plan }),
-            })
+                body: JSON.stringify({ propertyId, plan }) })
             if (res.ok) {
                 toast.success(`Plan updated to ${PLAN_META[plan]?.label ?? plan}`)
                 mutate()
@@ -132,8 +129,7 @@ export default function PropertiesPage() {
             const res = await fetch('/api/admin/settings/property', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ propertyId: property.id, features: newFeatures }),
-            })
+                body: JSON.stringify({ propertyId: property.id, features: newFeatures }) })
             if (res.ok) {
                 toast.success(`Feature ${isActive ? 'disabled' : 'enabled'}`)
                 mutate()
@@ -360,7 +356,7 @@ export default function PropertiesPage() {
                                                 {/* Real User Telemetry Intake Details */}
                                                 <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col gap-2">
                                                     <p className="text-[10px] font-extrabold text-purple-400/80 uppercase tracking-[0.2em] flex items-center gap-1.5">
-                                                        <Sparkles className="w-3 h-3" /> Client Onboarding Profile Scale
+                                                         Client Onboarding Profile Scale
                                                     </p>
                                                     <p className="text-sm font-medium text-white/90 leading-relaxed">
                                                         {property.description || "📋 Custom Enterprise License Request · Awaiting detailed inventory mapping."}
@@ -407,7 +403,7 @@ export default function PropertiesPage() {
                                                                         className="w-4 h-4 rounded border-border bg-surface accent-purple-500"
                                                                     />
                                                                     <span className="text-xs text-purple-300 font-bold flex items-center gap-1">
-                                                                        <Sparkles className="w-3 h-3 text-purple-400" /> Allow 14-Day Free Trial (UPI Mandate Setup)
+                                                                         Allow 14-Day Free Trial (UPI Mandate Setup)
                                                                     </span>
                                                                 </label>
                                                                 
@@ -488,7 +484,7 @@ export default function PropertiesPage() {
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
                                                 <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider flex items-center gap-2">
-                                                    <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Subscription Plan
+                                                     Subscription Plan
                                                 </h4>
                                                 <p className="text-xs text-text-tertiary mt-0.5">
                                                     Current: <span className={cn('font-bold', planMeta.color)}>{planMeta.label}</span>
@@ -539,7 +535,7 @@ export default function PropertiesPage() {
                                     {/* Feature Flags */}
                                     <div>
                                         <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-4 flex items-center gap-2">
-                                            <Sparkles className="w-3.5 h-3.5" /> Feature Flags
+                                             Feature Flags
                                             <span className="text-[9px] font-normal normal-case text-text-tertiary ml-1">
                                                 (Override individual features regardless of plan)
                                             </span>

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Lock, Mail, Loader2, Sparkles, ShieldCheck, Zap } from 'lucide-react'
+import { Lock, Mail, Loader2, ShieldCheck, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function StaffLoginPage() {
@@ -21,8 +21,7 @@ export default function StaffLoginPage() {
             const result = await signIn('credentials', {
                 redirect: false,
                 email,
-                password,
-            })
+                password })
 
             if (result?.error) {
                 toast.error(result.error === 'CredentialsSignin' ? 'Invalid credentials' : result.error)
@@ -120,7 +119,7 @@ export default function StaffLoginPage() {
                     </p>
                     <div className="flex items-center justify-center gap-4 text-gray-800">
                         <div className="w-8 h-[1px] bg-white/5"></div>
-                        <Sparkles className="w-3 h-3" />
+                        
                         <div className="w-8 h-[1px] bg-white/5"></div>
                     </div>
                 </div>

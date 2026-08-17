@@ -35,13 +35,11 @@ export default function Table<T extends Record<string, any>>({
   loading = false,
   emptyMessage = 'No data available',
   onRowClick,
-  pagination,
-}: TableProps<T>) {
+  pagination }: TableProps<T>) {
   const alignStyles = {
     left: 'text-left',
     center: 'text-center',
-    right: 'text-right',
-  }
+    right: 'text-right' }
 
   return (
     <div className="space-y-4">

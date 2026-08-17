@@ -40,8 +40,7 @@ function NewBookingContent() {
         required: true,
         onUnauthenticated() {
             router.push('/admin/login?callbackUrl=/admin/bookings/new')
-        },
-    })
+        } })
     const [currentStep, setCurrentStep] = useState(0)
     const [loading, setLoading] = useState(false)
     const [fetching, setFetching] = useState(false)
@@ -274,8 +273,7 @@ function NewBookingContent() {
         serviceChargePercent: 0.0,
         luxuryTaxPercent: 0.0,
         defaultDiscountPercent: 0.0,
-        discountLabel: 'Discount',
-    })
+        discountLabel: 'Discount' })
 
     const stayDuration = useMemo(() => {
         if (!bookingDetails.checkIn || !bookingDetails.checkOut) return 1
@@ -365,8 +363,7 @@ function NewBookingContent() {
                 bookings: [],
                 roomNumber: 'N/A',
                 source: 'DIRECT',
-                status: null,
-            }
+                status: null }
             setAllGuests([normalizedGuest, ...allGuests])
             setSelectedGuest(normalizedGuest)
             setShowNewGuestModal(false)
@@ -403,8 +400,7 @@ function NewBookingContent() {
                         mealPlan: selectedMealPlan,
                         mealPlanPricePerDay: activeMealPlanRate,
                         extraAddons: extraAddons.filter(a => (a.qty > 0 || a.price > 0) && a.name),
-                        extraAddonsAmount: extraAddonsTotal,
-                    })
+                        extraAddonsAmount: extraAddonsTotal })
                 })
             ))
 

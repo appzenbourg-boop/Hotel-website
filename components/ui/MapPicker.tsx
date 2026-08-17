@@ -17,8 +17,7 @@ function LocationMarker({ position, onChange }: { position: L.LatLng | null, onC
   useMapEvents({
     click(e) {
       onChange(e.latlng.lat, e.latlng.lng);
-    },
-  });
+    } });
 
   return position === null || !customIcon ? null : (
     <Marker position={position} icon={customIcon} />
@@ -36,8 +35,7 @@ export default function MapPicker({ latitude, longitude, onChange }: MapPickerPr
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
         iconSize: [25, 41],
-        iconAnchor: [12, 41],
-      });
+        iconAnchor: [12, 41] });
     }
 
     setMounted(true);

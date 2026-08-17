@@ -17,7 +17,6 @@ import {
   Building2,
   LogIn,
   ShieldAlert,
-  Sparkles,
   XOctagon
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -121,7 +120,7 @@ export default function RoomOccupancyPage() {
           <div className="flex justify-between items-start mb-3 relative z-10">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Service</p>
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              
             </div>
           </div>
           <p className="text-3xl font-black text-white tracking-tight">{summary.serviceCount ?? 0}</p>
@@ -262,7 +261,7 @@ export default function RoomOccupancyPage() {
                   </div>
                 ) : isService ? (
                   <div className="bg-[#1a2a3a] rounded-xl p-3.5 text-center">
-                    <Sparkles className="w-5 h-5 text-amber-400 mx-auto mb-1" />
+                    
                     <p className="text-xs font-bold text-amber-400">Under Cleaning / Housekeeping</p>
                     <p className="text-[10px] text-gray-500 mt-1">Service in progress</p>
                   </div>

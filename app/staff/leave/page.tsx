@@ -25,8 +25,7 @@ export default function LeavePage() {
 
     const { data: rawData, mutate, isValidating: loading } = useSWR('/api/staff/leave', fetcher, {
         revalidateOnFocus: true,
-        dedupingInterval: 2000,
-    })
+        dedupingInterval: 2000 })
 
     const balances = rawData?.balances || {}
     const history: any[] = Array.isArray(rawData?.history) ? rawData.history : []
@@ -45,8 +44,7 @@ export default function LeavePage() {
             const res = await fetch('/api/staff/leave', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ leaveType, startDate, endDate, totalDays, reason, evidence }),
-            })
+                body: JSON.stringify({ leaveType, startDate, endDate, totalDays, reason, evidence }) })
             if (res.ok) {
                 toast.success('Leave request submitted')
                 setReason(''); setStartDate(''); setEndDate(''); setEvidence('')

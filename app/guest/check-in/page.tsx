@@ -4,8 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { 
     User, Phone, Camera, CheckCircle2, 
-    ArrowRight, ArrowLeft, Loader2, Sparkles,
-    ShieldCheck, Building2, MapPin
+    ArrowRight, ArrowLeft, Loader2, ShieldCheck, Building2, MapPin
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -229,7 +228,7 @@ function GuestCheckInContent() {
                                     disabled={loading || !formData.idProof}
                                     className="flex-[2] bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white py-5 rounded-2xl font-bold shadow-xl shadow-[#4A9EFF]/20 transition-all disabled:opacity-50 disabled:grayscale flex justify-center items-center gap-3 active:scale-[0.98]"
                                 >
-                                    {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Finalize Check-in <Sparkles className="w-5 h-5" /></>}
+                                    {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Finalize Check-in </>}
                                 </button>
                             </div>
                         </div>

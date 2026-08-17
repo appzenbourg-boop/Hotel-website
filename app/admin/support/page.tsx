@@ -17,15 +17,13 @@ const ROLE_LABEL: Record<string, string> = {
     HOTEL_ADMIN: 'Hotel Admin',
     MANAGER: 'Manager',
     RECEPTIONIST: 'Receptionist',
-    STAFF: 'Staff',
-}
+    STAFF: 'Staff' }
 const ROLE_COLOR: Record<string, string> = {
     SUPER_ADMIN: 'text-purple-400 bg-purple-400/10',
     HOTEL_ADMIN: 'text-blue-400 bg-blue-400/10',
     MANAGER: 'text-amber-400 bg-amber-400/10',
     RECEPTIONIST: 'text-emerald-400 bg-emerald-400/10',
-    STAFF: 'text-slate-400 bg-slate-400/10',
-}
+    STAFF: 'text-slate-400 bg-slate-400/10' }
 
 export default function SupportPage() {
     return (
@@ -72,8 +70,7 @@ function SupportPageInner() {
             const res = await fetch(`/api/admin/support/${selectedTicket.id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: ticketMsg }),
-            })
+                body: JSON.stringify({ content: ticketMsg }) })
             if (res.ok) { setTicketMsg(''); fetchTickets() }
             else toast.error('Failed to send')
         } catch { toast.error('Error') } finally { setSendingTicket(false) }
@@ -85,8 +82,7 @@ function SupportPageInner() {
             const res = await fetch(`/api/admin/support/${selectedTicket.id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status }),
-            })
+                body: JSON.stringify({ status }) })
             if (res.ok) { toast.success(`Ticket ${status.toLowerCase()}`); fetchTickets() }
         } catch { toast.error('Failed') }
     }
@@ -132,8 +128,7 @@ function SupportPageInner() {
             const res = await fetch('/api/admin/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ receiverId: selectedContact.id, content: msgText }),
-            })
+                body: JSON.stringify({ receiverId: selectedContact.id, content: msgText }) })
             if (res.ok) {
                 setMsgText('')
                 fetchMessages(selectedContact.id)

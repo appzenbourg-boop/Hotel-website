@@ -9,8 +9,7 @@ import {
   UtensilsCrossed, Wine, Waves, TreePine, Bike, Gamepad2,
   Music, BookOpen, Baby, Dog, Cigarette, Accessibility,
   ParkingCircle, Bus, Plane, ShieldCheck, Bell, Phone,
-  Printer, Monitor, Briefcase, Sunset, Camera, Sparkles,
-  Heart, Zap, Droplets, Sun, Moon, Star, Clock, MapPin,
+  Printer, Monitor, Briefcase, Sunset, Camera, Heart, Zap, Droplets, Sun, Moon, Star, Clock, MapPin,
   ChefHat, Salad, IceCream, Beer, Soup, Sandwich,
   Bed, BedDouble, Key, Lock, Luggage, Umbrella,
   Smartphone, Rocket, LayoutGrid, Hammer, BellRing, Flower2,
@@ -44,7 +43,7 @@ const ICON_OPTIONS: { value: string; label: string; icon: React.ElementType; cat
   { value: 'Bath',         label: 'Bathtub',             icon: Bath,          category: 'Bathroom' },
   { value: 'ShowerHead',   label: 'Rain Shower',         icon: ShowerHead,    category: 'Bathroom' },
   { value: 'Droplets',     label: 'Hot Water',           icon: Droplets,      category: 'Bathroom' },
-  { value: 'Sparkles',     label: 'Toiletries',          icon: Sparkles,      category: 'Bathroom' },
+  { value: 'Toiletries', label: 'Toiletries',          icon: Droplets, category: 'Bathroom' },
   { value: 'Shirt',        label: 'Bathrobe & Slippers', icon: Shirt,         category: 'Bathroom' },
 
   // Food & Beverage
@@ -111,8 +110,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Wellness':       'text-emerald-400 bg-emerald-400/10',
   'Transport':      'text-purple-400 bg-purple-400/10',
   'Services':       'text-indigo-400 bg-indigo-400/10',
-  'Family':         'text-pink-400 bg-pink-400/10',
-}
+  'Family':         'text-pink-400 bg-pink-400/10' }
 
 const ICON_BG: Record<string, string> = {
   'General':        'bg-slate-500/15 text-slate-300',
@@ -123,12 +121,11 @@ const ICON_BG: Record<string, string> = {
   'Wellness':       'bg-emerald-500/15 text-emerald-300',
   'Transport':      'bg-purple-500/15 text-purple-300',
   'Services':       'bg-indigo-500/15 text-indigo-300',
-  'Family':         'bg-pink-500/15 text-pink-300',
-}
+  'Family':         'bg-pink-500/15 text-pink-300' }
 
 const DASHBOARD_ICON_OPTIONS = [
   { label: 'Open Door', iconName: 'key-outline', route: '/(services)/door', Icon: Key },
-  { label: 'House Keeping', iconName: 'sparkles-outline', route: '/(services)/housekeeping', Icon: Sparkles },
+  { label: 'House Keeping', iconName: 'sparkles-outline', route: '/(services)/housekeeping', Icon: Star },
   { label: 'Wake-up Call', iconName: 'alarm-outline', route: '/(services)/wakeup', Icon: Clock },
   { label: 'Toiletries', iconName: 'flask-outline', route: '/(services)/toiletries', Icon: Droplets },
   { label: 'Food', iconName: 'fast-food-outline', route: '/(services)/food', Icon: Utensils },
@@ -195,8 +192,7 @@ export default function AmenitiesPage() {
       icon: amenity.icon || 'Wifi',
       description: amenity.description || '',
       category: amenity.category || 'General',
-      options: Array.isArray(amenity.options) ? amenity.options : [],
-    })
+      options: Array.isArray(amenity.options) ? amenity.options : [] })
     setIconSearch('')
     setIconCategoryFilter('All')
     setShowForm(true)
@@ -217,8 +213,7 @@ export default function AmenitiesPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, propertyId }),
-      })
+        body: JSON.stringify({ ...formData, propertyId }) })
 
       if (res.ok) {
         toast.success(editingId ? 'Amenity updated' : 'Amenity added')
@@ -261,8 +256,7 @@ export default function AmenitiesPage() {
       route: service.route || '',
       isActive: service.isActive ?? true,
       order: service.order ?? 0,
-      options: Array.isArray(service.options) ? service.options : [],
-    })
+      options: Array.isArray(service.options) ? service.options : [] })
     setShowServiceForm(true)
   }
 
@@ -281,8 +275,7 @@ export default function AmenitiesPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...serviceFormData, propertyId }),
-      })
+        body: JSON.stringify({ ...serviceFormData, propertyId }) })
 
       if (res.ok) {
         toast.success(editingId ? 'Service updated' : 'Service added')
@@ -517,7 +510,7 @@ export default function AmenitiesPage() {
         </div>
       ) : amenities.length === 0 ? (
         <div className="py-16 text-center border border-dashed border-border rounded-2xl">
-          <Sparkles className="w-10 h-10 text-text-tertiary mx-auto mb-3 opacity-40" />
+          
           <p className="text-text-secondary text-sm">No amenities yet. Add your first one above.</p>
         </div>
       ) : (

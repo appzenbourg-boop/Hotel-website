@@ -7,8 +7,7 @@ import {
     CheckSquare, Square, Filter, RefreshCw,
     Phone, User, ChevronDown, X, Loader2, Check,
     TrendingUp, Award, BarChart3, Target, CalendarDays,
-    Percent, DollarSign, Sparkles
-} from 'lucide-react'
+    Percent, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getAdminContext } from '@/lib/admin-context'
@@ -160,9 +159,7 @@ export default function MarketingPage() {
                     segment: SEGMENTS.find(s => s.id === segment)?.label ?? 'Custom',
                     propertyId,
                     guestIds: Array.from(selected),
-                    message,
-                }),
-            })
+                    message }) })
             const data = await res.json()
             if (data.success) {
                 toast.success(`${channel} message sent to ${data.count} guest${data.count !== 1 ? 's' : ''}!`)
@@ -279,7 +276,7 @@ export default function MarketingPage() {
                         <div className="flex justify-between items-center">
                             <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Select Target Audience</span>
                             <div className="flex items-center gap-1 text-[9.5px] font-semibold text-amber-400">
-                                <Sparkles size={11} className="animate-pulse" />
+                                
                                 <span>Direct Geofencing Active</span>
                             </div>
                         </div>

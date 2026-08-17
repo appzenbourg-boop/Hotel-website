@@ -185,8 +185,7 @@ export default function StaffDetailPage() {
             punchIn: toTimeStr(att.punchIn),
             punchOut: toTimeStr(att.punchOut),
             status: att.status || 'PRESENT',
-            notes: att.notes || '',
-        })
+            notes: att.notes || '' })
     }
 
     const handleAttSave = async () => {
@@ -221,9 +220,7 @@ export default function StaffDetailPage() {
                     punchOut,
                     hoursWorked,
                     status: attForm.status,
-                    notes: attForm.notes,
-                }),
-            })
+                    notes: attForm.notes }) })
 
             if (res.ok) {
                 toast.success('Attendance record updated')
@@ -1523,8 +1520,7 @@ export default function StaffDetailPage() {
 function LeaveBalanceCard({
     staff,
     staffId,
-    onUpdate,
-}: {
+    onUpdate }: {
     staff: any
     staffId: string
     onUpdate: (updated: any) => void
@@ -1534,8 +1530,7 @@ function LeaveBalanceCard({
     const [balances, setBalances] = useState({
         annualLeaveBalance: staff.annualLeaveBalance ?? 15,
         sickLeaveBalance: staff.sickLeaveBalance ?? 10,
-        casualLeaveBalance: staff.casualLeaveBalance ?? 7,
-    })
+        casualLeaveBalance: staff.casualLeaveBalance ?? 7 })
 
     // Compute used days from approved leave requests
     const usedByType = (type: string) =>
@@ -1556,8 +1551,7 @@ function LeaveBalanceCard({
             textColor: 'text-blue-400',
             used: usedAnnual,
             total: balances.annualLeaveBalance,
-            icon: '🏖️',
-        },
+            icon: '🏖️' },
         {
             key: 'sickLeaveBalance' as const,
             label: 'Sick Leave',
@@ -1566,8 +1560,7 @@ function LeaveBalanceCard({
             textColor: 'text-amber-400',
             used: usedSick,
             total: balances.sickLeaveBalance,
-            icon: '🏥',
-        },
+            icon: '🏥' },
         {
             key: 'casualLeaveBalance' as const,
             label: 'Casual Leave',
@@ -1576,8 +1569,7 @@ function LeaveBalanceCard({
             textColor: 'text-emerald-400',
             used: usedCasual,
             total: balances.casualLeaveBalance,
-            icon: '☀️',
-        },
+            icon: '☀️' },
     ]
 
     const handleSave = async () => {
@@ -1586,8 +1578,7 @@ function LeaveBalanceCard({
             const res = await fetch(`/api/admin/staff/${staffId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(balances),
-            })
+                body: JSON.stringify(balances) })
             if (res.ok) {
                 toast.success('Leave balances updated')
                 onUpdate(balances)
@@ -1616,8 +1607,7 @@ function LeaveBalanceCard({
                                 setBalances({
                                     annualLeaveBalance: staff.annualLeaveBalance ?? 15,
                                     sickLeaveBalance: staff.sickLeaveBalance ?? 10,
-                                    casualLeaveBalance: staff.casualLeaveBalance ?? 7,
-                                })
+                                    casualLeaveBalance: staff.casualLeaveBalance ?? 7 })
                                 setEditing(false)
                             }}
                             className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-white bg-white/5 rounded-xl transition-all"
@@ -1759,8 +1749,7 @@ function LeaveBalanceCard({
 function BankDetailsTab({
     staff,
     staffId,
-    onUpdate,
-}: {
+    onUpdate }: {
     staff: any
     staffId: string
     onUpdate: (updated: any) => void
@@ -1771,8 +1760,7 @@ function BankDetailsTab({
     const [form, setForm] = useState({
         bankName:      staff.bankName      || '',
         accountNumber: staff.accountNumber || '',
-        ifscCode:      staff.ifscCode      || '',
-    })
+        ifscCode:      staff.ifscCode      || '' })
 
     const hasBankDetails = !!(staff.bankName && staff.accountNumber && staff.ifscCode)
 
@@ -1782,8 +1770,7 @@ function BankDetailsTab({
             const res = await fetch(`/api/admin/staff/${staffId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
-            })
+                body: JSON.stringify(form) })
             if (res.ok) {
                 toast.success('Bank details saved')
                 onUpdate(form)
@@ -1896,8 +1883,7 @@ function BankDetailsTab({
                                         {showAccount ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                     </button>
                                 ),
-                                colSpan: true,
-                            },
+                                colSpan: true },
                         ].map((item: any) => (
                             <div key={item.label} className={`space-y-2 ${item.colSpan ? 'col-span-2' : ''}`}>
                                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{item.label}</p>
@@ -1931,8 +1917,7 @@ function BankDetailsTab({
 function PayButton({
     payroll,
     staff,
-    onPaid,
-}: {
+    onPaid }: {
     payroll: any
     staff: any
     onPaid: () => void
@@ -1959,9 +1944,7 @@ function PayButton({
                     bankName:      staff.bankName,
                     staffName:     staff.user?.name || 'Staff',
                     month:         payroll.month,
-                    year:          payroll.year,
-                }),
-            })
+                    year:          payroll.year }) })
 
             const data = await res.json()
 

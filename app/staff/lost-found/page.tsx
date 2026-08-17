@@ -27,8 +27,7 @@ export default function StaffLostFoundPage() {
     // First get the staff's property ID, then fetch only that hotel's rooms
     const { data: meData } = useSWR('/api/staff/me', (url) => fetch(url).then(res => res.json()), {
         revalidateOnFocus: false,
-        dedupingInterval: 30000,
-    })
+        dedupingInterval: 30000 })
     const propertyId = meData?.profile?.propertyId
 
     const { data: roomsData, isValidating: roomsLoading } = useSWR(

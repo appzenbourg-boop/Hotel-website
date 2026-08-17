@@ -14,15 +14,13 @@ export default function Avatar({ src, name, size = 'md', className }: AvatarProp
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
     lg: 'w-12 h-12 text-base',
-    xl: 'w-16 h-16 text-lg',
-  }
+    xl: 'w-16 h-16 text-lg' }
 
   const sizeMap = {
     sm: 32,
     md: 40,
     lg: 48,
-    xl: 64,
-  }
+    xl: 64 }
 
   if (src) {
     return (

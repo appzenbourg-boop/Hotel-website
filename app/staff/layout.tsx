@@ -26,8 +26,7 @@ const PWAInstall = dynamic(() => import('@/components/common/PWAInstall'), { ssr
 let globalAudioCtx: AudioContext | null = null;
 
 export default function StaffLayout({
-    children,
-}: {
+    children }: {
     children: React.ReactNode
 }) {
     const pathname = usePathname()

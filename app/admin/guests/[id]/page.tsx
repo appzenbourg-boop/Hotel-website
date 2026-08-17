@@ -17,8 +17,7 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
     CHECKED_IN: { label: 'Active', cls: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
     CHECKED_OUT: { label: 'Completed', cls: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
     CANCELLED: { label: 'Cancelled', cls: 'bg-rose-500/10 text-rose-500 border-rose-500/20' },
-    COMPLETED: { label: 'Completed', cls: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
-}
+    COMPLETED: { label: 'Completed', cls: 'bg-gray-500/10 text-gray-400 border-gray-500/20' } }
 
 export default function GuestDetailPage() {
     const params = useParams()
@@ -83,8 +82,7 @@ export default function GuestDetailPage() {
                 setGuest((prev: any) => ({
                     ...prev,
                     idDocumentFront: side === 'front' ? data.url : prev.idDocumentFront,
-                    idDocumentBack: side === 'back' ? data.url : prev.idDocumentBack,
-                }))
+                    idDocumentBack: side === 'back' ? data.url : prev.idDocumentBack }))
                 toast.success(`${side === 'front' ? 'Front' : 'Back'} document uploaded`)
             } else { toast.error('Upload failed') }
         } catch { toast.error('Upload failed') }
@@ -96,8 +94,7 @@ export default function GuestDetailPage() {
             const res = await fetch(`/api/admin/guests/${guestId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editForm),
-            })
+                body: JSON.stringify(editForm) })
             if (res.ok) {
                 toast.success('Profile updated')
                 setIsEditing(false)

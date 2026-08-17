@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import {
-  Save, Building2, IndianRupee, Sparkles, Shield, Smartphone,
+  Save, Building2, IndianRupee, Shield, Smartphone,
   Database, Globe, ChevronRight, ChevronLeft, Loader2,
   Calendar, Check, CheckCircle2, Bell, Zap, ShieldAlert, ClipboardList,
   Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X, MessageSquare, UtensilsCrossed
@@ -34,7 +34,7 @@ const NAV = [
   { id: 'financial',    label: 'Financial & Tax',      icon: IndianRupee,     desc: 'GST, service charge, discounts, invoice' },
   { id: 'mealplans',    label: 'Meal Plans',           icon: UtensilsCrossed, desc: 'EP, CP, MAP, AP pricing and included meals' },
   { id: 'ops',          label: 'Notifications',        icon: Smartphone,      desc: 'SMS, push, email alert settings' },
-  { id: 'subscription', label: 'Subscription & Plans', icon: Sparkles,        desc: 'Current plan, upgrade, billing' },
+  { id: 'subscription', label: 'Subscription & Plans', icon: Star, desc: 'Current plan, upgrade, billing' },
   { id: 'integrations', label: 'Integrations',         icon: Globe,           desc: 'OTA channels and API connections' },
   { id: 'payouts',      label: 'Payouts & Withdrawals',icon: CreditCard,      desc: 'Request withdrawals and view transaction logs' },
   { id: 'retention',    label: 'Data Retention',       icon: Database,        desc: 'How long data is stored' },
@@ -66,12 +66,10 @@ const ROLES = [
 ]
 
 const PLAN_ICONS: Record<string, React.ElementType> = {
-  BASE: Building2, STARTER: Zap, STANDARD: Star, ENTERPRISE: Crown,
-}
+  BASE: Building2, STARTER: Zap, STANDARD: Star, ENTERPRISE: Crown }
 const PLAN_COLORS: Record<string, string> = {
   BASE: 'text-slate-400', STARTER: 'text-blue-400',
-  STANDARD: 'text-amber-400', ENTERPRISE: 'text-purple-400',
-}
+  STANDARD: 'text-amber-400', ENTERPRISE: 'text-purple-400' }
 
 // ─── Financial Settings Component ───────────────────────────────────────────
 function FinancialView({ propertyId }: { propertyId: string | null | undefined }) {
@@ -84,8 +82,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
     // Bank
     bankAccountName: '', bankAccountNumber: '', reenterBankAccountNumber: '', bankIfscCode: '',
     bankName: '', bankBranch: '', upiId: '',
-    razorpayKeyId: '',
-  })
+    razorpayKeyId: '' })
   const [razorpayKeySecret, setRazorpayKeySecret] = useState('')
   const [showSecret, setShowSecret] = useState(false)
   const [showAccountNumber, setShowAccountNumber] = useState(false)
@@ -118,8 +115,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             bankName: d.bankName ?? '',
             bankBranch: d.bankBranch ?? '',
             upiId: d.upiId ?? '',
-            razorpayKeyId: d.razorpayKeyId ?? '',
-          }))
+            razorpayKeyId: d.razorpayKeyId ?? '' }))
           if (d.bankAccountNumberMasked) setMaskedAccount(d.bankAccountNumberMasked)
         }
       })
@@ -145,8 +141,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
 
       const res = await fetch('/api/admin/settings/financial', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+        body: JSON.stringify(payload) })
       const j = await res.json()
       if (j.success) {
         toast.success('Financial settings saved')
@@ -454,8 +449,7 @@ function MealPlansView({ propertyId }: { propertyId: string | null | undefined }
 
 // Map legacy plan names to new ones (for properties that still have old plan in DB)
 const LEGACY_PLAN_MAP: Record<string, string> = {
-  GOLD: 'BASE', PLATINUM: 'STARTER', DIAMOND: 'STANDARD',
-}
+  GOLD: 'BASE', PLATINUM: 'STARTER', DIAMOND: 'STANDARD' }
 
 const PLAN_ORDER = ['BASE', 'STARTER', 'STANDARD', 'ENTERPRISE']
 
@@ -609,7 +603,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
   })
   const activePlan = sortedPlans.find(p => p.plan === normalizedPlan) ?? sortedPlans[0]
 
-  const PLAN_ICONS: Record<string, any> = { BASE: Star, STARTER: Zap, STANDARD: Crown, ENTERPRISE: Sparkles }
+  const PLAN_ICONS: Record<string, any> = { BASE: Star, STARTER: Zap, STANDARD: Crown, ENTERPRISE: Star }
   const PLAN_COLORS: Record<string, string> = { BASE: 'text-text-secondary', STARTER: 'text-amber-500', STANDARD: 'text-[#4A9EFF]', ENTERPRISE: 'text-purple-400' }
 
   return (
@@ -1043,8 +1037,7 @@ export default function SettingsPage() {
           } catch { toast.error('Verification error') } finally { setSaving(false) }
         },
         prefill: { name: session?.user?.name, email: session?.user?.email },
-        theme: { color: '#4A9EFF' }, modal: { ondismiss: () => setSaving(false) },
-      }
+        theme: { color: '#4A9EFF' }, modal: { ondismiss: () => setSaving(false) } }
       new (window as any).Razorpay(opts).open()
     } catch (e: any) { toast.error(e.message || 'Upgrade failed'); setSaving(false) }
   }
@@ -1068,8 +1061,7 @@ export default function SettingsPage() {
           plan: 'BASE',
           isTrialActive: false,
           isAutopayActive: false,
-          planExpiresAt: null,
-        }))
+          planExpiresAt: null }))
         await update()
       } else {
         toast.error(d.error || 'Failed to cancel Autopay')
@@ -1336,8 +1328,7 @@ export default function SettingsPage() {
   const viewTitle: Record<string, string> = {
     OVERVIEW: 'Settings', BRANDING: 'General Info', ROLES: 'Roles & Permissions',
     FINANCIAL: 'Financial & Tax', MEALPLANS: 'Meal Plans', OPS: 'Notifications', SUBSCRIPTION: 'Subscription & Plans',
-    INTEGRATIONS: 'Integrations', PAYOUTS: 'Payouts & Withdrawals', RETENTION: 'Data Retention',
-  }
+    INTEGRATIONS: 'Integrations', PAYOUTS: 'Payouts & Withdrawals', RETENTION: 'Data Retention' }
 
   return (
     <div className="space-y-6">
@@ -1733,9 +1724,7 @@ function AirbnbModal({
         body: JSON.stringify({
           url: airbnbUrl.trim(),
           otaChannel: 'AIRBNB',
-          propertyId,
-        }),
-      })
+          propertyId }) })
       const d = await res.json()
       if (d.success) {
         toast.success(
@@ -1759,8 +1748,7 @@ function AirbnbModal({
     const toastId = toast.loading('Syncing bookings with Airbnb...')
     try {
       const res = await fetch(`/api/admin/settings/integrations/airbnb/sync?propertyId=${propertyId}`, {
-        method: 'POST',
-      })
+        method: 'POST' })
       const d = await res.json()
       if (d.success) {
         toast.success(`Sync completed! Created: ${d.summary.created}, Updated: ${d.summary.updated}`, { id: toastId, duration: 5000 })
@@ -1780,8 +1768,7 @@ function AirbnbModal({
     setDisconnecting(true)
     try {
       const res = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${propertyId}`, {
-        method: 'DELETE',
-      })
+        method: 'DELETE' })
       const d = await res.json()
       if (d.success) {
         toast.success('Airbnb disconnected successfully')
@@ -1833,7 +1820,7 @@ function AirbnbModal({
             disabled={importing || !airbnbUrl.trim()}
             className="w-full py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20"
           >
-            {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
             {importing ? 'Auto-Detecting & Syncing...' : 'Connect & Auto-Import Airbnb Listing'}
           </button>
         </form>
@@ -1849,7 +1836,7 @@ function AirbnbModal({
                 onClick={handleSync}
                 className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5"
               >
-                {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5" />}
                 Sync Calendar Now
               </button>
             )}
@@ -2008,8 +1995,7 @@ function OtaConnectionModal({
         body: JSON.stringify({
           url: icalUrl.trim(),
           otaChannel: otaChannel,
-          propertyId,
-        })
+          propertyId })
       })
       const d = await res.json()
       if (d.success) {
@@ -2050,17 +2036,14 @@ function OtaConnectionModal({
     setSaving(true)
     const payload = Object.entries(localMappings).map(([roomId, otaRoomId]) => ({
       roomId,
-      otaRoomId,
-    }))
+      otaRoomId }))
     try {
       const res = await fetch(`/api/admin/settings/integrations/${ota.id}?propertyId=${propertyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           credentials: isIcalOta ? { defaultIcal: icalUrl, autoImported: true } : { hotelId, apiKey },
-          mappings: payload,
-        }),
-      })
+          mappings: payload }) })
       const d = await res.json()
       if (d.success) {
         toast.success(`${ota.name} settings saved successfully!`)
@@ -2080,8 +2063,7 @@ function OtaConnectionModal({
     setDisconnecting(true)
     try {
       const res = await fetch(`/api/admin/settings/integrations/${ota.id}?propertyId=${propertyId}`, {
-        method: 'DELETE',
-      })
+        method: 'DELETE' })
       const d = await res.json()
       if (d.success) {
         toast.success(`${ota.name} disconnected successfully`)
@@ -2112,9 +2094,7 @@ function OtaConnectionModal({
           roomId: simRoomId,
           guestName: simGuestName || `Mock ${ota.name} Reservation`,
           checkIn: simCheckIn,
-          checkOut: simCheckOut,
-        }),
-      })
+          checkOut: simCheckOut }) })
       const d = await res.json()
       if (d.success) {
         toast.success(`Booking successfully simulated! Reference: ${d.data.booking.notes.split('Ref: ')[1] || 'SIM123'}`, { id: toastId, duration: 4000 })
@@ -2152,8 +2132,7 @@ function OtaConnectionModal({
             'Click "Export Calendar" and copy the iCal link',
             'Paste the copied link below',
           ],
-          placeholder: 'https://admin.booking.com/hotel/hoteladmin/ical.html?t=...',
-        }
+          placeholder: 'https://admin.booking.com/hotel/hoteladmin/ical.html?t=...' }
       : {
           steps: [
             'Log in to Agoda YCS Partner Portal (ycs.agoda.com)',
@@ -2161,8 +2140,7 @@ function OtaConnectionModal({
             'Click "Export Calendar" and copy the iCal / .ics link',
             'Paste the copied link below',
           ],
-          placeholder: 'https://supply-xml.booking.com/hotels/ical/... or Agoda iCal link',
-        }
+          placeholder: 'https://supply-xml.booking.com/hotels/ical/... or Agoda iCal link' }
 
     const isConnected = mappings.length > 0
 
@@ -2216,7 +2194,7 @@ function OtaConnectionModal({
               onClick={handleIcalImport}
               className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
             >
-              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
               {importing ? 'Auto-Detecting & Syncing...' : `Connect & Auto-Import ${ota.name} Listing`}
             </button>
           </div>
@@ -2232,7 +2210,7 @@ function OtaConnectionModal({
                   onClick={handleSync}
                   className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5"
                 >
-                  {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5" />}
                   Sync Calendar Now
                 </button>
               </div>
@@ -2317,7 +2295,7 @@ function OtaConnectionModal({
 
         {/* Channel guidance note */}
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3.5 flex items-start gap-2.5">
-          <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+          
           <p className="text-xs text-gray-300 leading-relaxed">
             {ota.id === 'makemytrip' || ota.id === 'goibibo'
               ? `Hotel owners can copy their Hotel Code & Channel API Key from their MMT/Goibibo Extranet dashboard (partner.makemytrip.com → Channel Manager Settings).`
@@ -2388,7 +2366,7 @@ function OtaConnectionModal({
           <div className="bg-primary/5 border border-primary/20 p-5 rounded-2xl space-y-4">
             <div>
               <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" /> Channel Manager Simulator
+                 Channel Manager Simulator
               </h4>
               <p className="text-[11px] text-text-secondary mt-1">
                 Simulate an incoming guest reservation webhook from {ota.name} to check calendar updates instantly.
@@ -2530,8 +2508,7 @@ function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; on
                         accountSid: accountSid.trim(),
                         authToken: authToken.trim(),
                         phoneNumber: phoneNumber.trim(),
-                        whatsappNumber: whatsappNumber.trim(),
-                    },
+                        whatsappNumber: whatsappNumber.trim() },
                     mappings: []
                 })
             })
@@ -2553,8 +2530,7 @@ function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; on
         setDisconnecting(true)
         try {
             const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`, {
-                method: 'DELETE',
-            })
+                method: 'DELETE' })
             const json = await res.json()
             if (res.ok) {
                 toast.success('Twilio integration disconnected successfully')
@@ -2717,8 +2693,7 @@ function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; 
                 body: JSON.stringify({
                     credentials: {
                         keyId: keyId.trim(),
-                        keySecret: keySecret.trim(),
-                    },
+                        keySecret: keySecret.trim() },
                     mappings: []
                 })
             })
@@ -2740,8 +2715,7 @@ function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; 
         setDisconnecting(true)
         try {
             const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`, {
-                method: 'DELETE',
-            })
+                method: 'DELETE' })
             const json = await res.json()
             if (res.ok) {
                 toast.success('Razorpay gateway disconnected successfully')
