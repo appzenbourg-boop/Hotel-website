@@ -33,7 +33,11 @@ export async function POST(req: Request) {
         if (!session?.user?.id) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
         const body = await req.json()
-        const { propertyId, name, category, contactName, email, phone } = body
+        const { name, category, contactName, email, phone, image } = body
+
+        const { searchParams } = new URL(req.url)
+        const queryPropertyId = searchParams.get('propertyId')
+        const propertyId = body.propertyId || queryPropertyId || (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
 
         if (!propertyId || !name || !category) {
             return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
@@ -47,6 +51,7 @@ export async function POST(req: Request) {
                 contactName,
                 email,
                 phone,
+                image: image || null,
                 status: 'ACTIVE',
                 rating: 5.0
             }
@@ -56,5 +61,59 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error('Create Vendor Error:', error)
         return NextResponse.json({ success: false, error: 'Failed to create vendor' }, { status: 500 })
+    }
+}
+
+export async function PUT(req: Request) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session?.user?.id) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+
+        const body = await req.json()
+        const { id, name, category, contactName, email, phone, image } = body
+
+        if (!id) {
+            return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 })
+        }
+
+        const updated = await prisma.vendor.update({
+            where: { id },
+            data: {
+                name: name || undefined,
+                category: category || undefined,
+                contactName: contactName !== undefined ? contactName : undefined,
+                email: email !== undefined ? email : undefined,
+                phone: phone !== undefined ? phone : undefined,
+                image: image !== undefined ? image : undefined
+            }
+        })
+
+        return NextResponse.json({ success: true, data: updated })
+    } catch (error) {
+        console.error('Update Vendor Error:', error)
+        return NextResponse.json({ success: false, error: 'Failed to update vendor' }, { status: 500 })
+    }
+}
+
+export async function DELETE(req: Request) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session?.user?.id) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+
+        const { searchParams } = new URL(req.url)
+        const id = searchParams.get('id')
+
+        if (!id) {
+            return NextResponse.json({ success: false, error: 'ID is required' }, { status: 400 })
+        }
+
+        await prisma.vendor.delete({
+            where: { id }
+        })
+
+        return NextResponse.json({ success: true })
+    } catch (error) {
+        console.error('Delete Vendor Error:', error)
+        return NextResponse.json({ success: false, error: 'Failed to delete vendor' }, { status: 500 })
     }
 }

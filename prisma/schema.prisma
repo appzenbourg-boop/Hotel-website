@@ -1631,6 +1631,7 @@ model Vendor {
   category    String   // Linen & Textiles, Gastronomy, Wellness & Spa, etc.
   rating      Float    @default(0)
   status      String   @default("ACTIVE") // ACTIVE, PENDING
+  image       String?
   
   contactName String?
   email       String?
@@ -1691,4 +1692,86 @@ model PurchaseOrderItem {
   total           Float
   
   @@map("purchase_order_items")
+}
+
+// ========================================
+// POS (Point of Sale) SYSTEM
+// ========================================
+
+model POSOrder {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber  String   @unique
+  propertyId   String   @db.ObjectId
+  table        String?
+  serverName   String?
+  guestName    String?
+  status       POSOrderStatus @default(PREPARING)
+  tags         String[]
+  kitchenNotes String?
+  subtotal     Float    @default(0)
+  tax          Float    @default(0)
+  total        Float    @default(0)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items        POSOrderItem[] @relation("POSOrderToItem")
+
+  @@map("pos_orders")
+}
+
+model POSOrderItem {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  posOrderId   String   @db.ObjectId
+  posOrder     POSOrder @relation("POSOrderToItem", fields: [posOrderId], references: [id], onDelete: Cascade)
+  
+  course       String?  // e.g., "COURSE 1: STARTERS"
+  name         String
+  description  String?
+  allergy      String?
+  quantity     Int      @default(1)
+  price        Float
+  image        String?
+
+  @@map("pos_order_items")
+}
+
+enum POSOrderStatus {
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
+}
+
+model POSTable {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  tableId    String   @unique
+  size       Int      @default(4)
+  status     String   @default("READY") // READY, CLEANING, RESERVED
+  isBooth    Boolean  @default(false)
+  propertyId String   @db.ObjectId
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("pos_tables")
+}
+
+model InventoryItem {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  sku          String
+  category     String   // Housekeeping, Food & Beverage, Maintenance
+  stockLevel   Int      @default(0)
+  unit         String   @default("units")
+  reorderPoint Int      @default(0)
+  unitPrice    Float    @default(0)
+  status       String   @default("IN STOCK") // IN STOCK, LOW STOCK
+  image        String?
+  propertyId   String   @db.ObjectId
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("inventory_items")
 }

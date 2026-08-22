@@ -30,8 +30,14 @@ export async function GET(req: Request) {
         // Generate basic dashboard analytics
         const totalSpend = purchaseOrders.reduce((sum, po) => sum + (po.status !== 'CANCELLED' ? po.totalAmount : 0), 0)
         
-        // Mock budget for now (e.g. 20% higher than spend)
-        const budgetForecast = totalSpend > 0 ? totalSpend * 1.2 : 50000 
+        let totalOrderedUnits = 0
+        purchaseOrders.forEach(po => {
+            if (po.status !== 'CANCELLED') {
+                po.items.forEach((item: any) => {
+                    totalOrderedUnits += item.quantity || 0
+                })
+            }
+        })
 
         return NextResponse.json({ 
             success: true, 
@@ -39,7 +45,7 @@ export async function GET(req: Request) {
                 purchaseOrders,
                 analytics: {
                     totalSpend,
-                    budgetForecast
+                    totalOrderedUnits
                 }
             } 
         })

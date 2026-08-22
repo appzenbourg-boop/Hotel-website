@@ -33,7 +33,10 @@ import {
   Crown,
   Coffee,
   Star,
-  Plus
+  Plus,
+  MonitorSmartphone,
+  ReceiptText,
+  ShoppingBag
 } from 'lucide-react'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 import { type PlanTier } from '@/lib/plan-features'
@@ -55,11 +58,21 @@ const navItems: Omit<NavItem, 'badge'>[] = [
   { label: 'Front Desk',           icon: <ClipboardCheck className="w-[18px] h-[18px]" />,  href: '/admin/checkin',              featureKey: 'checkin' },
   { label: 'Amenities',            icon: <Star className="w-[18px] h-[18px]" />,         href: '/admin/content/amenities',    featureKey: 'content' },
   { label: 'Food & Beverage Menu', icon: <UtensilsCrossed className="w-[18px] h-[18px]" />, href: '/admin/content/menu',         featureKey: 'content' },
-  { label: 'Concierge Ops',        icon: <Coffee className="w-[18px] h-[18px]" />,          href: '/admin/procurement',                 featureKey: 'services',
+  { label: 'POS',                  icon: <MonitorSmartphone className="w-[18px] h-[18px]" />, href: '/admin/pos',                  featureKey: 'services',
     subItems: [
-      { label: 'PO Dashboard',       icon: <LayoutDashboard className="w-[14px] h-[14px]" />, href: '/admin/procurement',           featureKey: 'services' },
-      { label: 'Create PO',          icon: <Plus className="w-[14px] h-[14px]" />,            href: '/admin/procurement/new',       featureKey: 'services' },
+      { label: 'Active Orders',       icon: <Bell className="w-[14px] h-[14px]" />,            href: '/admin/pos',                    featureKey: 'services' },
+      { label: 'Floor Plan',          icon: <LayoutDashboard className="w-[14px] h-[14px]" />, href: '/admin/pos/floor-plan',         featureKey: 'services' },
+      { label: 'Menu Management',     icon: <UtensilsCrossed className="w-[14px] h-[14px]" />, href: '/admin/content/menu',           featureKey: 'content' },
+      { label: 'Transaction History', icon: <ClipboardCheck className="w-[14px] h-[14px]" />,  href: '/admin/pos/transactions',       featureKey: 'services' },
+    ]
+  },
+  { label: 'Purchase and Order',   icon: <ShoppingBag className="w-[18px] h-[18px]" />,     href: '/admin/procurement/inventory',       featureKey: 'services',
+    subItems: [
+      { label: 'Inventory Dashboard', icon: <LayoutDashboard className="w-[14px] h-[14px]" />, href: '/admin/procurement/inventory', featureKey: 'services' },
+      { label: 'Purchase Orders',     icon: <ReceiptText className="w-[14px] h-[14px]" />,     href: '/admin/procurement',           featureKey: 'services' },
       { label: 'Vendors & Suppliers', icon: <Building2 className="w-[14px] h-[14px]" />,      href: '/admin/procurement/vendors',   featureKey: 'services' },
+      { label: 'Stock Requests',      icon: <ClipboardCheck className="w-[14px] h-[14px]" />,  href: '/admin/procurement/stock-requests', featureKey: 'services' },
+      { label: 'Reports',             icon: <BarChart3 className="w-[14px] h-[14px]" />,       href: '/admin/procurement/reports',    featureKey: 'services' },
     ]
   },
   { label: 'Guests',               icon: <Users className="w-[18px] h-[18px]" />,            href: '/admin/guests',               featureKey: 'guests' },
@@ -193,6 +206,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       const allowed = [
         '/admin/dashboard', '/admin/bookings', '/admin/rooms', '/admin/services',
         '/admin/attendance', '/admin/content/amenities', '/admin/content/menu',
+        '/admin/pos', '/admin/procurement', '/admin/lost-found', '/admin/leaves'
       ]
       if (userDept === 'ACCOUNTS') allowed.push('/admin/payroll')
       return allowed.includes(href)

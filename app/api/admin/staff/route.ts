@@ -8,7 +8,7 @@ import { redis } from '@/lib/redis'
 
 export const dynamic = 'force-dynamic'
 
-const ALLOWED_ROLES = ['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER', 'RECEPTIONIST']
+const ALLOWED_ROLES = ['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER', 'RECEPTIONIST', 'STAFF']
 
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)

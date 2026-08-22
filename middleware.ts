@@ -56,6 +56,9 @@ export async function middleware(req: NextRequest) {
         // ── Admin paths ──────────────────────────────────────────────────────
         if (pathname.startsWith('/admin') && !isAuthPage) {
             const allowedAdminRoles = ['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER', 'RECEPTIONIST']
+            if (pathname.startsWith('/admin/pos') || pathname.startsWith('/admin/procurement')) {
+                allowedAdminRoles.push('STAFF')
+            }
             if (!allowedAdminRoles.includes(role)) {
                 return NextResponse.redirect(new URL(getHomePath(role), req.url))
             }

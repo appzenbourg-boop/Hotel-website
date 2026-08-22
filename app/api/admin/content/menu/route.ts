@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(req: NextRequest) {
     try {
-        const authResult = await requireAuth(req, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER'])
+        const authResult = await requireAuth(req, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER', 'STAFF'])
         if (authResult instanceof NextResponse) return authResult
 
         const { searchParams } = new URL(req.url)
