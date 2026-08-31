@@ -63,9 +63,18 @@ export default function NightAuditConsole() {
     guestLedgerBalance = 0,
     cityLedgerBalance = 0,
     advanceLedgerBalance = 0,
-    discrepancies = [],
+    discrepancies: rawDiscrepancies = [],
     activeAudit = null
   } = data || {}
+
+  const discrepancies = Array.isArray(rawDiscrepancies) ? rawDiscrepancies : []
+  const safeRoomRev = Number(roomRevenue) || 0
+  const safeFbRev = Number(fbRevenue) || 0
+  const safeSpaRev = Number(spaRevenue) || 0
+  const safeMiscRev = Number(miscRevenue) || 0
+  const safeGuestLedger = Number(guestLedgerBalance) || 0
+  const safeCityLedger = Number(cityLedgerBalance) || 0
+  const safeAdvanceLedger = Number(advanceLedgerBalance) || 0
 
   const steps = [
     { id: 1, title: 'Verify Cashier Closures', desc: 'Ensure all tills and shifts are dropped.', icon: <Lock className="w-4 h-4" /> },
@@ -205,19 +214,19 @@ export default function NightAuditConsole() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
              <Card className="p-4 bg-surface border-border">
                 <h4 className="text-[10px] uppercase font-bold text-text-secondary mb-1">Room Revenue</h4>
-                <p className="text-xl font-bold text-text-primary">${roomRevenue.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                <p className="text-xl font-bold text-text-primary">${safeRoomRev.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
              </Card>
              <Card className="p-4 bg-surface border-border">
                 <h4 className="text-[10px] uppercase font-bold text-text-secondary mb-1">F&B Revenue</h4>
-                <p className="text-xl font-bold text-text-primary">${fbRevenue.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                <p className="text-xl font-bold text-text-primary">${safeFbRev.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
              </Card>
              <Card className="p-4 bg-surface border-border">
                 <h4 className="text-[10px] uppercase font-bold text-text-secondary mb-1">Taxes Posted</h4>
-                <p className="text-xl font-bold text-text-primary">${(roomRevenue * 0.18).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                <p className="text-xl font-bold text-text-primary">${(safeRoomRev * 0.18).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
              </Card>
              <Card className="p-4 bg-surface border-border">
                 <h4 className="text-[10px] uppercase font-bold text-text-secondary mb-1">Total Revenue</h4>
-                <p className="text-xl font-bold text-primary">${(roomRevenue + fbRevenue + spaRevenue + miscRevenue).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                <p className="text-xl font-bold text-primary">${(safeRoomRev + safeFbRev + safeSpaRev + safeMiscRev).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
              </Card>
           </div>
 
@@ -232,17 +241,17 @@ export default function NightAuditConsole() {
              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border">
                 <div className="p-5">
                    <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-2">Guest Ledger</p>
-                   <p className="text-2xl font-bold text-text-primary">${guestLedgerBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                   <p className="text-2xl font-bold text-text-primary">${safeGuestLedger.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
                    <p className="text-xs text-text-tertiary mt-1">In-house guests balance</p>
                 </div>
                 <div className="p-5">
                    <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-2">City Ledger (A/R)</p>
-                   <p className="text-2xl font-bold text-text-primary">${cityLedgerBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                   <p className="text-2xl font-bold text-text-primary">${safeCityLedger.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
                    <p className="text-xs text-text-tertiary mt-1">Direct billing / OTAs</p>
                 </div>
                 <div className="p-5">
                    <p className="text-xs text-text-secondary font-bold uppercase tracking-wider mb-2">Advance Deposits</p>
-                   <p className="text-2xl font-bold text-text-primary">${advanceLedgerBalance.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                   <p className="text-2xl font-bold text-text-primary">${safeAdvanceLedger.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
                    <p className="text-xs text-text-tertiary mt-1">Future bookings liability</p>
                 </div>
              </div>
