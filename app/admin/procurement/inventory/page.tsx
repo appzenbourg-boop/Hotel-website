@@ -136,6 +136,18 @@ export default function InventoryDashboard() {
     return inventoryList.filter((item: any) => item.stockLevel <= item.reorderPoint)
   }, [inventoryList])
 
+  const handleRowClick = (item: any) => {
+    setSelectedItem(item)
+    setEditName(item.name)
+    setEditCategory(item.category)
+    setEditStockLevel(item.stockLevel)
+    setEditReorderPoint(item.reorderPoint)
+    setEditTotalValue(item.totalValue)
+    setEditUnit(item.unit || 'units')
+    setEditImage(item.imageUrl || null)
+    setIsEditModalOpen(true)
+  }
+
   const openOrderModal = () => {
     setOrderError('')
     if (inventoryList.length > 0) {
