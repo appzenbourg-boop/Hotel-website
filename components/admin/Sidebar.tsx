@@ -36,7 +36,11 @@ import {
   Plus,
   MonitorSmartphone,
   ReceiptText,
-  ShoppingBag
+  ShoppingBag,
+  ShieldCheck,
+  Calculator,
+  Wallet,
+  FileSpreadsheet
 } from 'lucide-react'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 import { type PlanTier } from '@/lib/plan-features'
@@ -93,14 +97,14 @@ const navItems: Omit<NavItem, 'badge'>[] = [
   { label: 'Attendance',           icon: <Clock className="w-[18px] h-[18px]" />,            href: '/admin/attendance',           featureKey: 'attendance' },
   { label: 'Payroll',              icon: <IndianRupee className="w-[18px] h-[18px]" />,      href: '/admin/payroll',              featureKey: 'payroll' },
   { 
-    label: 'Audit & Financials', 
-    icon: <Activity className="w-[18px] h-[18px]" />, 
+    label: 'Audit & Compliance', 
+    icon: <ShieldCheck className="w-[18px] h-[18px]" />, 
     href: '/admin/audit', 
     featureKey: 'payroll', // Requires similar access to payroll
     subItems: [
-        { label: 'Night Audit', icon: <Clock className="w-[14px] h-[14px]" />, href: '/admin/audit/night-audit', featureKey: 'payroll' },
-        { label: 'Transaction Ledger', icon: <ClipboardCheck className="w-[14px] h-[14px]" />, href: '/admin/audit/ledger', featureKey: 'payroll' },
-        { label: 'Audit Reports', icon: <BarChart3 className="w-[14px] h-[14px]" />, href: '/admin/audit/reports', featureKey: 'payroll' },
+        { label: 'Night Audit Console', icon: <Calculator className="w-[14px] h-[14px]" />, href: '/admin/audit/night-audit', featureKey: 'payroll' },
+        { label: 'Master Ledgers', icon: <Wallet className="w-[14px] h-[14px]" />, href: '/admin/audit/ledger', featureKey: 'payroll' },
+        { label: 'Financial Reports', icon: <FileSpreadsheet className="w-[14px] h-[14px]" />, href: '/admin/audit/reports', featureKey: 'payroll' },
         { label: 'ERP Integrations', icon: <Settings className="w-[14px] h-[14px]" />, href: '/admin/audit/integrations', featureKey: 'payroll' },
     ]
   },

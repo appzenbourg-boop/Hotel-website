@@ -272,7 +272,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json()
-    const { id, name, category, stockLevel, reorderPoint, unit, unitPrice } = body
+    const { id, name, category, stockLevel, reorderPoint, unit, unitPrice, image } = body
 
     if (!id) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
@@ -286,7 +286,8 @@ export async function PUT(req: Request) {
         stockLevel: stockLevel !== undefined ? parseInt(stockLevel) : undefined,
         reorderPoint: reorderPoint !== undefined ? parseInt(reorderPoint) : undefined,
         unitPrice: unitPrice !== undefined ? parseFloat(unitPrice) : undefined,
-        unit: unit || undefined
+        unit: unit || undefined,
+        image: image !== undefined ? image : undefined
       }
     })
 

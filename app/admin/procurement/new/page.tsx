@@ -19,7 +19,7 @@ export default function NewPurchaseOrderPage() {
     const [notes, setNotes] = useState('')
     
     const [items, setItems] = useState([
-        { id: 1, description: '', quantity: 1, unitPrice: 0, taxPercent: 8.5 }
+        { id: 1, description: '', quantity: 1, unitPrice: 0, taxPercent: 0 }
     ])
 
     // Fetch Vendors
@@ -37,7 +37,7 @@ export default function NewPurchaseOrderPage() {
     const activeBookings = bookingData?.data?.filter((b: any) => b.status === 'CHECKED_IN' || b.status === 'RESERVED') || []
 
     const handleAddItem = () => {
-        setItems([...items, { id: Date.now(), description: '', quantity: 1, unitPrice: 0, taxPercent: 8.5 }])
+        setItems([...items, { id: Date.now(), description: '', quantity: 1, unitPrice: 0, taxPercent: 0 }])
     }
 
     const updateItem = (id: number, field: string, value: any) => {
@@ -91,11 +91,7 @@ export default function NewPurchaseOrderPage() {
 
 
             <main className="max-w-6xl mx-auto px-8 py-10">
-                <div className="mb-10 flex items-center gap-4">
-                    <div className="px-3 py-1 bg-[#3B82F6]/10 text-[#3B82F6] text-[10px] font-black uppercase tracking-widest rounded-full">New Order</div>
-                    <div className="h-[1px] flex-1 bg-white/10"></div>
-                    <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500">Procurement Protocol</span>
-                </div>
+
                 
                 <div className="flex items-end justify-between mb-12">
                     <div>
@@ -209,7 +205,7 @@ export default function NewPurchaseOrderPage() {
                                                 ×
                                             </button>
                                         )}
-                                        <div className="col-span-12 md:col-span-5">
+                                        <div className="col-span-12 md:col-span-4">
                                             <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Description</label>
                                             <input 
                                                 type="text" 
@@ -219,7 +215,7 @@ export default function NewPurchaseOrderPage() {
                                                 onChange={e => updateItem(item.id, 'description', e.target.value)}
                                             />
                                         </div>
-                                        <div className="col-span-6 md:col-span-2">
+                                        <div className="col-span-4 md:col-span-2">
                                             <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Qty</label>
                                             <input 
                                                 type="number" 
@@ -229,7 +225,7 @@ export default function NewPurchaseOrderPage() {
                                                 onChange={e => updateItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
                                             />
                                         </div>
-                                        <div className="col-span-6 md:col-span-3">
+                                        <div className="col-span-4 md:col-span-2">
                                             <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Unit Price ($)</label>
                                             <input 
                                                 type="number" 
@@ -239,10 +235,20 @@ export default function NewPurchaseOrderPage() {
                                                 onChange={e => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                                             />
                                         </div>
+                                        <div className="col-span-4 md:col-span-2">
+                                            <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tax / GST (%)</label>
+                                            <input 
+                                                type="number" 
+                                                min="0" max="100" step="0.1"
+                                                className="w-full border border-white/10 rounded-lg p-2.5 text-sm bg-[#1A2634] focus:border-[#3B82F6] text-white outline-none transition-colors text-right font-mono"
+                                                value={item.taxPercent}
+                                                onChange={e => updateItem(item.id, 'taxPercent', parseFloat(e.target.value) || 0)}
+                                            />
+                                        </div>
                                         <div className="col-span-12 md:col-span-2 text-right py-2.5">
                                             <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total</div>
                                             <div className="font-black text-[#3B82F6] font-mono">
-                                                {formatCurrency(item.quantity * item.unitPrice)}
+                                                {formatCurrency(item.quantity * item.unitPrice * (1 + item.taxPercent / 100))}
                                             </div>
                                         </div>
                                     </div>
@@ -306,7 +312,16 @@ export default function NewPurchaseOrderPage() {
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t border-white/20">
+                            <div className="pt-6 border-t border-white/20 space-y-3">
+                                <div className="flex justify-between items-center text-xs text-blue-200">
+                                    <span>Subtotal</span>
+                                    <span className="font-mono font-bold">{formatCurrency(subtotal)}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs text-blue-200">
+                                    <span>Tax / GST</span>
+                                    <span className="font-mono font-bold">{formatCurrency(estimatedTax)}</span>
+                                </div>
+                                <div className="h-[1px] bg-white/20 my-2"></div>
                                 <div className="flex justify-between items-end mb-8">
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-blue-200">Total Obligation</span>
                                     <span className="text-4xl font-black">{formatCurrency(totalAmount)}</span>

@@ -61,7 +61,11 @@ export async function POST(req: Request) {
         if (!session?.user?.id) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
         const body = await req.json()
-        const { propertyId, vendorId, items, shipping, notes, bookingId, status } = body
+        const { vendorId, items, shipping, notes, bookingId, status } = body
+
+        const { searchParams } = new URL(req.url)
+        const queryPropertyId = searchParams.get('propertyId')
+        const propertyId = body.propertyId || queryPropertyId || (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
 
         if (!propertyId || !vendorId || !items || !items.length) {
             return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })

@@ -55,10 +55,7 @@ export default function PurchaseOrdersPage() {
             <main className="max-w-7xl mx-auto py-6">
                 {/* Hero Section */}
                 <div className="mb-12">
-                    <div className="flex items-center gap-4 mb-2">
-                        <div className="h-[1px] w-8 bg-[#3B82F6]"></div>
-                        <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#3B82F6]">Procurement Intelligence</span>
-                    </div>
+
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
                         <div>
                             <h1 className="text-5xl font-black text-white leading-tight">Purchase Orders</h1>

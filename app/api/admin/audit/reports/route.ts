@@ -16,7 +16,8 @@ export async function GET(req: Request) {
             return NextResponse.json({ 
                 monthlyData: [], 
                 ytdRevenue: 0, 
-                projectedRevenue: 0 
+                projectedRevenue: 0,
+                exceptionsCount: 0
             })
         }
 
@@ -60,17 +61,18 @@ export async function GET(req: Request) {
             select: { policies: true }
         })
 
-        const scheduledAudits = (property?.policies as any)?.auditSchedules || [
-            { title: 'Monthly Closing Reconciliation', nextRun: 'Oct 31, 23:59', recipient: 'Board', status: 'Active', progress: 85 },
-            { title: 'OTA Commission Integrity', nextRun: 'Nov 01, 08:00', recipient: 'Regional Manager', status: 'Pending', progress: 0 },
-            { title: 'Nightly Void Exceptions', nextRun: 'Oct 25, 03:00', recipient: 'Audit Team', status: 'Delayed', progress: 0 }
-        ]
+        const scheduledAudits = (property?.policies as any)?.auditSchedules || []
+
+        const exceptionsCount = await prisma.auditException.count({
+            where: { propertyId, status: 'PENDING' }
+        })
 
         return NextResponse.json({
             monthlyData,
             ytdRevenue,
             projectedRevenue,
-            scheduledAudits
+            scheduledAudits,
+            exceptionsCount
         })
     } catch (e: any) {
         return NextResponse.json({ error: e.message }, { status: 500 })

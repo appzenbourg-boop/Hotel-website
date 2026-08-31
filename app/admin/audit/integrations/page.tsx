@@ -178,68 +178,7 @@ export default function IntegrationsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Dedicated Tally Integration Card */}
-        <Card className="border-border shadow-card bg-surface overflow-hidden relative">
-          <div className="absolute top-0 right-0 px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold tracking-wider uppercase rounded-bl-lg">
-            Recommended
-          </div>
-          <div className="h-1.5 w-full bg-success"></div>
-          <div className="p-6">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-lg bg-surface-light flex items-center justify-center border border-border">
-                  <FileSpreadsheet className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-text-primary">Tally Prime / ERP 9</h3>
-                  <p className="text-xs text-text-secondary">Type: Accounting Software</p>
-                </div>
-              </div>
-              <Badge variant="success">
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Active
-              </Badge>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              <div>
-                <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
-                  <span className="text-text-secondary">Sync Health</span>
-                  <span className="text-success">100%</span>
-                </div>
-                <Progress value={100} className="h-1.5 bg-background" indicatorColor="bg-success" />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 bg-background p-4 rounded-lg border border-border">
-                <div>
-                  <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Vouchers Synced</p>
-                  <p className="font-mono text-sm text-text-primary">1,402</p>
-                </div>
-                <div>
-                  <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Night Audit</p>
-                  <p className="font-mono text-sm text-text-primary">
-                    Auto-Sync Enabled
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <Button 
-                variant="primary"
-                className="flex-1"
-                onClick={() => handleSync('Tally')}
-                disabled={syncing === 'Tally'}
-                loading={syncing === 'Tally'}
-                leftIcon={<RefreshCcw className="w-4 h-4" />}
-              >
-                {syncing === 'Tally' ? 'Syncing...' : 'Export to Tally'}
-              </Button>
-              <Button variant="secondary" className="px-3" onClick={() => handleOpenConfig({ provider: 'Tally Prime / ERP 9', status: 'ACTIVE', config: { autoSync: true, endpoint: '' } })}>
-                <Settings2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </Card>
+        {/* Dedicated Integration Cards (Fully Dynamic) */}
 
         {/* Sync Logs Widget */}
         <Card className="border-border shadow-card bg-surface overflow-hidden flex flex-col h-[350px]">
@@ -282,8 +221,8 @@ export default function IntegrationsPage() {
                       <Database className="w-6 h-6 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg text-text-primary">{intg.provider}</h3>
-                      <p className="text-xs text-text-secondary">Type: {intg.type}</p>
+                      <h3 className="font-bold text-lg text-text-primary">{intg.provider.replace('_', ' ')}</h3>
+                      <p className="text-xs text-text-secondary">Type: Accounting Software</p>
                     </div>
                   </div>
                   {intg.status === 'CONNECTED' ? (
@@ -301,20 +240,20 @@ export default function IntegrationsPage() {
                   <div>
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
                       <span className="text-text-secondary">Sync Health</span>
-                      <span className="text-primary">99.8%</span>
+                      <span className="text-primary">{intg.syncHealth || 0}%</span>
                     </div>
-                    <Progress value={99.8} className="h-1.5 bg-background" indicatorColor="bg-primary" />
+                    <Progress value={intg.syncHealth || 0} className="h-1.5 bg-background" indicatorColor="bg-primary" />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 bg-background p-4 rounded-lg border border-border">
                     <div>
                       <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Records Synced</p>
-                      <p className="font-mono text-sm text-text-primary">{(12400).toLocaleString()}</p>
+                      <p className="font-mono text-sm text-text-primary">{(intg.syncedRecords || 0).toLocaleString()}</p>
                     </div>
                     <div>
                       <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Last Sync</p>
                       <p className="font-mono text-sm text-text-primary">
-                        {format(new Date(intg.lastSyncAt), 'h:mm a')}
+                        {intg.lastSyncAt ? format(new Date(intg.lastSyncAt), 'h:mm a') : 'Never'}
                       </p>
                     </div>
                   </div>
@@ -418,7 +357,7 @@ export default function IntegrationsPage() {
             </div>
             <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
               
-              {['SAP_S4HANA', 'QUICKBOOKS', 'ZOHO_BOOKS', 'ORACLE_NETSUITE'].map(erp => (
+              {['TALLY_PRIME', 'SAP_S4HANA', 'QUICKBOOKS', 'ZOHO_BOOKS', 'ORACLE_NETSUITE'].map(erp => (
                 <div key={erp} className="border border-border rounded-xl p-4 flex items-center justify-between hover:bg-surface-light transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center">

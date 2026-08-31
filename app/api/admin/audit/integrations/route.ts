@@ -23,10 +23,24 @@ export async function GET(req: Request) {
             orderBy: { lastSyncAt: 'desc' }
         })
 
-        const lastSync = integrations.length > 0 ? integrations[0].lastSyncAt : null
+        const logs = await prisma.eRPSyncLog.findMany({
+            where: { propertyId, status: 'SUCCESS' }
+        })
+
+        const enhancedIntegrations = integrations.map(intg => {
+            const providerLogs = logs.filter(l => l.destination === intg.provider)
+            const syncedRecords = providerLogs.reduce((sum, log) => sum + log.recordCount, 0)
+            return {
+                ...intg,
+                syncedRecords,
+                syncHealth: providerLogs.length > 0 ? 100 : 0
+            }
+        })
+
+        const lastSync = enhancedIntegrations.length > 0 ? enhancedIntegrations[0].lastSyncAt : null
 
         return NextResponse.json({
-            integrations,
+            integrations: enhancedIntegrations,
             lastSync
         })
     } catch (e: any) {

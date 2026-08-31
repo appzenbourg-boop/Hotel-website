@@ -207,115 +207,99 @@ export default function RoomOccupancyPage() {
 
             // Determine card accent
             const accentColor = isOccupied ? 'purple' : isService ? 'amber' : isOutOfOrder ? 'rose' : 'emerald'
+            const statusColor = isOccupied ? 'text-purple-400' : isService ? 'text-amber-400' : isOutOfOrder ? 'text-rose-400' : 'text-emerald-400'
+            const statusBg = isOccupied ? 'bg-purple-500/10' : isService ? 'bg-amber-500/10' : isOutOfOrder ? 'bg-rose-500/10' : 'bg-emerald-500/10'
             const statusLabel = isOccupied ? 'Occupied' : isService ? 'Service' : isOutOfOrder ? 'Out of Order' : 'Ready'
-            const statusBadgeClass = isOccupied
-              ? 'bg-purple-500/15 text-purple-400'
-              : isService
-              ? 'bg-amber-500/15 text-amber-400'
-              : isOutOfOrder
-              ? 'bg-rose-500/15 text-rose-400'
-              : 'bg-emerald-500/15 text-emerald-400'
 
             return (
               <div
                 key={room.id}
-                className="bg-[#233648] rounded-[20px] p-5 space-y-4 transition-all hover:scale-[1.01] relative group flex flex-col justify-between shadow-lg hover:shadow-xl"
+                className="group relative bg-[#233648] rounded-[20px] p-5 flex flex-col justify-between transition-all hover:-translate-y-1 hover:shadow-2xl overflow-hidden shadow-lg border border-white/[0.02]"
               >
-                {/* Subtle glow */}
+                {/* Subtle top glow matching status */}
                 <div className={cn(
-                  "absolute -right-6 -top-6 w-24 h-24 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none",
-                  accentColor === 'purple' && 'bg-purple-500/10',
-                  accentColor === 'amber' && 'bg-amber-500/10',
-                  accentColor === 'rose' && 'bg-rose-500/10',
-                  accentColor === 'emerald' && 'bg-emerald-500/10',
+                  "absolute top-0 left-0 w-full h-[2px] opacity-0 group-hover:opacity-100 transition-opacity",
+                  isOccupied ? 'bg-purple-500' : isService ? 'bg-amber-500' : isOutOfOrder ? 'bg-rose-500' : 'bg-emerald-500'
                 )} />
 
-                {/* Room Header */}
-                <div className="flex items-start justify-between relative z-10">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-6 relative z-10">
                   <div>
-                    <h3 className="text-lg font-black text-white tracking-tight">Room {room.roomNumber}</h3>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{room.type || room.category || 'Standard Suite'}</p>
+                    <h3 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                      {room.roomNumber}
+                    </h3>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-widest mt-1 font-bold">
+                      {room.type || room.category || 'Standard Suite'}
+                    </p>
                   </div>
-                  <span className={cn(
-                    "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider",
-                    statusBadgeClass
-                  )}>
-                    {statusLabel}
-                  </span>
+                  
+                  {/* Status Indicator */}
+                  <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1", statusBg)}>
+                    <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse bg-current", statusColor)} />
+                    <span className={cn("text-[10px] font-black uppercase tracking-wider", statusColor)}>{statusLabel}</span>
+                  </div>
                 </div>
 
-                {/* Body Details */}
-                {isOccupied && booking ? (
-                  <div className="bg-[#1a2a3a] rounded-xl p-3.5 space-y-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar name={booking.guestName} size="sm" />
-                      <div className="overflow-hidden">
-                        <p className="text-xs font-bold text-white truncate">{booking.guestName}</p>
-                        <p className="text-[10px] text-purple-400 font-mono font-medium">{booking.guestPhone || 'Phone hidden'}</p>
+                {/* Content Body */}
+                <div className="flex-1 mb-6 relative z-10">
+                  {isOccupied ? (
+                    <div className="bg-[#1a2a3a] rounded-xl p-4 space-y-3">
+                       <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Guest Details</p>
+                       {booking ? (
+                         <div>
+                            <p className="text-sm font-black text-white">{booking.guestName}</p>
+                            <p className="text-xs text-gray-400 mt-1 font-medium">Out: {new Date(booking.checkOut).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}</p>
+                         </div>
+                       ) : (
+                         <p className="text-sm text-gray-400 italic">Walk-in / No Profile</p>
+                       )}
+                    </div>
+                  ) : isService ? (
+                    <div className="bg-[#1a2a3a] rounded-xl p-4">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Housekeeping</p>
+                      <p className="text-sm font-black text-white">Service in progress</p>
+                    </div>
+                  ) : isOutOfOrder ? (
+                    <div className="bg-[#1a2a3a] rounded-xl p-4">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-2">Maintenance</p>
+                      <p className="text-sm font-black text-white">Room Blocked</p>
+                    </div>
+                  ) : (
+                    <div className="bg-[#1a2a3a] rounded-xl p-4">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-1">Base Nightly Rate</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black text-white">{formatCurrency(room.basePrice || 2500)}</span>
+                        <span className="text-[10px] text-gray-400 uppercase font-bold">/ nt</span>
                       </div>
                     </div>
-                    <div className="border-t border-white/[0.08] pt-2 flex items-center justify-between text-[10px] text-gray-400 font-medium">
-                      <span>Check-out:</span>
-                      <span className="text-white font-bold">{new Date(booking.checkOut).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
-                    </div>
-                  </div>
-                ) : isService ? (
-                  <div className="bg-[#1a2a3a] rounded-xl p-3.5 text-center">
-                    
-                    <p className="text-xs font-bold text-amber-400">Under Cleaning / Housekeeping</p>
-                    <p className="text-[10px] text-gray-500 mt-1">Service in progress</p>
-                  </div>
-                ) : isOutOfOrder ? (
-                  <div className="bg-[#1a2a3a] rounded-xl p-3.5 text-center">
-                    <XOctagon className="w-5 h-5 text-rose-400 mx-auto mb-1" />
-                    <p className="text-xs font-bold text-rose-400">Out of Order</p>
-                    <p className="text-[10px] text-gray-500 mt-1">Maintenance or blocked from bookings</p>
-                  </div>
-                ) : (
-                  <div className="bg-[#1a2a3a] rounded-xl p-3.5 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Base Nightly Rate</p>
-                      <p className="text-sm font-extrabold text-white mt-0.5">{formatCurrency(room.basePrice || 2500)}</p>
-                    </div>
-                    <span className="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md uppercase">
-                      Ready
-                    </span>
-                  </div>
-                )}
-
-                {/* Footer Action */}
-                <div className="pt-1">
-                  {isOccupied && booking ? (
-                    <button
-                      onClick={() => router.push(`/admin/bookings?search=${booking.guestName}`)}
-                      className="w-full py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      <span>Manage Booking</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </button>
-                  ) : isService ? (
-                    <button
-                      onClick={() => router.push('/admin/services')}
-                      className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      <span>View Service Status</span>
-                    </button>
-                  ) : isOutOfOrder ? (
-                    <button
-                      onClick={() => router.push('/admin/rooms')}
-                      className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      <span>View Room Settings</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => router.push(`/admin/bookings/new?roomId=${room.id}`)}
-                      className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95"
-                    >
-                      <LogIn className="w-3.5 h-3.5" />
-                      <span>Book Room {room.roomNumber}</span>
-                    </button>
                   )}
+                </div>
+
+                {/* Footer Button */}
+                <div className="relative z-10">
+                  <button
+                    onClick={() => {
+                       if (isOccupied) booking ? router.push(`/admin/bookings?search=${booking.guestName}`) : router.push('/admin/rooms')
+                       else if (isService) router.push('/admin/services')
+                       else if (isOutOfOrder) router.push('/admin/rooms')
+                       else router.push(`/admin/bookings/new?roomId=${room.id}`)
+                    }}
+                    className={cn(
+                      "w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 active:scale-95",
+                      statusBg, statusColor,
+                      "hover:opacity-80"
+                    )}
+                  >
+                    {isOccupied ? (
+                      <>Manage {booking ? 'Booking' : 'Room'}<ArrowUpRight className="w-3.5 h-3.5" /></>
+                    ) : isService ? (
+                      'View Service Status'
+                    ) : isOutOfOrder ? (
+                      'View Room Settings'
+                    ) : (
+                      <>Book Room<ArrowUpRight className="w-3.5 h-3.5" /></>
+                    )}
+                  </button>
                 </div>
               </div>
             )

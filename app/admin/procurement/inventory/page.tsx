@@ -60,6 +60,7 @@ export default function InventoryDashboard() {
   const [editReorderPoint, setEditReorderPoint] = useState(0)
   const [editTotalValue, setEditTotalValue] = useState(0)
   const [editUnit, setEditUnit] = useState('units')
+  const [editImage, setEditImage] = useState<string | null>(null)
 
   // Add Form Fields
   const [addName, setAddName] = useState('')
@@ -69,7 +70,37 @@ export default function InventoryDashboard() {
   const [addReorderPoint, setAddReorderPoint] = useState(0)
   const [addTotalValue, setAddTotalValue] = useState(0)
   const [addUnit, setAddUnit] = useState('units')
+  const [addImage, setAddImage] = useState<string | null>(null)
   const [addError, setAddError] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, mode: 'add' | 'edit') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (data.url) {
+        if (mode === 'add') {
+          setAddImage(data.url)
+        } else {
+          setEditImage(data.url)
+        }
+      } else {
+        alert('Failed to upload image')
+      }
+    } catch (err) {
+      alert('Upload failed')
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   // Smart Reorder Form Fields
   const [orderItemId, setOrderItemId] = useState('')
@@ -153,7 +184,7 @@ export default function InventoryDashboard() {
     mutateProcurement() 
   }
 
-  const handleRowClick = (item: any) => {
+  const openEditModal = (item: any) => {
     setSelectedItem(item)
     setEditName(item.name)
     setEditCategory(item.category)
@@ -164,6 +195,7 @@ export default function InventoryDashboard() {
     const totalVal = item.stockLevel * (item.unitPrice || 0)
     setEditTotalValue(totalVal)
     setEditUnit(item.unit)
+    setEditImage(item.image || null)
     setIsEditModalOpen(true)
   }
 
@@ -184,7 +216,8 @@ export default function InventoryDashboard() {
         stockLevel: editStockLevel,
         reorderPoint: editReorderPoint,
         unitPrice: calculatedUnitPrice,
-        unit: editUnit
+        unit: editUnit,
+        image: editImage
       })
     })
 
@@ -225,7 +258,8 @@ export default function InventoryDashboard() {
         stockLevel: addStockLevel,
         reorderPoint: addReorderPoint,
         unitPrice: calculatedUnitPrice,
-        unit: addUnit
+        unit: addUnit,
+        image: addImage
       })
     })
 
@@ -239,6 +273,7 @@ export default function InventoryDashboard() {
     setAddSku('')
     setAddTotalValue(0)
     setAddStockLevel(0)
+    setAddImage(null)
     setIsAddModalOpen(false)
     mutateInventory()
   }
@@ -316,10 +351,7 @@ export default function InventoryDashboard() {
       {/* Top Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-6">
         <div>
-          <div className="flex items-center gap-4 mb-2">
-            <div className="h-[1px] w-8 bg-[#3B82F6]"></div>
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#3B82F6]">Asset Management</span>
-          </div>
+
           <h1 className="text-5xl font-black text-white leading-tight">Inventory<br/><span className="text-[#3B82F6]">State of Zenbourg</span></h1>
         </div>
         
@@ -652,6 +684,34 @@ export default function InventoryDashboard() {
                 />
               </div>
 
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Item Image</label>
+                <div className="flex gap-4 items-center">
+                  <div className="w-20 h-20 bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden flex items-center justify-center relative shrink-0">
+                    {editImage ? (
+                      <img src={editImage} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="w-8 h-8 text-gray-600" />
+                    )}
+                    {isUploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+                  <label className="flex-1 flex flex-col items-center justify-center border border-dashed border-white/10 hover:border-[#3B82F6] rounded-2xl p-4 cursor-pointer transition-colors bg-[#0F172A]/50">
+                    <span className="text-xs font-bold text-gray-300">Change Image</span>
+                    <span className="text-[10px] text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={e => handleImageUpload(e, 'edit')} 
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="submit"
                 className="w-full py-4 bg-[#2563EB] hover:bg-[#3B82F6] text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-blue-500/20"
@@ -769,6 +829,34 @@ export default function InventoryDashboard() {
                   className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Item Image</label>
+                <div className="flex gap-4 items-center">
+                  <div className="w-20 h-20 bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden flex items-center justify-center relative shrink-0">
+                    {addImage ? (
+                      <img src={addImage} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="w-8 h-8 text-gray-600" />
+                    )}
+                    {isUploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
+                  </div>
+                  <label className="flex-1 flex flex-col items-center justify-center border border-dashed border-white/10 hover:border-[#3B82F6] rounded-2xl p-4 cursor-pointer transition-colors bg-[#0F172A]/50">
+                    <span className="text-xs font-bold text-gray-300">Upload Image</span>
+                    <span className="text-[10px] text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={e => handleImageUpload(e, 'add')} 
+                      className="hidden" 
+                    />
+                  </label>
+                </div>
               </div>
 
               <button

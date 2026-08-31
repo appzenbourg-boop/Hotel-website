@@ -112,10 +112,7 @@ export default function ProcurementReportsPage() {
     <div className="min-h-screen bg-[#0F172A] pb-24 font-sans text-gray-200 -mx-6 md:-mx-8 -my-6 md:-my-8 p-8 overflow-y-auto">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-6">
         <div>
-          <div className="flex items-center gap-4 mb-2">
-            <div className="h-[1px] w-8 bg-[#3B82F6]"></div>
-            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#3B82F6]">Procurement Intelligence</span>
-          </div>
+
           <h1 className="text-5xl font-black text-white leading-tight">Procurement Reports</h1>
           <p className="text-gray-400 text-sm mt-3 max-w-md">Extract, analyze, and review transaction ledgers and partner metrics loaded dynamically from stay databases.</p>
         </div>
