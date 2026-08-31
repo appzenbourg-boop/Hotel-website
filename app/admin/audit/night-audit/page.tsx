@@ -291,7 +291,7 @@ export default function NightAuditConsole() {
                            <span className="block text-xs text-text-tertiary">{dis.type || 'System Variance'}</span>
                          </td>
                          <td className="px-4 py-3 text-right text-danger font-bold">
-                           ${(dis.amount || 0).toFixed(2)}
+                           ${(Number(dis.amount) || 0).toFixed(2)}
                          </td>
                          <td className="px-4 py-3 text-right">
                            <Button size="sm" variant="secondary" className="text-xs" disabled={currentStep !== 3}>
