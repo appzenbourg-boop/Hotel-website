@@ -20,7 +20,7 @@ export default function FloorPlanPage() {
   const { data: staffData } = useSWR('/api/admin/staff?activeOnly=true', fetcher)
 
   const staffMembers = staffData?.data || []
-  const tables = dbTables || []
+  const tables = Array.isArray(dbTables) ? dbTables : []
 
   // Modal States
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)

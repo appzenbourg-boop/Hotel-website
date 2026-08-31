@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import {
   Utensils, LayoutGrid, BellRing, UtensilsCrossed, ReceiptText, LogOut,
-  Edit3, Camera, CheckCircle2, Printer, CreditCard, AlertTriangle, User
+  Edit3, Camera, CheckCircle2, Printer, CreditCard, AlertTriangle, User, Plus
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -119,13 +119,13 @@ export default function POSDashboard() {
               <p className="text-sm text-gray-400 mb-6 leading-relaxed">
                 {orders?.error 
                   ? `Database Error: ${orders.error}` 
-                  : "No active orders found in the database. Start by seeding the default orders."}
+                  : "No active orders found in the database. Create a new order from the floor plan to get started."}
               </p>
               <button 
-                onClick={handleSeed} 
+                onClick={() => router.push('/admin/pos/floor-plan')} 
                 className="px-6 py-3.5 bg-[#3B82F6] hover:bg-[#2563EB] text-white font-bold rounded-2xl shadow-lg shadow-blue-500/20 transition-all w-full flex items-center justify-center gap-2"
               >
-                <Utensils className="w-4 h-4" /> Seed Live Data
+                <Plus className="w-4 h-4" /> Create New Order
               </button>
             </div>
           )}
