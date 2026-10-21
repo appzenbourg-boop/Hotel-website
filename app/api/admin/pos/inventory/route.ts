@@ -9,7 +9,23 @@ export async function GET(req: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const propertyId = (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
+    const { searchParams } = new URL(req.url)
+    const urlPropertyId = searchParams.get('propertyId')
+    let propertyId = (session.user as any)?.propertyId
+
+    if (session.user.role === 'SUPER_ADMIN') {
+      if (urlPropertyId && urlPropertyId !== 'ALL') {
+        propertyId = urlPropertyId
+      }
+    } else {
+      if (!propertyId && urlPropertyId && urlPropertyId !== 'ALL') {
+        propertyId = urlPropertyId
+      }
+    }
+
+    if (!propertyId) {
+       return NextResponse.json({ items: [], vendors: [], stats: { totalStockValue: 0, criticalCount: 0, pendingOrdersCount: 0, activeVendorsCount: 0 } })
+    }
 
     const items = await prisma.inventoryItem.findMany({
       where: { propertyId },
@@ -74,9 +90,24 @@ export async function POST(req: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const propertyId = (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
-
     const { searchParams } = new URL(req.url)
+    const urlPropertyId = searchParams.get('propertyId')
+    let propertyId = (session.user as any)?.propertyId
+
+    if (session.user.role === 'SUPER_ADMIN') {
+      if (urlPropertyId && urlPropertyId !== 'ALL') {
+        propertyId = urlPropertyId
+      }
+    } else {
+      if (!propertyId && urlPropertyId && urlPropertyId !== 'ALL') {
+        propertyId = urlPropertyId
+      }
+    }
+
+    if (!propertyId) {
+       return NextResponse.json({ error: 'Property ID required' }, { status: 400 })
+    }
+
     const isReorder = searchParams.get('reorder') === 'true'
 
     if (isReorder) {

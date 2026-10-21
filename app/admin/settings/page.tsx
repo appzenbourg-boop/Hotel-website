@@ -6,7 +6,9 @@ import {
   Save, Building2, IndianRupee, Shield, Smartphone,
   Database, Globe, ChevronRight, ChevronLeft, Loader2,
   Calendar, Check, CheckCircle2, Bell, Zap, ShieldAlert, ClipboardList,
-  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X, MessageSquare, UtensilsCrossed
+  Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X, MessageSquare, UtensilsCrossed,
+  MonitorSmartphone, ShoppingBag, PartyPopper, UserCog, CalendarDays, RotateCcw, CheckSquare, Square, Sparkles, Lock,
+  Search, BarChart3, FileSpreadsheet, Megaphone, Upload, Clock, ShieldCheck
 } from 'lucide-react'
 import { cn, validateGSTIN } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -29,47 +31,304 @@ interface PlanDef {
 }
 
 const NAV = [
-  { id: 'branding',     label: 'General Info',         icon: Building2,       desc: 'Hotel name, address, contact details' },
-  { id: 'roles',        label: 'Roles & Permissions',  icon: Shield,          desc: 'Staff access levels per module' },
-  { id: 'financial',    label: 'Financial & Tax',      icon: IndianRupee,     desc: 'GST, service charge, discounts, invoice' },
-  { id: 'mealplans',    label: 'Meal Plans',           icon: UtensilsCrossed, desc: 'EP, CP, MAP, AP pricing and included meals' },
-  { id: 'ops',          label: 'Notifications',        icon: Smartphone,      desc: 'SMS, push, email alert settings' },
+  { id: 'branding', label: 'General Info', icon: Building2, desc: 'Hotel name, address, contact details' },
+  { id: 'roles', label: 'Roles & Permissions', icon: Shield, desc: 'Staff access levels per module' },
+  { id: 'financial', label: 'Financial & Tax', icon: IndianRupee, desc: 'GST, service charge, discounts, invoice' },
+  { id: 'mealplans', label: 'Meal Plans', icon: UtensilsCrossed, desc: 'EP, CP, MAP, AP pricing and included meals' },
+  { id: 'ops', label: 'Notifications', icon: Smartphone, desc: 'SMS, push, email alert settings' },
   { id: 'subscription', label: 'Subscription & Plans', icon: Star, desc: 'Current plan, upgrade, billing' },
-  { id: 'integrations', label: 'Integrations',         icon: Globe,           desc: 'OTA channels and API connections' },
-  { id: 'payouts',      label: 'Payouts & Withdrawals',icon: CreditCard,      desc: 'Request withdrawals and view transaction logs' },
-  { id: 'retention',    label: 'Data Retention',       icon: Database,        desc: 'How long data is stored' },
+  { id: 'integrations', label: 'Integrations', icon: Globe, desc: 'OTA channels and API connections' },
+  { id: 'payouts', label: 'Payouts & Withdrawals', icon: CreditCard, desc: 'Request withdrawals and view transaction logs' },
+  { id: 'retention', label: 'Data Retention', icon: Database, desc: 'How long data is stored' },
 ]
 
-const PERMISSIONS_SCHEMA = [
-  { id: 'reservations', label: 'Reservations', icon: Calendar, permissions: [
-    { id: 'view_reservations',  label: 'View Reservations',   desc: 'View booking calendar and lists' },
-    { id: 'create_reservation', label: 'Create Reservation',  desc: 'Add new bookings manually' },
-    { id: 'edit_guest_details', label: 'Edit Guest Details',  desc: 'Modify guest names and contact info' },
-    { id: 'process_refunds',    label: 'Process Refunds',     desc: 'Authorize refunds to guests' },
-  ]},
-  { id: 'housekeeping', label: 'Housekeeping', icon: ClipboardList, permissions: [
-    { id: 'view_room_status',   label: 'View Room Status',   desc: 'See clean/dirty/inspected status' },
-    { id: 'update_room_status', label: 'Update Room Status', desc: 'Change room status' },
-    { id: 'manage_supplies',    label: 'Manage Supplies',    desc: 'Track and order cleaning supplies' },
-  ]},
-  { id: 'finance', label: 'Finance', icon: IndianRupee, permissions: [
-    { id: 'view_reports',    label: 'View Financial Reports', desc: 'Access revenue reports' },
-    { id: 'manage_invoices', label: 'Manage Invoices',        desc: 'Create and edit guest invoices' },
-    { id: 'tax_settings',    label: 'Manage Tax Rules',       desc: 'Configure tax rates' },
-  ]},
+export interface PermissionItem {
+  id: string
+  label: string
+  desc: string
+}
+
+export interface PermissionModule {
+  id: string
+  label: string
+  desc: string
+  icon: React.ElementType
+  permissions: PermissionItem[]
+}
+
+const PERMISSIONS_SCHEMA: PermissionModule[] = [
+  {
+    id: 'reservations',
+    label: 'Front Desk & Reservations',
+    desc: 'Room bookings, calendar timeline, digital check-in and reservation details',
+    icon: CalendarDays,
+    permissions: [
+      { id: 'view_reservations', label: 'View Reservations', desc: 'View booking calendar, list and room charts' },
+      { id: 'create_reservation', label: 'Create Reservation', desc: 'Add new walk-in and advance bookings manually' },
+      { id: 'edit_guest_details', label: 'Edit Booking & Guest Info', desc: 'Modify stay dates, room type and contact details' },
+      { id: 'front_desk_checkin', label: 'Check-in & Check-out', desc: 'Verify identity, issue keys and process check-outs' },
+      { id: 'process_refunds', label: 'Process Refunds & Voids', desc: 'Authorize deposit refunds and cancel bookings' },
+    ]
+  },
+  {
+    id: 'channel_manager',
+    label: 'Channel Manager (OTA Sync & Distribution)',
+    desc: 'Two-way synchronization of rates and availability with Booking.com, Agoda, Airbnb & MakeMyTrip',
+    icon: Globe,
+    permissions: [
+      { id: 'channel_manager', label: 'Channel Manager Hub', desc: 'Access OTA channel management console and status' },
+      { id: 'channel_sync', label: 'Real-time OTA Inventory Sync', desc: 'Sync live room availability and booking rates with channels' },
+      { id: 'channel_rates', label: 'Rate Parity & Restrictions', desc: 'Configure channel pricing rules, minimum stay and stop-sell limits' },
+    ]
+  },
+  {
+    id: 'amenities',
+    label: 'Amenities & Facilities Showcase',
+    desc: 'Manage hotel amenities, operating hours, icons and guest-facing inclusions',
+    icon: Star,
+    permissions: [
+      { id: 'manage_amenities', label: 'Manage Amenities', desc: 'Add, update and categorize hotel and room amenities' },
+      { id: 'amenities_display', label: 'Guest Showcase Visibility', desc: 'Control which amenities appear on guest app and booking engine' },
+    ]
+  },
+  {
+    id: 'menu',
+    label: 'Food & Beverage Menu Management',
+    desc: 'Dining menu items, categories, pricing slabs, taxes and dish availability',
+    icon: UtensilsCrossed,
+    permissions: [
+      { id: 'pos_menu', label: 'Menu Items & Pricing', desc: 'Edit dishes, prices, descriptions and in-stock toggle' },
+      { id: 'menu_categories', label: 'Menu Categories & Add-ons', desc: 'Organize food categories, meal times and dietary tags' },
+    ]
+  },
+  {
+    id: 'pos',
+    label: 'Point of Sale (POS & F&B)',
+    desc: 'Restaurant tables, kitchen order tickets (KOT), room service and dining billing',
+    icon: MonitorSmartphone,
+    permissions: [
+      { id: 'pos_orders', label: 'Active Orders & KOT', desc: 'Punch table orders and send tickets to kitchen' },
+      { id: 'pos_floor_plan', label: 'Floor Plan & Table Layout', desc: 'View and rearrange restaurant dining tables' },
+      { id: 'pos_billing', label: 'POS Billing & Settle Checks', desc: 'Generate bills, accept cash/card and charge to room' },
+      { id: 'pos_discount', label: 'Discounts & Order Voids', desc: 'Apply managerial discounts or cancel fired KOTs' },
+      { id: 'pos_transactions', label: 'POS Transaction History', desc: 'Audit past restaurant settlements and daily register' },
+    ]
+  },
+  {
+    id: 'procurement',
+    label: 'Purchase & Inventory (Procurement)',
+    desc: 'Material procurement, vendor purchase orders, stock levels and requisitions',
+    icon: ShoppingBag,
+    permissions: [
+      { id: 'procurement_inventory', label: 'Inventory Stock Levels', desc: 'View real-time item counts and minimum stock alerts' },
+      { id: 'procurement_pos', label: 'Purchase Orders (PO)', desc: 'Draft, approve and issue purchase orders' },
+      { id: 'procurement_vendors', label: 'Vendors & Suppliers', desc: 'Manage vendor directory, contracts and contact info' },
+      { id: 'procurement_requests', label: 'Department Stock Requests', desc: 'Raise and approve internal stock issue requests' },
+      { id: 'procurement_reports', label: 'Consumption & Stock Valuation', desc: 'Analyze kitchen and operational consumption costs' },
+    ]
+  },
+  {
+    id: 'banquet',
+    label: 'Banquet & Events',
+    desc: 'Hall bookings, wedding/corporate event contracts and event billing',
+    icon: PartyPopper,
+    permissions: [
+      { id: 'banquet_calendar', label: 'Banquet Calendar & Inquiries', desc: 'Check hall availability and log event enquiries' },
+      { id: 'banquet_booking', label: 'Create & Manage Events', desc: 'Draft function prospectuses (FP) and event schedules' },
+      { id: 'banquet_billing', label: 'Banquet Billing & Invoicing', desc: 'Raise event advances, final bills and tax invoices' },
+      { id: 'banquet_halls', label: 'Hall Layouts & Setup', desc: 'Configure hall capacities and seating arrangements' },
+    ]
+  },
+  {
+    id: 'guests',
+    label: 'Guests & CRM',
+    desc: 'Guest profile directory, preferences, VIP history and service requests',
+    icon: Users,
+    permissions: [
+      { id: 'view_guests', label: 'Guest Directory & History', desc: 'Browse guest profiles, ID proofs and past stay logs' },
+      { id: 'guest_services', label: 'Guest Service Requests', desc: 'Manage room service, bell desk and concierge tasks' },
+    ]
+  },
+  {
+    id: 'rooms',
+    label: 'Rooms & Housekeeping',
+    desc: 'Room cleanliness status, room occupancy heatmap and maintenance work orders',
+    icon: BedDouble,
+    permissions: [
+      { id: 'view_room_status', label: 'View Room Status & Occupancy', desc: 'Check clean, dirty, inspected or out-of-order rooms' },
+      { id: 'update_room_status', label: 'Update Room Status', desc: 'Mark rooms clean/inspected after servicing' },
+      { id: 'room_maintenance', label: 'Maintenance & Work Orders', desc: 'Flag rooms for repairs or technical defects' },
+      { id: 'manage_supplies', label: 'Linen & Supplies Tracking', desc: 'Monitor cleaning supplies, toiletries and bedding' },
+    ]
+  },
+  {
+    id: 'lost_found',
+    label: 'Lost & Found Registry',
+    desc: 'Log, verify, track, and return guest belongings left in guest rooms or public areas',
+    icon: Search,
+    permissions: [
+      { id: 'lost_found', label: 'Lost & Found Operations', desc: 'Log found items, verify claimant identity, and record return handover' },
+    ]
+  },
+  {
+    id: 'staff',
+    label: 'Staff & Human Resources',
+    desc: 'Employee directory, department rosters, performance and staff incentives',
+    icon: UserCog,
+    permissions: [
+      { id: 'staff_management', label: 'Staff Profiles & Roster', desc: 'View staff directory, assign shifts and departments' },
+      { id: 'staff_perks', label: 'Staff Incentives & Perks', desc: 'Manage reward points, bonus perks and recognition programs' },
+    ]
+  },
+  {
+    id: 'attendance_leaves',
+    label: 'Attendance & Leave Approvals',
+    desc: 'Biometric / digital shift clock-ins and employee leave requests',
+    icon: Clock,
+    permissions: [
+      { id: 'attendance', label: 'Attendance Tracking', desc: 'Record shift check-in and check-out logs' },
+      { id: 'leave_approvals', label: 'Leave Requests & Approvals', desc: 'Approve or reject employee leave applications' },
+    ]
+  },
+  {
+    id: 'payroll',
+    label: 'Payroll & Salary Slips',
+    desc: 'Staff salary calculations, attendance-linked deductions and payslips',
+    icon: IndianRupee,
+    permissions: [
+      { id: 'payroll', label: 'Payroll & Salary Slips', desc: 'Access staff salary calculations and disbursements' },
+    ]
+  },
+  {
+    id: 'audit',
+    label: 'Audit & Compliance (Night Audit)',
+    desc: 'Daily night audit console, master ledgers, daily manager reports and ERP sync',
+    icon: ShieldCheck,
+    permissions: [
+      { id: 'night_audit', label: 'Night Audit Console', desc: 'Execute daily night audit and balance hotel ledger' },
+      { id: 'master_ledgers', label: 'Master Ledgers & Folios', desc: 'View city ledgers, guest folios and balance sheets' },
+      { id: 'audit_reports', label: 'Financial Audit Reports', desc: 'Export revenue auditor summaries and discrepancy logs' },
+      { id: 'erp_integrations', label: 'ERP Sync (Tally / SAP)', desc: 'Configure accounting export and sync feeds' },
+    ]
+  },
+  {
+    id: 'marketing',
+    label: 'Marketing & Campaigns',
+    desc: 'Promotional broadcast campaigns via SMS, WhatsApp, and email marketing',
+    icon: Megaphone,
+    permissions: [
+      { id: 'marketing_campaigns', label: 'Broadcasts & Promotions', desc: 'Send promotional SMS, WhatsApp or email campaigns' },
+    ]
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics & Performance',
+    desc: 'Revenue metrics, ADR, RevPAR, dining analysis and loyalty statistics',
+    icon: BarChart3,
+    permissions: [
+      { id: 'view_analytics', label: 'Analytics Dashboard', desc: 'Access revenue velocity, occupancy trends and KPI charts' },
+      { id: 'restaurant_analysis', label: 'Restaurant & Dining Analysis', desc: 'Analyze table turnover, average check and dish popularity' },
+      { id: 'loyalty_analysis', label: 'Guest Loyalty Metrics', desc: 'Track guest retention rate, repeat visits and lifetime value' },
+    ]
+  },
+  {
+    id: 'reports',
+    label: 'Reports & Financial MIS',
+    desc: 'Central report exports, tax invoices, GST configurations and collection summaries',
+    icon: FileSpreadsheet,
+    permissions: [
+      { id: 'view_reports', label: 'Financial & MIS Reports', desc: 'Access daily collection reports, ADR and RevPAR exports' },
+      { id: 'manage_invoices', label: 'Generate & Edit Invoices', desc: 'Create, modify and print hotel tax invoices' },
+      { id: 'tax_settings', label: 'Manage Tax & Pricing Rules', desc: 'Configure GST rates, service charges and discounts' },
+    ]
+  },
+  {
+    id: 'bulk_import',
+    label: 'Bulk Data Import',
+    desc: 'Import past reservations, guest directories, and room inventories via CSV / Excel',
+    icon: Upload,
+    permissions: [
+      { id: 'bulk_import', label: 'Bulk Data Upload', desc: 'Upload and process bulk spreadsheets for rooms, guests and bookings' },
+    ]
+  },
 ]
+
+const DEFAULT_ROLE_PERMISSIONS: Record<string, Record<string, boolean>> = {
+  MANAGER: {
+    reservations: true, view_reservations: true, create_reservation: true, edit_guest_details: true, front_desk_checkin: true, process_refunds: true,
+    channel_manager: true, channel_sync: true, channel_rates: true,
+    amenities: true, manage_amenities: true, amenities_display: true,
+    menu: true, pos_menu: true, menu_categories: true,
+    pos: true, pos_orders: true, pos_floor_plan: true, pos_billing: true, pos_discount: true, pos_transactions: true,
+    procurement: true, procurement_inventory: true, procurement_pos: true, procurement_vendors: true, procurement_requests: true, procurement_reports: true,
+    banquet: true, banquet_calendar: true, banquet_booking: true, banquet_billing: true, banquet_halls: true,
+    guests: true, view_guests: true, guest_services: true,
+    rooms: true, view_room_status: true, update_room_status: true, room_maintenance: true, manage_supplies: true,
+    lost_found: true,
+    staff: true, staff_management: true, staff_perks: true,
+    attendance_leaves: true, attendance: true, leave_approvals: true,
+    payroll: false,
+    audit: true, night_audit: false, master_ledgers: true, audit_reports: true, erp_integrations: false,
+    marketing: true, marketing_campaigns: true,
+    analytics: true, view_analytics: true, restaurant_analysis: true, loyalty_analysis: true,
+    reports: true, view_reports: true, manage_invoices: true, tax_settings: false,
+    bulk_import: true
+  },
+  RECEPTIONIST: {
+    reservations: true, view_reservations: true, create_reservation: true, edit_guest_details: true, front_desk_checkin: true, process_refunds: false,
+    channel_manager: false, channel_sync: false, channel_rates: false,
+    amenities: true, manage_amenities: false, amenities_display: true,
+    menu: true, pos_menu: false, menu_categories: false,
+    pos: true, pos_orders: true, pos_floor_plan: true, pos_billing: true, pos_discount: false, pos_transactions: true,
+    procurement: false, procurement_inventory: false, procurement_pos: false, procurement_vendors: false, procurement_requests: false, procurement_reports: false,
+    banquet: true, banquet_calendar: true, banquet_booking: true, banquet_billing: false, banquet_halls: false,
+    guests: true, view_guests: true, guest_services: true,
+    rooms: true, view_room_status: true, update_room_status: false, room_maintenance: false, manage_supplies: false,
+    lost_found: true,
+    staff: false, staff_management: false, staff_perks: false,
+    attendance_leaves: true, attendance: true, leave_approvals: false,
+    payroll: false,
+    audit: false, night_audit: false, master_ledgers: false, audit_reports: false, erp_integrations: false,
+    marketing: false, marketing_campaigns: false,
+    analytics: false, view_analytics: false, restaurant_analysis: false, loyalty_analysis: false,
+    reports: true, view_reports: false, manage_invoices: true, tax_settings: false,
+    bulk_import: false
+  },
+  STAFF: {
+    reservations: false, view_reservations: false, create_reservation: false, edit_guest_details: false, front_desk_checkin: false, process_refunds: false,
+    channel_manager: false, channel_sync: false, channel_rates: false,
+    amenities: false, manage_amenities: false, amenities_display: false,
+    menu: false, pos_menu: false, menu_categories: false,
+    pos: true, pos_orders: true, pos_floor_plan: false, pos_billing: false, pos_discount: false, pos_transactions: false,
+    procurement: false, procurement_inventory: false, procurement_pos: false, procurement_vendors: false, procurement_requests: true, procurement_reports: false,
+    banquet: false, banquet_calendar: false, banquet_booking: false, banquet_billing: false, banquet_halls: false,
+    guests: true, view_guests: false, guest_services: true,
+    rooms: true, view_room_status: true, update_room_status: true, room_maintenance: false, manage_supplies: false,
+    lost_found: true,
+    staff: false, staff_management: false, staff_perks: false,
+    attendance_leaves: true, attendance: true, leave_approvals: false,
+    payroll: false,
+    audit: false, night_audit: false, master_ledgers: false, audit_reports: false, erp_integrations: false,
+    marketing: false, marketing_campaigns: false,
+    analytics: false, view_analytics: false, restaurant_analysis: false, loyalty_analysis: false,
+    reports: false, view_reports: false, manage_invoices: false, tax_settings: false,
+    bulk_import: false
+  }
+}
 
 const ROLES = [
-  { id: 'MANAGER',      label: 'Manager',      desc: 'Operations and staff oversight' },
-  { id: 'RECEPTIONIST', label: 'Receptionist', desc: 'Front desk and check-in' },
-  { id: 'STAFF',        label: 'Staff',        desc: 'Task execution only' },
+  { id: 'MANAGER', label: 'Manager', desc: 'Operational supervision, guest escalation and staff management' },
+  { id: 'RECEPTIONIST', label: 'Receptionist', desc: 'Front desk check-in, bookings and guest communication' },
+  { id: 'STAFF', label: 'Staff', desc: 'Daily task execution, housekeeping updates and service orders' },
 ]
 
 const PLAN_ICONS: Record<string, React.ElementType> = {
-  BASE: Building2, STARTER: Zap, STANDARD: Star, ENTERPRISE: Crown }
+  BASE: Building2, STARTER: Zap, STANDARD: Star, ENTERPRISE: Crown
+}
 const PLAN_COLORS: Record<string, string> = {
   BASE: 'text-slate-400', STARTER: 'text-blue-400',
-  STANDARD: 'text-amber-400', ENTERPRISE: 'text-purple-400' }
+  STANDARD: 'text-amber-400', ENTERPRISE: 'text-purple-400'
+}
 
 // ─── Financial Settings Component ───────────────────────────────────────────
 function FinancialView({ propertyId }: { propertyId: string | null | undefined }) {
@@ -77,15 +336,18 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
     gstPercent: 18, serviceChargePercent: 0, luxuryTaxPercent: 0,
     gstNumber: '',
     defaultDiscountPercent: 0, discountLabel: 'Discount',
+    managerPin: '1234',
     invoicePrefix: 'INV', invoiceFooter: '',
     checkInTime: '14:00', checkOutTime: '11:00',
     // Bank
     bankAccountName: '', bankAccountNumber: '', reenterBankAccountNumber: '', bankIfscCode: '',
     bankName: '', bankBranch: '', upiId: '',
-    razorpayKeyId: '' })
+    razorpayKeyId: ''
+  })
   const [razorpayKeySecret, setRazorpayKeySecret] = useState('')
   const [showSecret, setShowSecret] = useState(false)
   const [showAccountNumber, setShowAccountNumber] = useState(false)
+  const [showManagerPin, setShowManagerPin] = useState(false)
   const [maskedAccount, setMaskedAccount] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -105,6 +367,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             gstNumber: d.gstNumber ?? '',
             defaultDiscountPercent: d.defaultDiscountPercent ?? 0,
             discountLabel: d.discountLabel ?? 'Discount',
+            managerPin: d.managerPin ?? '1234',
             invoicePrefix: d.invoicePrefix ?? 'INV',
             invoiceFooter: d.invoiceFooter ?? '',
             checkInTime: d.checkInTime ?? '14:00',
@@ -115,11 +378,12 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             bankName: d.bankName ?? '',
             bankBranch: d.bankBranch ?? '',
             upiId: d.upiId ?? '',
-            razorpayKeyId: d.razorpayKeyId ?? '' }))
+            razorpayKeyId: d.razorpayKeyId ?? ''
+          }))
           if (d.bankAccountNumberMasked) setMaskedAccount(d.bankAccountNumberMasked)
         }
       })
-      .catch(() => {}).finally(() => setLoading(false))
+      .catch(() => { }).finally(() => setLoading(false))
   }, [propertyId])
 
   const save = async () => {
@@ -130,18 +394,19 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
       if (razorpayKeySecret) payload.razorpayKeySecret = razorpayKeySecret
       // Don't send empty account number (would overwrite existing)
       if (s.bankAccountNumber) {
-          if (s.bankAccountNumber !== s.reenterBankAccountNumber) {
-              toast.error('Account numbers do not match')
-              setSaving(false)
-              return
-          }
+        if (s.bankAccountNumber !== s.reenterBankAccountNumber) {
+          toast.error('Account numbers do not match')
+          setSaving(false)
+          return
+        }
       } else {
-          delete payload.bankAccountNumber
+        delete payload.bankAccountNumber
       }
 
       const res = await fetch('/api/admin/settings/financial', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload) })
+        body: JSON.stringify(payload)
+      })
       const j = await res.json()
       if (j.success) {
         toast.success('Financial settings saved')
@@ -166,7 +431,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
   const disc = total * s.defaultDiscountPercent / 100
   const final = total - disc
 
-  const ic = 'w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all'
+  const ic = 'w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none transition-all'
   const lc = 'text-xs font-semibold text-text-secondary block mb-1.5'
 
   return (
@@ -175,7 +440,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
       <div className="bg-surface border border-border rounded-2xl p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold text-white">Tax Rates</h3>
+            <h3 className="text-base font-semibold text-text-primary">Tax Rates</h3>
             <p className="text-xs text-text-secondary mt-0.5">Applied automatically to every booking</p>
           </div>
           <Button onClick={save} loading={saving} variant="primary" className="text-sm">
@@ -191,13 +456,48 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
           <div className="space-y-1.5"><label className={lc}>Default Discount %</label><p className="text-[11px] text-text-tertiary">Auto-applied to all bookings (0 = none)</p><input type="number" min={0} max={100} value={s.defaultDiscountPercent} onChange={e => setS(p => ({ ...p, defaultDiscountPercent: parseFloat(e.target.value) || 0 }))} className={ic} /></div>
           <div className="space-y-1.5"><label className={lc}>Discount Label</label><p className="text-[11px] text-text-tertiary">e.g. Early Bird, Member Rate</p><input type="text" value={s.discountLabel} onChange={e => setS(p => ({ ...p, discountLabel: e.target.value }))} className={ic} /></div>
         </div>
+
+        {/* Manager PIN for POS Discounts & Overrides */}
+        <div className="pt-3 border-t border-border">
+          <div className="p-4 rounded-xl bg-surface-light border border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1 max-w-lg">
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-primary" />
+                <span className="text-xs font-bold text-text-primary uppercase tracking-wider">Manager POS Authorization Key (PIN)</span>
+              </div>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Set the secret PIN required when staff or managers punch discounts, void tickets, or approve manual rate adjustments in POS. (Default: <code className="text-primary font-mono font-bold">1234</code>)
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="relative">
+                <input
+                  type={showManagerPin ? 'text' : 'password'}
+                  maxLength={10}
+                  value={s.managerPin}
+                  onChange={e => setS(p => ({ ...p, managerPin: e.target.value.trim() }))}
+                  placeholder="1234"
+                  className={cn(ic, "w-36 text-center font-mono font-bold text-base tracking-widest py-2")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowManagerPin(!showManagerPin)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary text-xs"
+                  title={showManagerPin ? 'Hide PIN' : 'Show PIN'}
+                >
+                  {showManagerPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Invoice & Times ── */}
       <div className="bg-surface border border-border rounded-2xl p-6 space-y-4">
-        <h3 className="text-base font-semibold text-white">Invoice & Operations</h3>
+        <h3 className="text-base font-semibold text-text-primary">Invoice & Operations</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5 md:col-span-2 bg-[#182433]/60 border border-white/5 rounded-xl p-3.5">
+          <div className="space-y-1.5 md:col-span-2 bg-surface-light border border-border rounded-xl p-3.5">
             <label className={lc}>Hotel GST Number (GSTIN)</label>
             <p className="text-[11px] text-text-tertiary">Official 15-character GSTIN displayed on all hotel tax invoices</p>
             <div className="relative mt-1">
@@ -234,7 +534,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             <CreditCard className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-white">Bank Account Details</h3>
+            <h3 className="text-base font-semibold text-text-primary">Bank Account Details</h3>
             <p className="text-xs text-text-secondary mt-0.5">
               All payments collected through the admin panel will be settled to this account via Razorpay.
             </p>
@@ -259,7 +559,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             {maskedAccount && !showAccountNumber ? (
               <div className="flex gap-2">
                 <input type="text" value={maskedAccount} readOnly className={cn(ic, 'opacity-60 cursor-not-allowed font-mono tracking-widest')} />
-                <button onClick={() => setShowAccountNumber(true)} className="px-3 py-2 bg-surface-light border border-border rounded-xl text-xs text-text-secondary hover:text-white transition-all whitespace-nowrap">
+                <button onClick={() => setShowAccountNumber(true)} className="px-3 py-2 bg-surface-light border border-border rounded-xl text-xs text-text-secondary hover:text-text-primary transition-all whitespace-nowrap">
                   Change
                 </button>
               </div>
@@ -294,7 +594,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
 
       {/* ── Demo Review ── */}
       <div className="bg-surface border border-border rounded-2xl p-6">
-        <h3 className="text-base font-semibold text-white mb-4">Demo Review — ₹5,000 room charge</h3>
+        <h3 className="text-base font-semibold text-text-primary mb-4">Demo Review — ₹5,000 room charge</h3>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between text-text-secondary"><span>Room Charges</span><span>₹{base.toLocaleString('en-IN')}</span></div>
           {gst > 0 && <div className="flex justify-between text-text-secondary"><span>GST ({s.gstPercent}%)</span><span>+₹{gst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>}
@@ -302,7 +602,7 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
           {lt > 0 && <div className="flex justify-between text-text-secondary"><span>Luxury Tax ({s.luxuryTaxPercent}%)</span><span>+₹{lt.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>}
           <div className="flex justify-between text-text-secondary border-t border-border pt-2"><span>Subtotal</span><span>₹{total.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>
           {disc > 0 && <div className="flex justify-between text-emerald-400"><span>{s.discountLabel} ({s.defaultDiscountPercent}%)</span><span>-₹{disc.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>}
-          <div className="flex justify-between text-white font-bold border-t border-border pt-2"><span>Guest Pays</span><span>₹{final.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>
+          <div className="flex justify-between text-text-primary font-bold border-t border-border pt-2"><span>Guest Pays</span><span>₹{final.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span></div>
         </div>
       </div>
     </div>
@@ -377,7 +677,7 @@ function MealPlansView({ propertyId }: { propertyId: string | null | undefined }
     <form onSubmit={handleSave} className="space-y-6 animate-fade-in text-left">
       <div className="bg-surface border border-border rounded-2xl p-6 space-y-6">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
+          <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
             <UtensilsCrossed className="w-5 h-5 text-primary" /> Hotel Meal Plan System (EP / CP / MAP / AP)
           </h3>
           <p className="text-xs text-text-secondary mt-1">
@@ -387,13 +687,13 @@ function MealPlansView({ propertyId }: { propertyId: string | null | undefined }
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {plans.map((plan) => (
-            <div key={plan.type} className={cn("p-5 rounded-2xl border transition-all space-y-4", plan.isActive ? "bg-surface-light border-white/10" : "bg-black/20 border-white/5 opacity-60")}>
+            <div key={plan.type} className={cn("p-5 rounded-2xl border transition-all space-y-4", plan.isActive ? "bg-surface-light border-border" : "bg-black/5 dark:bg-black/20 border-border opacity-60")}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="px-3 py-1 bg-primary/10 text-primary font-black text-xs uppercase tracking-wider rounded-lg border border-primary/20">{plan.type}</span>
                   <div>
-                    <h4 className="text-sm font-bold text-white">{plan.name}</h4>
-                    <p className="text-[10px] text-gray-400">{plan.type === 'EP' ? 'Room Only' : plan.type === 'CP' ? 'Room + Breakfast' : plan.type === 'MAP' ? 'Room + Breakfast + Dinner' : 'Room + All 3 Meals'}</p>
+                    <h4 className="text-sm font-bold text-text-primary">{plan.name}</h4>
+                    <p className="text-[10px] text-text-secondary">{plan.type === 'EP' ? 'Room Only' : plan.type === 'CP' ? 'Room + Breakfast' : plan.type === 'MAP' ? 'Room + Breakfast + Dinner' : 'Room + All 3 Meals'}</p>
                   </div>
                 </div>
                 {plan.type !== 'EP' && (
@@ -403,33 +703,33 @@ function MealPlansView({ propertyId }: { propertyId: string | null | undefined }
 
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Per-Day Cost (₹/guest)</label>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Per-Day Cost (₹/guest)</label>
                   <input
                     type="number"
                     min="0"
                     disabled={plan.type === 'EP' || !plan.isActive}
                     value={plan.pricePerDay}
                     onChange={e => handlePriceChange(plan.type, parseFloat(e.target.value) || 0)}
-                    className="w-full bg-[#101922] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white outline-none focus:border-primary disabled:opacity-50"
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-xs font-mono font-bold text-text-primary outline-none focus:border-primary disabled:opacity-50"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Included Meals</label>
-                  <div className="flex items-center gap-1.5 pt-1.5 text-[10px] font-semibold text-gray-300">
-                    <span className={cn("px-2 py-0.5 rounded", plan.includesBreakfast ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-600")}>Bfst</span>
-                    <span className={cn("px-2 py-0.5 rounded", plan.includesLunch ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-600")}>Lunch</span>
-                    <span className={cn("px-2 py-0.5 rounded", plan.includesDinner ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-gray-600")}>Dinner</span>
+                  <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Included Meals</label>
+                  <div className="flex items-center gap-1.5 pt-1.5 text-[10px] font-semibold text-text-secondary">
+                    <span className={cn("px-2 py-0.5 rounded", plan.includesBreakfast ? "bg-emerald-500/20 text-emerald-400" : "bg-surface text-text-tertiary border border-border")}>Bfst</span>
+                    <span className={cn("px-2 py-0.5 rounded", plan.includesLunch ? "bg-emerald-500/20 text-emerald-400" : "bg-surface text-text-tertiary border border-border")}>Lunch</span>
+                    <span className={cn("px-2 py-0.5 rounded", plan.includesDinner ? "bg-emerald-500/20 text-emerald-400" : "bg-surface text-text-tertiary border border-border")}>Dinner</span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Description / Notes</label>
+                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest block mb-1">Description / Notes</label>
                 <input
                   type="text"
                   value={plan.description || ''}
                   onChange={e => handleDescriptionChange(plan.type, e.target.value)}
-                  className="w-full bg-[#101922] border border-white/10 rounded-xl px-3 py-2 text-xs text-gray-300 outline-none focus:border-primary"
+                  className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-xs text-text-primary outline-none focus:border-primary"
                   placeholder="e.g. Complimentary buffet breakfast from 7-10 AM"
                 />
               </div>
@@ -449,7 +749,8 @@ function MealPlansView({ propertyId }: { propertyId: string | null | undefined }
 
 // Map legacy plan names to new ones (for properties that still have old plan in DB)
 const LEGACY_PLAN_MAP: Record<string, string> = {
-  GOLD: 'BASE', PLATINUM: 'STARTER', DIAMOND: 'STANDARD' }
+  GOLD: 'BASE', PLATINUM: 'STARTER', DIAMOND: 'STANDARD'
+}
 
 const PLAN_ORDER = ['BASE', 'STARTER', 'STANDARD', 'ENTERPRISE']
 
@@ -488,7 +789,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
     fetch('/api/admin/subscription-plans')
       .then(r => r.json())
       .then(j => { if (j.success && j.data) setPlans(j.data) })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [])
 
@@ -500,7 +801,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
         setCustomRequests(d.customRequests)
         setAddHotelRequests(d.addHotelRequests)
       }
-    } catch {}
+    } catch { }
   }, [])
 
   useEffect(() => {
@@ -616,7 +917,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
             <div>
               <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wider">Current Plan</p>
               <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-base font-bold text-white">{activePlan.displayName ?? activePlan.plan}</p>
+                <p className="text-base font-bold text-text-primary">{activePlan.displayName ?? activePlan.plan}</p>
                 {isTrialActive && <span className="text-[10px] font-bold bg-amber-500/25 text-amber-400 border border-amber-500/20 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Free Trial</span>}
                 {isAutopayActive && (
                   <div className="flex items-center gap-2">
@@ -628,7 +929,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
             </div>
           </div>
           <div className="text-right">
-            {activePlan.plan !== 'ENTERPRISE' ? <p className="text-lg font-bold text-white">₹{(activePlan.discountedPrice ?? 0).toLocaleString()} <span className="text-xs text-text-tertiary">/mo</span></p> : <p className="text-sm font-bold text-white">Custom Pricing</p>}
+            {activePlan.plan !== 'ENTERPRISE' ? <p className="text-lg font-bold text-text-primary">₹{(activePlan.discountedPrice ?? 0).toLocaleString()} <span className="text-xs text-text-tertiary">/mo</span></p> : <p className="text-sm font-bold text-text-primary">Custom Pricing</p>}
           </div>
         </div>
       )}
@@ -642,10 +943,10 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
             <div key={plan.plan} className={cn('relative flex flex-col border rounded-2xl p-5 transition-all', isActive ? 'bg-primary/10 border-primary/40' : 'bg-surface border-border hover:border-primary/30')}>
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-surface-light"><Icon className={cn('w-4 h-4', PLAN_COLORS[plan.plan])} /></div>
-                <div><h4 className="text-sm font-bold text-white">{plan.displayName ?? plan.plan}</h4><p className="text-[11px] text-text-secondary mt-0.5">{plan.tagline}</p></div>
+                <div><h4 className="text-sm font-bold text-text-primary">{plan.displayName ?? plan.plan}</h4><p className="text-[11px] text-text-secondary mt-0.5">{plan.tagline}</p></div>
               </div>
               <div className="mb-4">
-                {plan.plan !== 'ENTERPRISE' ? <p className="text-2xl font-bold text-white">₹{(plan.discountedPrice ?? 0).toLocaleString()}<span className="text-xs text-text-tertiary">/-mo</span></p> : <p className="text-lg font-bold text-white">Custom Multi-Hotel</p>}
+                {plan.plan !== 'ENTERPRISE' ? <p className="text-2xl font-bold text-text-primary">₹{(plan.discountedPrice ?? 0).toLocaleString()}<span className="text-xs text-text-tertiary">/-mo</span></p> : <p className="text-lg font-bold text-text-primary">Custom Multi-Hotel</p>}
               </div>
               <div className="space-y-1.5 mb-5 flex-1 text-xs text-text-secondary">
                 {(plan.features ?? []).map((f: string, i: number) => <div key={i} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-primary" /><span>{f}</span></div>)}
@@ -662,7 +963,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
       {!isSuper && currentPlan === 'ENTERPRISE' && (
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <div><h3 className="text-base font-semibold text-white">Hotel Portfolio expansion</h3><p className="text-xs text-text-secondary mt-0.5">Request approval to register another hotel to your active dashboard</p></div>
+            <div><h3 className="text-base font-semibold text-text-primary">Hotel Portfolio expansion</h3><p className="text-xs text-text-secondary mt-0.5">Request approval to register another hotel to your active dashboard</p></div>
             <Button onClick={() => setAddHotelModal(true)} variant="primary" className="text-xs py-1.5">Request New Hotel Addition</Button>
           </div>
         </div>
@@ -671,7 +972,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
       {/* REQUESTS HISTORY & SUPER ADMIN MANAGEMENT LEDGER */}
       <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
         <div>
-          <h3 className="text-base font-semibold text-white">{isSuper ? 'Multi-Hotel & Custom Pricing Requests Dashboard' : 'Your Multi-Hotel Portfolio Requests'}</h3>
+          <h3 className="text-base font-semibold text-text-primary">{isSuper ? 'Multi-Hotel & Custom Pricing Requests Dashboard' : 'Your Multi-Hotel Portfolio Requests'}</h3>
           <p className="text-xs text-text-secondary mt-0.5">{isSuper ? 'Provide custom pricing quotes and audit incoming SaaS registration approvals' : 'Track the review, quotation, and Razorpay payment status of your portfolio extensions'}</p>
         </div>
 
@@ -691,7 +992,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
                     <th className="pb-2 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-white">
+                <tbody className="divide-y divide-border text-text-primary">
                   {customRequests.length === 0 ? <tr><td colSpan={6} className="py-4 text-center text-text-secondary">No custom plan requests found</td></tr> : customRequests.map(r => (
                     <tr key={r.id}>
                       <td className="py-3 font-medium">{r.userEmail ?? 'SaaS Customer'}</td>
@@ -704,7 +1005,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
                       <td className="py-3 text-right">
                         {isSuper && r.status === 'PENDING' ? (
                           <div className="flex items-center justify-end gap-2">
-                            <input type="number" placeholder="Set price" value={pricingQuote[r.id] ?? ''} onChange={e => setPricingQuote(p => ({ ...p, [r.id]: e.target.value }))} className="bg-surface-light border border-border rounded-lg px-2 py-1 text-xs text-white outline-none w-24" />
+                            <input type="number" placeholder="Set price" value={pricingQuote[r.id] ?? ''} onChange={e => setPricingQuote(p => ({ ...p, [r.id]: e.target.value }))} className="bg-surface-light border border-border rounded-lg px-2 py-1 text-xs text-text-primary outline-none w-24" />
                             <Button onClick={() => handleSetPriceQuote(r.id, 'CUSTOM_PRICE')} variant="primary" className="text-[10px] py-1 px-2.5">Approve Quote</Button>
                           </div>
                         ) : !isSuper && r.status === 'PRICED' ? (
@@ -733,7 +1034,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
                     <th className="pb-2 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-white">
+                <tbody className="divide-y divide-border text-text-primary">
                   {addHotelRequests.length === 0 ? <tr><td colSpan={6} className="py-4 text-center text-text-secondary">No hotel extension requests found</td></tr> : addHotelRequests.map(r => (
                     <tr key={r.id}>
                       <td className="py-3 font-medium">{r.userEmail ?? 'SaaS Owner'}</td>
@@ -746,7 +1047,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
                       <td className="py-3 text-right">
                         {isSuper && r.status === 'PENDING' ? (
                           <div className="flex items-center justify-end gap-2">
-                            <input type="number" placeholder="Set price" value={pricingQuote[r.id] ?? ''} onChange={e => setPricingQuote(p => ({ ...p, [r.id]: e.target.value }))} className="bg-surface-light border border-border rounded-lg px-2 py-1 text-xs text-white outline-none w-24" />
+                            <input type="number" placeholder="Set price" value={pricingQuote[r.id] ?? ''} onChange={e => setPricingQuote(p => ({ ...p, [r.id]: e.target.value }))} className="bg-surface-light border border-border rounded-lg px-2 py-1 text-xs text-text-primary outline-none w-24" />
                             <Button onClick={() => handleSetPriceQuote(r.id, 'ADD_HOTEL')} variant="primary" className="text-[10px] py-1 px-2.5">Approve Quote</Button>
                           </div>
                         ) : !isSuper && r.status === 'PRICED' ? (
@@ -829,6 +1130,11 @@ export default function SettingsPage() {
   const [hotelInfo, setHotelInfo] = useState<HotelInfo>({ name: '', description: '', address: '', phone: '', email: '', plan: 'BASE', features: [], planExpiresAt: null, ranking: 0, isTrialActive: false, isAutopayActive: false, coverImage: null, logo: null, images: [] })
   const [selectedRole, setSelectedRole] = useState('MANAGER')
   const [permissions, setPermissions] = useState<Record<string, boolean>>({})
+  const [managerAuthPin, setManagerAuthPin] = useState('1234')
+  const [showRolesPin, setShowRolesPin] = useState(false)
+  const [isSavingPin, setIsSavingPin] = useState(false)
+  const [roleSearchQuery, setRoleSearchQuery] = useState('')
+  const [roleCategoryFilter, setRoleCategoryFilter] = useState('ALL')
   const [notif, setNotif] = useState({ smsAlerts: false, pushNotifications: true, emailAlerts: true, bookingConfirmation: true, checkoutReminder: true, serviceUpdates: true })
   const [retention, setRetention] = useState({ guestProfiles: '3_YEARS', financials: '7_YEARS', serviceLogs: '1_YEAR', legalHoldMode: false })
 
@@ -839,14 +1145,14 @@ export default function SettingsPage() {
   const effectivePropertyId = activePropertyId || currentPropertyId
 
   const [otaConnections, setOtaConnections] = useState<any[]>([])
-  
+
   const [airbnbConnected, setAirbnbConnected] = useState(false)
   const [showTwilioModal, setShowTwilioModal] = useState(false)
   const [showRazorpayModal, setShowRazorpayModal] = useState(false)
   const [airbnbMappings, setAirbnbMappings] = useState<any[]>([])
   const [airbnbRooms, setAirbnbRooms] = useState<any[]>([])
   const [showAirbnbModal, setShowAirbnbModal] = useState(false)
-  
+
   const [showOtaModal, setShowOtaModal] = useState<any | null>(null)
 
   const fetchIntegrations = useCallback(async () => {
@@ -865,7 +1171,7 @@ export default function SettingsPage() {
       if (dAll.success) {
         setOtaConnections(dAll.data.connections)
       }
-    } catch {}
+    } catch { }
   }, [effectivePropertyId])
 
   useEffect(() => {
@@ -873,16 +1179,16 @@ export default function SettingsPage() {
   }, [fetchIntegrations])
 
   const INTEGRATIONS = [
-    { id: 'airbnb',       name: 'Airbnb',        type: 'Travel & Booking', status: airbnbConnected ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'booking_com',  name: 'Booking.com',   type: 'OTA Channel',      status: otaConnections.some(c => (c.otaName === 'BOOKING_COM' || c.otaName === 'BOOKING_COM') && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'makemytrip',   name: 'MakeMyTrip',    type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'goibibo',      name: 'Goibibo',       type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'GOIBIBO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'easemytrip',   name: 'EaseMyTrip',    type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'EASE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'yatra',        name: 'Yatra',         type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'YATRA' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'agoda',        name: 'Agoda',         type: 'OTA Channel',      status: otaConnections.some(c => c.otaName === 'AGODA' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'ixigo',        name: 'Ixigo',         type: 'Meta-Search Channel', status: otaConnections.some(c => c.otaName === 'IXIGO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'razorpay',     name: 'Razorpay',      type: 'Payment Gateway',  status: otaConnections.some(c => c.otaName === 'RAZORPAY' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
-    { id: 'twilio',       name: 'Twilio',        type: 'SMS / WhatsApp',   status: otaConnections.some(c => c.otaName === 'TWILIO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'airbnb', name: 'Airbnb', type: 'Travel & Booking', status: airbnbConnected ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'booking_com', name: 'Booking.com', type: 'OTA Channel', status: otaConnections.some(c => (c.otaName === 'BOOKING_COM' || c.otaName === 'BOOKING_COM') && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'makemytrip', name: 'MakeMyTrip', type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'MAKE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'goibibo', name: 'Goibibo', type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'GOIBIBO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'easemytrip', name: 'EaseMyTrip', type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'EASE_MY_TRIP' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'yatra', name: 'Yatra', type: 'OTA Channel (India)', status: otaConnections.some(c => c.otaName === 'YATRA' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'agoda', name: 'Agoda', type: 'OTA Channel', status: otaConnections.some(c => c.otaName === 'AGODA' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'ixigo', name: 'Ixigo', type: 'Meta-Search Channel', status: otaConnections.some(c => c.otaName === 'IXIGO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'razorpay', name: 'Razorpay', type: 'Payment Gateway', status: otaConnections.some(c => c.otaName === 'RAZORPAY' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
+    { id: 'twilio', name: 'Twilio', type: 'SMS / WhatsApp', status: otaConnections.some(c => c.otaName === 'TWILIO' && c.status === 'CONNECTED') ? 'CONNECTED' : 'NOT_CONNECTED' },
   ]
 
   useEffect(() => {
@@ -897,7 +1203,7 @@ export default function SettingsPage() {
         if (d.success && d.properties) {
           setMyProperties(d.properties)
         }
-      } catch {}
+      } catch { }
     }
     loadProps()
   }, [])
@@ -919,18 +1225,58 @@ export default function SettingsPage() {
       if (d.success) {
         const cur = (d.rolePermissions || []).find((rp: any) => rp.role === selectedRole)
         const raw: Record<string, any> = cur?.permissions || {}
-        // Normalize: convert 'READ'/'READ_WRITE' → true, 'NONE'/undefined → false
-        const normalized: Record<string, boolean> = {}
-        Object.entries(raw).forEach(([k, v]) => {
-          normalized[k] = v === true || v === 'READ' || v === 'READ_WRITE'
-        })
-        setPermissions(normalized)
+        if (raw && Object.keys(raw).length > 0) {
+          // Normalize: convert 'READ'/'READ_WRITE' → true, 'NONE'/undefined → false
+          const normalized: Record<string, boolean> = {}
+          Object.entries(raw).forEach(([k, v]) => {
+            normalized[k] = v === true || v === 'READ' || v === 'READ_WRITE'
+          })
+          setPermissions(normalized)
+        } else {
+          // Fresh property or unconfigured role: initialize with industry-standard defaults
+          setPermissions(DEFAULT_ROLE_PERMISSIONS[selectedRole] ?? {})
+        }
       }
     } catch { /* silent */ }
   }, [effectivePropertyId, selectedRole])
 
   useEffect(() => { fetchProperty() }, [fetchProperty])
   useEffect(() => { fetchRoles() }, [fetchRoles])
+
+  useEffect(() => {
+    if (effectivePropertyId && effectivePropertyId !== 'ALL') {
+      fetch(`/api/admin/pos/verify-pin?propertyId=${effectivePropertyId}`)
+        .then(r => r.json())
+        .then(d => { if (d.pin) setManagerAuthPin(d.pin) })
+        .catch(() => {})
+    }
+  }, [effectivePropertyId])
+
+  const handleSaveManagerPin = async () => {
+    if (!effectivePropertyId || effectivePropertyId === 'ALL') { toast.error('Select a hotel first'); return }
+    if (!managerAuthPin || managerAuthPin.length < 3) {
+      toast.error('PIN must be at least 3 characters')
+      return
+    }
+    setIsSavingPin(true)
+    try {
+      const res = await fetch('/api/admin/settings/financial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId: effectivePropertyId, managerPin: managerAuthPin })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success(`Manager Authorization PIN saved as "${managerAuthPin}"`)
+      } else {
+        toast.error(data.error || 'Failed to update PIN')
+      }
+    } catch {
+      toast.error('Connection error')
+    } finally {
+      setIsSavingPin(false)
+    }
+  }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logo' | 'coverImage') => {
     const file = e.target.files?.[0]
@@ -975,7 +1321,7 @@ export default function SettingsPage() {
   }
 
   const saveBranding = async () => {
-    if (!currentPropertyId || currentPropertyId === 'ALL') { toast.error('Select a hotel first'); return }
+    if (!effectivePropertyId || effectivePropertyId === 'ALL') { toast.error('Select a hotel first'); return }
     setSaving(true)
     try {
       // Only send editable branding fields — never send plan/features (those are SUPER_ADMIN only)
@@ -983,7 +1329,7 @@ export default function SettingsPage() {
       const r = await fetch('/api/admin/settings/property', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: currentPropertyId, name, description, address, phone, email, logo, coverImage, images })
+        body: JSON.stringify({ propertyId: effectivePropertyId, name, description, address, phone, email, logo, coverImage, images })
       })
       const d = await r.json()
       if (d.success) toast.success('Hotel info saved')
@@ -992,7 +1338,7 @@ export default function SettingsPage() {
   }
 
   const saveRoles = async () => {
-    if (!currentPropertyId || currentPropertyId === 'ALL') { toast.error('Select a hotel first'); return }
+    if (!effectivePropertyId || effectivePropertyId === 'ALL') { toast.error('Select a hotel first'); return }
     setSaving(true)
     try {
       // Convert boolean map → PermissionLevel strings for server-side checkPermission()
@@ -1003,12 +1349,74 @@ export default function SettingsPage() {
       const r = await fetch('/api/admin/settings/roles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: currentPropertyId, role: selectedRole, permissions: permissionLevels })
+        body: JSON.stringify({ propertyId: effectivePropertyId, role: selectedRole, permissions: permissionLevels })
       })
       const d = await r.json()
-      if (d.success) toast.success('Permissions saved')
-      else toast.error(d.error ?? 'Failed to save')
+      if (d.success) {
+        const roleLabel = ROLES.find(r => r.id === selectedRole)?.label ?? selectedRole
+        toast.success(`${roleLabel} permissions saved successfully`)
+        window.dispatchEvent(new CustomEvent('rolePermissionsUpdated', { detail: { role: selectedRole, propertyId: effectivePropertyId } }))
+      } else {
+        toast.error(d.error ?? 'Failed to save')
+      }
     } catch { toast.error('Connection error') } finally { setSaving(false) }
+  }
+
+  const handleToggleModule = (mod: PermissionModule, checked: boolean) => {
+    setPermissions(prev => {
+      const next = { ...prev, [mod.id]: checked }
+      mod.permissions.forEach(p => {
+        next[p.id] = checked
+      })
+      return next
+    })
+  }
+
+  const handleToggleAllInModule = (mod: PermissionModule, enable: boolean) => {
+    setPermissions(prev => {
+      const next = { ...prev, [mod.id]: enable }
+      mod.permissions.forEach(p => {
+        next[p.id] = enable
+      })
+      return next
+    })
+  }
+
+  const handleTogglePermission = (mod: PermissionModule, permId: string) => {
+    setPermissions(prev => {
+      const newVal = !prev[permId]
+      const next = { ...prev, [permId]: newVal }
+      if (newVal) {
+        next[mod.id] = true
+      } else {
+        const anyRemaining = mod.permissions.some(p => p.id !== permId && !!prev[p.id])
+        if (!anyRemaining) {
+          next[mod.id] = false
+        }
+      }
+      return next
+    })
+  }
+
+  const handleResetRoleDefaults = () => {
+    const defaults = DEFAULT_ROLE_PERMISSIONS[selectedRole] ?? {}
+    setPermissions(defaults)
+    const roleLabel = ROLES.find(r => r.id === selectedRole)?.label ?? selectedRole
+    toast.info(`Reset ${roleLabel} permissions to recommended defaults`)
+  }
+
+  const handleGlobalToggleAll = (enable: boolean) => {
+    setPermissions(() => {
+      const next: Record<string, boolean> = {}
+      PERMISSIONS_SCHEMA.forEach(mod => {
+        next[mod.id] = enable
+        mod.permissions.forEach(p => {
+          next[p.id] = enable
+        })
+      })
+      return next
+    })
+    toast.info(enable ? 'Enabled all modules for this role' : 'Disabled all modules for this role')
   }
 
   const handleUpgrade = async (plan: PlanDef) => {
@@ -1037,7 +1445,8 @@ export default function SettingsPage() {
           } catch { toast.error('Verification error') } finally { setSaving(false) }
         },
         prefill: { name: session?.user?.name, email: session?.user?.email },
-        theme: { color: '#4A9EFF' }, modal: { ondismiss: () => setSaving(false) } }
+        theme: { color: '#4A9EFF' }, modal: { ondismiss: () => setSaving(false) }
+      }
       new (window as any).Razorpay(opts).open()
     } catch (e: any) { toast.error(e.message || 'Upgrade failed'); setSaving(false) }
   }
@@ -1061,7 +1470,8 @@ export default function SettingsPage() {
           plan: 'BASE',
           isTrialActive: false,
           isAutopayActive: false,
-          planExpiresAt: null }))
+          planExpiresAt: null
+        }))
         await update()
       } else {
         toast.error(d.error || 'Failed to cancel Autopay')
@@ -1073,7 +1483,7 @@ export default function SettingsPage() {
     }
   }
 
-  const ic = 'w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none transition-all'
+  const ic = 'w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none transition-all'
   const lc = 'text-xs font-semibold text-text-secondary block mb-1.5'
 
   const renderView = () => {
@@ -1081,7 +1491,7 @@ export default function SettingsPage() {
       <div className="space-y-6">
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
           <div className="flex items-center justify-between">
-            <div><h3 className="text-base font-semibold text-white">Hotel Information</h3><p className="text-xs text-text-secondary mt-0.5">Update your hotel name, contact details and description</p></div>
+            <div><h3 className="text-base font-semibold text-text-primary">Hotel Information</h3><p className="text-xs text-text-secondary mt-0.5">Update your hotel name, contact details and description</p></div>
             <Button onClick={saveBranding} loading={saving} variant="primary" className="text-sm"><Save className="w-4 h-4 mr-2" />Save</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1151,7 +1561,7 @@ export default function SettingsPage() {
                 {hotelInfo.images.map((imgUrl, idx) => (
                   <div key={idx} className="relative aspect-video rounded-lg border border-white/[0.05] overflow-hidden group">
                     <img src={imgUrl} className="w-full h-full object-cover" alt={`Gallery ${idx + 1}`} />
-                    <button 
+                    <button
                       onClick={() => removeGalleryImage(idx)}
                       className="absolute top-1.5 right-1.5 bg-black/70 hover:bg-red-500 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Remove photo"
@@ -1174,38 +1584,369 @@ export default function SettingsPage() {
       </div>
     )
 
-    if (view === 'ROLES') return (
-      <div className="space-y-6">
-        <div className="bg-surface border border-border rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-5">
-            <div><h3 className="text-base font-semibold text-white">Roles & Permissions</h3><p className="text-xs text-text-secondary mt-0.5">Control what each staff role can access</p></div>
-            <Button onClick={saveRoles} loading={saving} variant="primary" className="text-sm"><Save className="w-4 h-4 mr-2" />Save</Button>
-          </div>
-          <div className="flex gap-2 flex-wrap mb-6">
-            {ROLES.map(r => (
-              <button key={r.id} onClick={() => setSelectedRole(r.id)} className={cn('px-4 py-2 rounded-xl text-sm font-medium transition-all', selectedRole === r.id ? 'bg-primary text-white' : 'bg-surface-light text-text-secondary hover:text-white border border-border')}>
-                {r.label}
-              </button>
-            ))}
-          </div>
-          <div className="space-y-6">
-            {PERMISSIONS_SCHEMA.map(mod => (
-              <div key={mod.id}>
-                <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-3">{mod.label}</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {mod.permissions.map(perm => (
-                    <div key={perm.id} className="flex items-center justify-between p-4 bg-surface-light border border-border rounded-xl">
-                      <div><p className="text-sm font-medium text-white">{perm.label}</p><p className="text-xs text-text-secondary mt-0.5">{perm.desc}</p></div>
-                      <Switch checked={!!permissions[perm.id]} onChange={() => setPermissions(p => ({ ...p, [perm.id]: !p[perm.id] }))} />
-                    </div>
-                  ))}
+    if (view === 'ROLES') {
+      const totalPerms = PERMISSIONS_SCHEMA.reduce((acc, mod) => acc + mod.permissions.length, 0)
+      let activePerms = 0
+      PERMISSIONS_SCHEMA.forEach(mod => {
+        mod.permissions.forEach(p => {
+          if (permissions[p.id]) activePerms++
+        })
+      })
+      const activeRoleObj = ROLES.find(r => r.id === selectedRole)
+
+      const filteredSchema = PERMISSIONS_SCHEMA.filter(mod => {
+        if (roleCategoryFilter !== 'ALL') {
+          if (roleCategoryFilter === 'CHANNEL' && mod.id !== 'channel_manager') return false
+          if (roleCategoryFilter === 'FRONT_DESK' && !['reservations', 'guests', 'rooms', 'amenities', 'lost_found', 'bulk_import'].includes(mod.id)) return false
+          if (roleCategoryFilter === 'DINING' && !['pos', 'menu'].includes(mod.id)) return false
+          if (roleCategoryFilter === 'EVENTS' && mod.id !== 'banquet') return false
+          if (roleCategoryFilter === 'INVENTORY' && mod.id !== 'procurement') return false
+          if (roleCategoryFilter === 'STAFF_HR' && !['staff', 'attendance_leaves', 'payroll'].includes(mod.id)) return false
+          if (roleCategoryFilter === 'AUDIT_FINANCE' && !['audit', 'reports', 'analytics', 'marketing'].includes(mod.id)) return false
+        }
+        if (!roleSearchQuery.trim()) return true
+        const q = roleSearchQuery.trim().toLowerCase()
+        if (mod.label.toLowerCase().includes(q) || mod.desc.toLowerCase().includes(q)) return true
+        return mod.permissions.some(p => p.label.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q))
+      })
+
+      return (
+        <div className="space-y-6">
+          {/* Main Container */}
+          <div className="bg-surface border border-border rounded-2xl p-6 space-y-6">
+            {/* Header & Primary Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+              <div>
+                <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-primary" /> Roles & Permissions Control
+                </h3>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  Configure access rights per staff role. Turn ON a main module (e.g. POS) to enable and customize its sub-options.
+                </p>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <Button
+                  onClick={handleResetRoleDefaults}
+                  variant="secondary"
+                  className="text-xs py-2 px-3 flex items-center gap-1.5"
+                  title="Restore recommended default permissions for this role"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Defaults
+                </Button>
+                <Button
+                  onClick={saveRoles}
+                  loading={saving}
+                  variant="primary"
+                  className="text-xs py-2 px-4 shadow-sm shadow-primary/20"
+                >
+                  <Save className="w-4 h-4 mr-1.5" /> Save Changes
+                </Button>
+              </div>
+            </div>
+
+            {/* Role Tabs */}
+            <div className="space-y-3">
+              <div className="flex gap-2.5 flex-wrap">
+                {ROLES.map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => setSelectedRole(r.id)}
+                    className={cn(
+                      'px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 border',
+                      selectedRole === r.id
+                        ? 'bg-primary text-white border-primary shadow-sm shadow-primary/25'
+                        : 'bg-surface-light text-text-secondary hover:text-text-primary border-border hover:border-primary/30'
+                    )}
+                  >
+                    <span>{r.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Role Context Banner & Quick Global Controls */}
+              <div className="p-3.5 bg-surface-light border border-border rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="text-xs">
+                  <span className="font-bold text-text-primary">{activeRoleObj?.label} Role:</span>{' '}
+                  <span className="text-text-secondary">{activeRoleObj?.desc}</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="font-semibold text-text-primary bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full text-[11px]">
+                    {activePerms} of {totalPerms} permissions enabled
+                  </span>
+                  <div className="h-3.5 w-px bg-border hidden sm:block" />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleGlobalToggleAll(true)}
+                      className="text-[11px] font-semibold text-primary hover:underline"
+                    >
+                      Enable All
+                    </button>
+                    <span className="text-text-tertiary text-xs">•</span>
+                    <button
+                      onClick={() => handleGlobalToggleAll(false)}
+                      className="text-[11px] font-semibold text-text-secondary hover:text-text-primary"
+                    >
+                      Disable All
+                    </button>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Manager POS Authorization Key Configuration */}
+            {selectedRole === 'MANAGER' && (
+              <div className="p-4 rounded-xl bg-surface-light border border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1 max-w-lg">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-bold text-text-primary uppercase tracking-wider">Manager POS Authorization Key (PIN)</span>
+                  </div>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    Set the secret PIN required when staff or managers approve discounts, void active tickets, or override rates in the POS terminal. (Default: <code className="text-primary font-mono font-bold">1234</code>)
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative">
+                    <input
+                      type={showRolesPin ? 'text' : 'password'}
+                      maxLength={10}
+                      value={managerAuthPin}
+                      onChange={e => setManagerAuthPin(e.target.value.trim())}
+                      placeholder="1234"
+                      className="w-32 bg-surface border border-border rounded-xl px-3 py-2 text-center font-mono font-bold text-base tracking-widest text-text-primary outline-none focus:border-primary transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRolesPin(!showRolesPin)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
+                      title={showRolesPin ? 'Hide PIN' : 'Show PIN'}
+                    >
+                      {showRolesPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                  <Button
+                    onClick={handleSaveManagerPin}
+                    loading={isSavingPin}
+                    variant="primary"
+                    className="text-xs py-2 px-3.5 shadow-xs"
+                  >
+                    Save PIN
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Search & Quick Filter Controls */}
+            <div className="space-y-3 pt-1">
+              <div className="relative">
+                <Search className="w-4 h-4 text-text-tertiary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={roleSearchQuery}
+                  onChange={e => setRoleSearchQuery(e.target.value)}
+                  placeholder="Search sidebar module or permission (e.g. Channel Manager, Amenities, POS, Night Audit, Staff)..."
+                  className="w-full bg-surface-light border border-border rounded-xl pl-10 pr-9 py-2.5 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-primary transition-all shadow-xs"
+                />
+                {roleSearchQuery && (
+                  <button
+                    onClick={() => setRoleSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary p-0.5 rounded-md"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Filter Category Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs custom-scrollbar">
+                {[
+                  { id: 'ALL', label: `All Modules (${PERMISSIONS_SCHEMA.length})` },
+                  { id: 'CHANNEL', label: 'Channel Manager' },
+                  { id: 'FRONT_DESK', label: 'Front Desk & Rooms' },
+                  { id: 'DINING', label: 'POS & Menu' },
+                  { id: 'EVENTS', label: 'Banquet & Events' },
+                  { id: 'INVENTORY', label: 'Purchase & Inventory' },
+                  { id: 'STAFF_HR', label: 'Staff & HR' },
+                  { id: 'AUDIT_FINANCE', label: 'Audit, MIS & Analytics' },
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setRoleCategoryFilter(cat.id)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border shrink-0',
+                      roleCategoryFilter === cat.id
+                        ? 'bg-primary text-white border-primary shadow-xs'
+                        : 'bg-surface-light text-text-secondary hover:text-text-primary border-border hover:border-primary/30'
+                    )}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modules List with Master Toggles & Expandable Sub-Options */}
+            <div className="space-y-4 pt-1">
+              {filteredSchema.length === 0 ? (
+                <div className="p-8 text-center bg-surface-light border border-border rounded-2xl">
+                  <Search className="w-8 h-8 text-text-tertiary mx-auto mb-2 opacity-50" />
+                  <p className="text-sm font-bold text-text-primary">No modules matching &quot;{roleSearchQuery}&quot;</p>
+                  <p className="text-xs text-text-secondary mt-1">Try searching for keywords like &quot;Channel Manager&quot;, &quot;Amenities&quot;, &quot;Night Audit&quot;, or clear filters.</p>
+                  <button
+                    onClick={() => { setRoleSearchQuery(''); setRoleCategoryFilter('ALL') }}
+                    className="mt-3 px-3.5 py-1.5 text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors border border-primary/20"
+                  >
+                    Clear Filters & Show All
+                  </button>
+                </div>
+              ) : (
+                filteredSchema.map(mod => {
+                  const totalSub = mod.permissions.length
+                  const activeSubCount = mod.permissions.filter(p => !!permissions[p.id]).length
+                  const isModActive = permissions[mod.id] === true || activeSubCount > 0
+                  const IconComponent = mod.icon
+
+                  return (
+                    <div
+                      key={mod.id}
+                      className={cn(
+                        "rounded-2xl border transition-all duration-200 overflow-hidden",
+                        isModActive
+                          ? "bg-surface border-border shadow-xs hover:border-primary/30"
+                          : "bg-surface/50 border-border/60 opacity-90"
+                      )}
+                    >
+                      {/* Master Module Header */}
+                      <div className="p-4 sm:p-5 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div
+                            className={cn(
+                              "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-all",
+                              isModActive
+                                ? "bg-primary/10 text-primary border border-primary/25"
+                                : "bg-surface-light text-text-tertiary border border-border"
+                            )}
+                          >
+                            <IconComponent className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-bold text-text-primary tracking-tight">
+                                {mod.label}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-text-secondary mt-0.5 truncate max-w-xl">
+                              {mod.desc}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Master Switch on the Right */}
+                        <div className="flex items-center gap-3 shrink-0">
+                          <Switch
+                            checked={isModActive}
+                            onChange={(checked) => handleToggleModule(mod, checked)}
+                            textOn="On"
+                            textOff="Off"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sub-Options Container (Visible when Master is ON, cleanly collapsed when OFF) */}
+                      {isModActive ? (
+                        <div className="border-t border-border bg-surface-light/40 p-4 sm:p-5 space-y-3.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider text-[11px]">
+                              {mod.label} Sub-Features & Permissions
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleAllInModule(mod, true)}
+                                className="text-[11px] font-bold text-primary hover:underline px-1.5 py-0.5"
+                              >
+                                Select All
+                              </button>
+                              <span className="text-text-tertiary text-xs">•</span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleAllInModule(mod, false)}
+                                className="text-[11px] font-bold text-text-secondary hover:text-text-primary px-1.5 py-0.5"
+                              >
+                                Deselect All
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {mod.permissions.map(perm => {
+                              const isPermChecked = !!permissions[perm.id]
+                              return (
+                                <div
+                                  key={perm.id}
+                                  className={cn(
+                                    "flex items-center justify-between p-3.5 rounded-xl border transition-all gap-3",
+                                    isPermChecked
+                                      ? "bg-surface border-border shadow-xs"
+                                      : "bg-surface/50 border-border/50 text-text-secondary"
+                                  )}
+                                >
+                                  <div className="min-w-0 pr-2">
+                                    <p className={cn("text-xs font-semibold", isPermChecked ? "text-text-primary" : "text-text-secondary")}>
+                                      {perm.label}
+                                    </p>
+                                    <p className="text-[11px] text-text-secondary mt-0.5 leading-snug">
+                                      {perm.desc}
+                                    </p>
+                                  </div>
+                                  <Switch
+                                    checked={isPermChecked}
+                                    onChange={() => handleTogglePermission(mod, perm.id)}
+                                  />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="px-5 py-3 bg-surface-light/20 border-t border-border flex items-center justify-between text-xs text-text-secondary">
+                          <span className="text-[11px]">
+                            Module disabled for {activeRoleObj?.label}. Toggle ON above to grant access and customize sub-options.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleModule(mod, true)}
+                            className="text-primary font-semibold hover:underline text-[11px] shrink-0 ml-3"
+                          >
+                            Enable {mod.label}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Bottom Save Bar */}
+            <div className="flex items-center justify-between pt-4 border-t border-border">
+              <span className="text-xs text-text-secondary">
+                Remember to click save to apply permission changes for <strong className="text-text-primary">{activeRoleObj?.label}</strong>.
+              </span>
+              <Button
+                onClick={saveRoles}
+                loading={saving}
+                variant="primary"
+                className="text-xs py-2 px-5"
+              >
+                <Save className="w-4 h-4 mr-1.5" /> Save {activeRoleObj?.label} Permissions
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    )
+      )
+    }
 
     if (view === 'FINANCIAL') return <FinancialView propertyId={effectivePropertyId} />
 
@@ -1214,18 +1955,18 @@ export default function SettingsPage() {
     if (view === 'OPS') return (
       <div className="space-y-6">
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
-          <div><h3 className="text-base font-semibold text-white">Notification Settings</h3><p className="text-xs text-text-secondary mt-0.5">Control which alerts are sent to staff and guests</p></div>
+          <div><h3 className="text-base font-semibold text-text-primary">Notification Settings</h3><p className="text-xs text-text-secondary mt-0.5">Control which alerts are sent to staff and guests</p></div>
           <div className="space-y-3">
             {[
-              { id: 'smsAlerts',           label: 'SMS Alerts',              desc: 'Send SMS for bookings and service updates' },
-              { id: 'pushNotifications',   label: 'Push Notifications',      desc: 'In-app push alerts for staff' },
-              { id: 'emailAlerts',         label: 'Email Alerts',            desc: 'Email notifications for important events' },
-              { id: 'bookingConfirmation', label: 'Booking Confirmation',    desc: 'Auto-send confirmation to guests on booking' },
-              { id: 'checkoutReminder',    label: 'Checkout Reminder',       desc: 'Remind guests 1 hour before checkout' },
-              { id: 'serviceUpdates',      label: 'Service Request Updates', desc: 'Notify guests when their request is completed' },
+              { id: 'smsAlerts', label: 'SMS Alerts', desc: 'Send SMS for bookings and service updates' },
+              { id: 'pushNotifications', label: 'Push Notifications', desc: 'In-app push alerts for staff' },
+              { id: 'emailAlerts', label: 'Email Alerts', desc: 'Email notifications for important events' },
+              { id: 'bookingConfirmation', label: 'Booking Confirmation', desc: 'Auto-send confirmation to guests on booking' },
+              { id: 'checkoutReminder', label: 'Checkout Reminder', desc: 'Remind guests 1 hour before checkout' },
+              { id: 'serviceUpdates', label: 'Service Request Updates', desc: 'Notify guests when their request is completed' },
             ].map(n => (
               <div key={n.id} className="flex items-center justify-between p-4 bg-surface-light border border-border rounded-xl">
-                <div><p className="text-sm font-medium text-white">{n.label}</p><p className="text-xs text-text-secondary mt-0.5">{n.desc}</p></div>
+                <div><p className="text-sm font-medium text-text-primary">{n.label}</p><p className="text-xs text-text-secondary mt-0.5">{n.desc}</p></div>
                 <Switch checked={!!(notif as any)[n.id]} onChange={() => setNotif(p => ({ ...p, [n.id]: !(p as any)[n.id] }))} />
               </div>
             ))}
@@ -1236,13 +1977,13 @@ export default function SettingsPage() {
     )
 
     if (view === 'SUBSCRIPTION') return (
-      <SubscriptionView 
-        propertyId={effectivePropertyId} 
-        currentPlan={hotelInfo.plan} 
+      <SubscriptionView
+        propertyId={effectivePropertyId}
+        currentPlan={hotelInfo.plan}
         isTrialActive={hotelInfo.isTrialActive}
         isAutopayActive={hotelInfo.isAutopayActive}
         planExpiresAt={hotelInfo.planExpiresAt}
-        onUpgrade={handleUpgrade} 
+        onUpgrade={handleUpgrade}
         onCancelAutopay={handleCancelAutopay}
       />
     )
@@ -1250,16 +1991,16 @@ export default function SettingsPage() {
     if (view === 'INTEGRATIONS') return (
       <div className="space-y-6">
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-4">
-          <div><h3 className="text-base font-semibold text-white">Integrations & Channels</h3><p className="text-xs text-text-secondary mt-0.5">Connect OTA channels, payment gateways and communication tools</p></div>
+          <div><h3 className="text-base font-semibold text-text-primary">Integrations & Channels</h3><p className="text-xs text-text-secondary mt-0.5">Connect OTA channels, payment gateways and communication tools</p></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {INTEGRATIONS.map(intg => (
               <div key={intg.id} className="flex items-center justify-between p-4 bg-surface-light border border-border rounded-xl">
-                <div><p className="text-sm font-semibold text-white">{intg.name}</p><p className="text-xs text-text-secondary mt-0.5">{intg.type}</p></div>
+                <div><p className="text-sm font-semibold text-text-primary">{intg.name}</p><p className="text-xs text-text-secondary mt-0.5">{intg.type}</p></div>
                 <div className="flex items-center gap-3">
                   <span className={cn('text-xs font-semibold px-2.5 py-1 rounded-full', intg.status === 'CONNECTED' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-surface text-text-tertiary border border-border')}>
                     {intg.status === 'CONNECTED' ? 'Connected' : 'Not Connected'}
                   </span>
-                  <button 
+                  <button
                     onClick={() => {
                       if (intg.id === 'airbnb') {
                         setShowAirbnbModal(true)
@@ -1291,14 +2032,14 @@ export default function SettingsPage() {
     if (view === 'RETENTION') return (
       <div className="space-y-6">
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
-          <div><h3 className="text-base font-semibold text-white">Data Retention</h3><p className="text-xs text-text-secondary mt-0.5">Configure how long different types of data are stored</p></div>
+          <div><h3 className="text-base font-semibold text-text-primary">Data Retention</h3><p className="text-xs text-text-secondary mt-0.5">Configure how long different types of data are stored</p></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className={lc}>Guest Profiles</label><select value={retention.guestProfiles} onChange={e => setRetention(p => ({ ...p, guestProfiles: e.target.value }))} className={cn(ic, 'appearance-none cursor-pointer')}><option value="1_YEAR">1 Year</option><option value="3_YEARS">3 Years</option><option value="5_YEARS">5 Years</option><option value="FOREVER">Forever</option></select></div>
-            <div><label className={lc}>Financial Records</label><select value={retention.financials} onChange={e => setRetention(p => ({ ...p, financials: e.target.value }))} className={cn(ic, 'appearance-none cursor-pointer')}><option value="3_YEARS">3 Years</option><option value="5_YEARS">5 Years</option><option value="7_YEARS">7 Years</option><option value="FOREVER">Forever</option></select></div>
-            <div><label className={lc}>Service Logs</label><select value={retention.serviceLogs} onChange={e => setRetention(p => ({ ...p, serviceLogs: e.target.value }))} className={cn(ic, 'appearance-none cursor-pointer')}><option value="30_DAYS">30 Days</option><option value="90_DAYS">90 Days</option><option value="1_YEAR">1 Year</option><option value="3_YEARS">3 Years</option></select></div>
+            <div><label className={lc}>Guest Profiles</label><select value={retention.guestProfiles} onChange={e => setRetention(p => ({ ...p, guestProfiles: e.target.value }))} className={cn(ic, 'cursor-pointer')}><option value="1_YEAR">1 Year</option><option value="3_YEARS">3 Years</option><option value="5_YEARS">5 Years</option><option value="FOREVER">Forever</option></select></div>
+            <div><label className={lc}>Financial Records</label><select value={retention.financials} onChange={e => setRetention(p => ({ ...p, financials: e.target.value }))} className={cn(ic, 'cursor-pointer')}><option value="3_YEARS">3 Years</option><option value="5_YEARS">5 Years</option><option value="7_YEARS">7 Years</option><option value="FOREVER">Forever</option></select></div>
+            <div><label className={lc}>Service Logs</label><select value={retention.serviceLogs} onChange={e => setRetention(p => ({ ...p, serviceLogs: e.target.value }))} className={cn(ic, 'cursor-pointer')}><option value="30_DAYS">30 Days</option><option value="90_DAYS">90 Days</option><option value="1_YEAR">1 Year</option><option value="3_YEARS">3 Years</option></select></div>
           </div>
           <div className="flex items-center justify-between p-4 bg-surface-light border border-border rounded-xl">
-            <div><p className="text-sm font-medium text-white">Legal Hold Mode</p><p className="text-xs text-text-secondary mt-0.5">Prevent deletion of any data (for compliance/audit)</p></div>
+            <div><p className="text-sm font-medium text-text-primary">Legal Hold Mode</p><p className="text-xs text-text-secondary mt-0.5">Prevent deletion of any data (for compliance/audit)</p></div>
             <Switch checked={retention.legalHoldMode} onChange={() => setRetention(p => ({ ...p, legalHoldMode: !p.legalHoldMode }))} />
           </div>
           <Button onClick={() => toast.success('Retention settings saved')} variant="primary" className="text-sm"><Save className="w-4 h-4 mr-2" />Save Settings</Button>
@@ -1310,14 +2051,14 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {NAV.map(item => (
           <button key={item.id} onClick={() => setView(item.id.toUpperCase())}
-            className="group p-5 bg-surface border border-border rounded-2xl text-left hover:border-primary/40 hover:bg-surface-light transition-all">
+            className="group p-5 bg-surface border border-border rounded-2xl text-left hover:border-primary/40 hover:bg-surface-light transition-all shadow-sm hover:shadow-md">
             <div className="flex items-start justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl bg-surface-light border border-border flex items-center justify-center text-text-secondary group-hover:text-primary group-hover:border-primary/30 transition-all">
+              <div className="w-10 h-10 rounded-xl bg-surface-light border border-border flex items-center justify-center text-text-primary group-hover:text-primary group-hover:border-primary/30 transition-all">
                 <item.icon className="w-5 h-5" />
               </div>
               <ChevronRight className="w-4 h-4 text-text-tertiary group-hover:text-primary transition-all group-hover:translate-x-0.5" />
             </div>
-            <h3 className="text-sm font-semibold text-white mb-1">{item.label}</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-1">{item.label}</h3>
             <p className="text-xs text-text-secondary leading-relaxed">{item.desc}</p>
           </button>
         ))}
@@ -1328,7 +2069,8 @@ export default function SettingsPage() {
   const viewTitle: Record<string, string> = {
     OVERVIEW: 'Settings', BRANDING: 'General Info', ROLES: 'Roles & Permissions',
     FINANCIAL: 'Financial & Tax', MEALPLANS: 'Meal Plans', OPS: 'Notifications', SUBSCRIPTION: 'Subscription & Plans',
-    INTEGRATIONS: 'Integrations', PAYOUTS: 'Payouts & Withdrawals', RETENTION: 'Data Retention' }
+    INTEGRATIONS: 'Integrations', PAYOUTS: 'Payouts & Withdrawals', RETENTION: 'Data Retention'
+  }
 
   return (
     <div className="space-y-6">
@@ -1340,7 +2082,7 @@ export default function SettingsPage() {
             </button>
           )}
           <div>
-            <h1 className="text-xl font-bold text-white">{viewTitle[view] ?? view}</h1>
+            <h1 className="text-xl font-bold text-text-primary">{viewTitle[view] ?? view}</h1>
             {view !== 'OVERVIEW' && <p className="text-xs text-text-secondary mt-0.5">{NAV.find(n => n.id.toUpperCase() === view)?.desc}</p>}
           </div>
         </div>
@@ -1354,7 +2096,7 @@ export default function SettingsPage() {
               className="bg-transparent text-xs font-bold text-[#4A9EFF] focus:outline-none cursor-pointer"
             >
               {myProperties.map(p => (
-                <option key={p.id} value={p.id} className="bg-[#0d1117] text-white">{p.name}</option>
+                <option key={p.id} value={p.id} className="bg-surface text-text-primary">{p.name}</option>
               ))}
             </select>
           </div>
@@ -1362,42 +2104,42 @@ export default function SettingsPage() {
       </div>
       {renderView()}
       {showAirbnbModal && (
-        <AirbnbModal 
-          propertyId={effectivePropertyId || ''} 
-          rooms={airbnbRooms} 
+        <AirbnbModal
+          propertyId={effectivePropertyId || ''}
+          rooms={airbnbRooms}
           mappings={airbnbMappings}
           onClose={() => {
             setShowAirbnbModal(false)
             fetchIntegrations()
-          }} 
+          }}
         />
       )}
       {showTwilioModal && (
-        <TwilioConnectionModal 
-          propertyId={effectivePropertyId || ''} 
+        <TwilioConnectionModal
+          propertyId={effectivePropertyId || ''}
           onClose={() => {
             setShowTwilioModal(false)
             fetchIntegrations()
-          }} 
+          }}
         />
       )}
       {showRazorpayModal && (
-        <RazorpayConnectionModal 
-          propertyId={effectivePropertyId || ''} 
+        <RazorpayConnectionModal
+          propertyId={effectivePropertyId || ''}
           onClose={() => {
             setShowRazorpayModal(false)
             fetchIntegrations()
-          }} 
+          }}
         />
       )}
       {showOtaModal && (
-        <OtaConnectionModal 
-          propertyId={effectivePropertyId || ''} 
+        <OtaConnectionModal
+          propertyId={effectivePropertyId || ''}
           ota={showOtaModal}
           onClose={() => {
             setShowOtaModal(null)
             fetchIntegrations()
-          }} 
+          }}
         />
       )}
     </div>
@@ -1488,7 +2230,7 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-surface border border-border rounded-2xl p-5 space-y-2">
             <p className="text-xs font-semibold text-text-secondary">Total Bookings Revenue</p>
-            <p className="text-2xl font-bold text-white">₹{stats.totalRevenue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-text-primary">₹{stats.totalRevenue.toLocaleString()}</p>
           </div>
           <div className="bg-surface border border-border rounded-2xl p-5 space-y-2">
             <p className="text-xs font-semibold text-text-secondary">Total Payouts Done</p>
@@ -1501,7 +2243,7 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
           <div className="bg-gradient-to-br from-[#4A9EFF]/10 to-[#4A9EFF]/2 bg-surface border border-[#4A9EFF]/20 rounded-2xl p-5 flex flex-col justify-between">
             <div className="space-y-1">
               <p className="text-xs font-bold text-[#4A9EFF] tracking-wide uppercase">Requestable Balance</p>
-              <p className="text-2xl font-black text-white">₹{stats.currentBalance.toLocaleString()}</p>
+              <p className="text-2xl font-black text-text-primary">₹{stats.currentBalance.toLocaleString()}</p>
             </div>
             {stats.currentBalance > 0 && (
               <Button onClick={() => setWithdrawModal(true)} variant="primary" className="text-xs py-1.5 mt-3">Request Withdrawal</Button>
@@ -1514,7 +2256,7 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
       {isSuper ? (
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
           <div>
-            <h3 className="text-base font-semibold text-white">Payment & Withdrawal Requests</h3>
+            <h3 className="text-base font-semibold text-text-primary">Payment & Withdrawal Requests</h3>
             <p className="text-xs text-text-secondary mt-0.5">Approve, transfer, and ledger cash withdrawals for hotel partners</p>
           </div>
 
@@ -1529,7 +2271,7 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
                   <th className="pb-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border text-sm text-white">
+              <tbody className="divide-y divide-border text-sm text-text-primary">
                 {allRequests.length === 0 ? (
                   <tr><td colSpan={5} className="py-8 text-center text-text-secondary">No payout requests registered in the network</td></tr>
                 ) : allRequests.map((r) => (
@@ -1538,9 +2280,9 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
                     <td className="py-3.5 font-bold">₹{r.amount.toLocaleString()}</td>
                     <td className="py-3.5 text-text-secondary text-xs">{new Date(r.requestedAt).toLocaleDateString()}</td>
                     <td className="py-3.5">
-                      <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', 
+                      <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         r.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' :
-                        r.status === 'PENDING' ? 'bg-orange-500/10 text-orange-500' : 'bg-red-500/10 text-red-500'
+                          r.status === 'PENDING' ? 'bg-orange-500/10 text-orange-500' : 'bg-red-500/10 text-red-500'
                       )}>{r.status}</span>
                     </td>
                     <td className="py-3.5 text-right">
@@ -1562,7 +2304,7 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
         /* 3. HISTORY FOR HOTEL ADMIN */
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
           <div>
-            <h3 className="text-base font-semibold text-white">Payout History & Logs</h3>
+            <h3 className="text-base font-semibold text-text-primary">Payout History & Logs</h3>
             <p className="text-xs text-text-secondary mt-0.5">Track all requested, processed, and historical payout status</p>
           </div>
 
@@ -1577,7 +2319,7 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
                   <th className="pb-3 text-right">Processed At</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border text-sm text-white">
+              <tbody className="divide-y divide-border text-sm text-text-primary">
                 {payoutRequests.length === 0 ? (
                   <tr><td colSpan={5} className="py-8 text-center text-text-secondary">No historical payout requests registered</td></tr>
                 ) : payoutRequests.map((r) => (
@@ -1585,9 +2327,9 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
                     <td className="py-3.5 font-bold">₹{r.amount.toLocaleString()}</td>
                     <td className="py-3.5 text-text-secondary text-xs">{new Date(r.requestedAt).toLocaleDateString()}</td>
                     <td className="py-3.5">
-                      <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider', 
+                      <span className={cn('px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         r.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500' :
-                        r.status === 'PENDING' ? 'bg-orange-500/10 text-orange-500' : 'bg-red-500/10 text-red-500'
+                          r.status === 'PENDING' ? 'bg-orange-500/10 text-orange-500' : 'bg-red-500/10 text-red-500'
                       )}>{r.status}</span>
                     </td>
                     <td className="py-3.5 font-mono text-xs text-text-secondary">{r.transactionId ?? 'Waiting for processing...'}</td>
@@ -1665,16 +2407,16 @@ function PayoutsView({ propertyId, userRole }: { propertyId: string, userRole: s
   )
 }
 // ─── Airbnb Integration Setup Modal Component ─────────────────────────────────
-function AirbnbModal({ 
-  propertyId, 
-  rooms: initialRooms, 
-  mappings: initialMappings, 
-  onClose 
-}: { 
+function AirbnbModal({
+  propertyId,
+  rooms: initialRooms,
+  mappings: initialMappings,
+  onClose
+}: {
   propertyId: string
   rooms: any[]
   mappings: any[]
-  onClose: () => void 
+  onClose: () => void
 }) {
   const [airbnbUrl, setAirbnbUrl] = useState('')
   const [localRooms, setLocalRooms] = useState<any[]>(initialRooms || [])
@@ -1693,13 +2435,13 @@ function AirbnbModal({
       if (d.success && d.data) {
         setLocalRooms(d.data.rooms || [])
         const initial: Record<string, string> = {}
-        ;(d.data.rooms || []).forEach((r: any) => {
-          const match = (d.data.mappings || []).find((m: any) => m.roomId === r.id)
-          initial[r.id] = match ? match.otaRoomId : ''
-        })
+          ; (d.data.rooms || []).forEach((r: any) => {
+            const match = (d.data.mappings || []).find((m: any) => m.roomId === r.id)
+            initial[r.id] = match ? match.otaRoomId : ''
+          })
         setLocalMappings(initial)
       }
-    } catch {} finally {
+    } catch { } finally {
       setLoadingRooms(false)
     }
   }, [propertyId])
@@ -1724,7 +2466,9 @@ function AirbnbModal({
         body: JSON.stringify({
           url: airbnbUrl.trim(),
           otaChannel: 'AIRBNB',
-          propertyId }) })
+          propertyId
+        })
+      })
       const d = await res.json()
       if (d.success) {
         toast.success(
@@ -1748,7 +2492,8 @@ function AirbnbModal({
     const toastId = toast.loading('Syncing bookings with Airbnb...')
     try {
       const res = await fetch(`/api/admin/settings/integrations/airbnb/sync?propertyId=${propertyId}`, {
-        method: 'POST' })
+        method: 'POST'
+      })
       const d = await res.json()
       if (d.success) {
         toast.success(`Sync completed! Created: ${d.summary.created}, Updated: ${d.summary.updated}`, { id: toastId, duration: 5000 })
@@ -1768,7 +2513,8 @@ function AirbnbModal({
     setDisconnecting(true)
     try {
       const res = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${propertyId}`, {
-        method: 'DELETE' })
+        method: 'DELETE'
+      })
       const d = await res.json()
       if (d.success) {
         toast.success('Airbnb disconnected successfully')
@@ -1805,17 +2551,17 @@ function AirbnbModal({
             <label className="text-[11px] font-bold text-rose-400 uppercase tracking-wider block">
               Airbnb Listing URL or Export Calendar iCal Link *
             </label>
-            <input 
+            <input
               required
-              type="text" 
-              value={airbnbUrl} 
+              type="text"
+              value={airbnbUrl}
               onChange={e => setAirbnbUrl(e.target.value)}
               placeholder="https://www.airbnb.com/rooms/12345678 or https://www.airbnb.com/calendar/ical/12345678.ics"
               className="w-full bg-[#101922] border border-white/[0.15] focus:border-rose-500 rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner"
             />
           </div>
 
-          <button 
+          <button
             type="submit"
             disabled={importing || !airbnbUrl.trim()}
             className="w-full py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20"
@@ -1830,7 +2576,7 @@ function AirbnbModal({
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Connected Airbnb Rooms ({localRooms.filter(r => localMappings[r.id]).length})</h4>
             {localRooms.some(r => localMappings[r.id]) && (
-              <button 
+              <button
                 type="button"
                 disabled={syncing}
                 onClick={handleSync}
@@ -1888,7 +2634,7 @@ function AirbnbModal({
 
         <div className="flex items-center justify-between pt-2 border-t border-white/10">
           {localRooms.some(r => localMappings[r.id]) ? (
-            <button 
+            <button
               disabled={disconnecting}
               onClick={handleDisconnect}
               className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider text-left border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
@@ -1897,7 +2643,7 @@ function AirbnbModal({
             </button>
           ) : <div />}
 
-          <button 
+          <button
             onClick={onClose}
             className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
           >
@@ -1910,20 +2656,20 @@ function AirbnbModal({
 }
 
 // ─── Unified OTA Connection Setup & Simulation Modal ───────────────────────────
-function OtaConnectionModal({ 
-  propertyId, 
-  ota, 
-  onClose 
-}: { 
+function OtaConnectionModal({
+  propertyId,
+  ota,
+  onClose
+}: {
   propertyId: string
   ota: { id: string; name: string }
-  onClose: () => void 
+  onClose: () => void
 }) {
   const [rooms, setRooms] = useState<any[]>([])
   const [mappings, setMappings] = useState<any[]>([])
   const [hotelId, setHotelId] = useState('')
   const [apiKey, setApiKey] = useState('')
-  
+
   const [localMappings, setLocalMappings] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -1960,7 +2706,7 @@ function OtaConnectionModal({
               setIcalUrl(d.data.connection.credentials.defaultIcal)
             }
           }
-          
+
           const initial: Record<string, string> = {}
           d.data.rooms.forEach((r: any) => {
             const match = d.data.mappings.find((m: any) => m.roomId === r.id)
@@ -1995,7 +2741,8 @@ function OtaConnectionModal({
         body: JSON.stringify({
           url: icalUrl.trim(),
           otaChannel: otaChannel,
-          propertyId })
+          propertyId
+        })
       })
       const d = await res.json()
       if (d.success) {
@@ -2036,14 +2783,17 @@ function OtaConnectionModal({
     setSaving(true)
     const payload = Object.entries(localMappings).map(([roomId, otaRoomId]) => ({
       roomId,
-      otaRoomId }))
+      otaRoomId
+    }))
     try {
       const res = await fetch(`/api/admin/settings/integrations/${ota.id}?propertyId=${propertyId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           credentials: isIcalOta ? { defaultIcal: icalUrl, autoImported: true } : { hotelId, apiKey },
-          mappings: payload }) })
+          mappings: payload
+        })
+      })
       const d = await res.json()
       if (d.success) {
         toast.success(`${ota.name} settings saved successfully!`)
@@ -2063,7 +2813,8 @@ function OtaConnectionModal({
     setDisconnecting(true)
     try {
       const res = await fetch(`/api/admin/settings/integrations/${ota.id}?propertyId=${propertyId}`, {
-        method: 'DELETE' })
+        method: 'DELETE'
+      })
       const d = await res.json()
       if (d.success) {
         toast.success(`${ota.name} disconnected successfully`)
@@ -2094,7 +2845,9 @@ function OtaConnectionModal({
           roomId: simRoomId,
           guestName: simGuestName || `Mock ${ota.name} Reservation`,
           checkIn: simCheckIn,
-          checkOut: simCheckOut }) })
+          checkOut: simCheckOut
+        })
+      })
       const d = await res.json()
       if (d.success) {
         toast.success(`Booking successfully simulated! Reference: ${d.data.booking.notes.split('Ref: ')[1] || 'SIM123'}`, { id: toastId, duration: 4000 })
@@ -2126,21 +2879,23 @@ function OtaConnectionModal({
   if (isIcalOta) {
     const icalHelp = ota.id === 'booking_com'
       ? {
-          steps: [
-            'Log in to your Booking.com Extranet (admin.booking.com)',
-            'Go to Property → Calendar & Pricing → Sync Calendar',
-            'Click "Export Calendar" and copy the iCal link',
-            'Paste the copied link below',
-          ],
-          placeholder: 'https://admin.booking.com/hotel/hoteladmin/ical.html?t=...' }
+        steps: [
+          'Log in to your Booking.com Extranet (admin.booking.com)',
+          'Go to Property → Calendar & Pricing → Sync Calendar',
+          'Click "Export Calendar" and copy the iCal link',
+          'Paste the copied link below',
+        ],
+        placeholder: 'https://admin.booking.com/hotel/hoteladmin/ical.html?t=...'
+      }
       : {
-          steps: [
-            'Log in to Agoda YCS Partner Portal (ycs.agoda.com)',
-            'Go to Property → Availability → Calendar Sync',
-            'Click "Export Calendar" and copy the iCal / .ics link',
-            'Paste the copied link below',
-          ],
-          placeholder: 'https://supply-xml.booking.com/hotels/ical/... or Agoda iCal link' }
+        steps: [
+          'Log in to Agoda YCS Partner Portal (ycs.agoda.com)',
+          'Go to Property → Availability → Calendar Sync',
+          'Click "Export Calendar" and copy the iCal / .ics link',
+          'Paste the copied link below',
+        ],
+        placeholder: 'https://supply-xml.booking.com/hotels/ical/... or Agoda iCal link'
+      }
 
     const isConnected = mappings.length > 0
 
@@ -2179,16 +2934,16 @@ function OtaConnectionModal({
               <label className="text-[11px] font-bold text-white uppercase tracking-wider block">
                 {ota.name} iCal Export URL *
               </label>
-              <input 
-                type="text" 
-                value={icalUrl} 
+              <input
+                type="text"
+                value={icalUrl}
                 onChange={e => setIcalUrl(e.target.value)}
                 placeholder={icalHelp.placeholder}
                 className="w-full bg-[#0d1117] border border-white/[0.15] focus:border-primary rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner"
               />
             </div>
 
-            <button 
+            <button
               type="button"
               disabled={importing || !icalUrl.trim()}
               onClick={handleIcalImport}
@@ -2204,7 +2959,7 @@ function OtaConnectionModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Connected {ota.name} Rooms ({rooms.filter(r => localMappings[r.id]).length})</h4>
-                <button 
+                <button
                   type="button"
                   disabled={syncing}
                   onClick={handleSync}
@@ -2255,7 +3010,7 @@ function OtaConnectionModal({
           {/* Footer */}
           <div className="flex items-center justify-between pt-2 border-t border-white/10">
             {isConnected ? (
-              <button 
+              <button
                 disabled={disconnecting}
                 onClick={handleDisconnect}
                 className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
@@ -2264,7 +3019,7 @@ function OtaConnectionModal({
               </button>
             ) : <div />}
 
-            <button 
+            <button
               onClick={onClose}
               className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
             >
@@ -2295,17 +3050,17 @@ function OtaConnectionModal({
 
         {/* Channel guidance note */}
         <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3.5 flex items-start gap-2.5">
-          
+
           <p className="text-xs text-gray-300 leading-relaxed">
             {ota.id === 'makemytrip' || ota.id === 'goibibo'
               ? `Hotel owners can copy their Hotel Code & Channel API Key from their MMT/Goibibo Extranet dashboard (partner.makemytrip.com → Channel Manager Settings).`
               : ota.id === 'easemytrip'
-              ? `Copy your Hotel Property ID & API Key from your EaseMyTrip Extranet Portal.`
-              : ota.id === 'yatra'
-              ? `Copy your Property ID & Channel Key from your Yatra Extranet Portal (hotel.yatra.com).`
-              : ota.id === 'ixigo'
-              ? `Connect your Ixigo Partner Code or MMT Channel Mapping to route Ixigo meta-search bookings.`
-              : `Enter your ${ota.name} Hotel ID and API Key provided in your channel extranet.`}
+                ? `Copy your Hotel Property ID & API Key from your EaseMyTrip Extranet Portal.`
+                : ota.id === 'yatra'
+                  ? `Copy your Property ID & Channel Key from your Yatra Extranet Portal (hotel.yatra.com).`
+                  : ota.id === 'ixigo'
+                    ? `Connect your Ixigo Partner Code or MMT Channel Mapping to route Ixigo meta-search bookings.`
+                    : `Enter your ${ota.name} Hotel ID and API Key provided in your channel extranet.`}
           </p>
         </div>
 
@@ -2316,9 +3071,9 @@ function OtaConnectionModal({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] text-text-secondary font-bold block mb-1">Hotel ID / Merchant ID</label>
-                  <input 
-                    type="text" 
-                    value={hotelId} 
+                  <input
+                    type="text"
+                    value={hotelId}
                     onChange={e => setHotelId(e.target.value)}
                     placeholder="e.g. H10283"
                     className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-colors"
@@ -2326,9 +3081,9 @@ function OtaConnectionModal({
                 </div>
                 <div>
                   <label className="text-[10px] text-text-secondary font-bold block mb-1">API Password / Key</label>
-                  <input 
-                    type="password" 
-                    value={apiKey} 
+                  <input
+                    type="password"
+                    value={apiKey}
                     onChange={e => setApiKey(e.target.value)}
                     placeholder="••••••••"
                     className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-colors"
@@ -2349,7 +3104,7 @@ function OtaConnectionModal({
                         <span className="text-xs font-bold text-white">Room {room.roomNumber}</span>
                         <span className="text-[9px] text-gray-500 uppercase font-black ml-1.5">({room.type})</span>
                       </div>
-                      <input 
+                      <input
                         type="text"
                         value={localMappings[room.id] || ''}
                         onChange={e => setLocalMappings(prev => ({ ...prev, [room.id]: e.target.value }))}
@@ -2366,7 +3121,7 @@ function OtaConnectionModal({
           <div className="bg-primary/5 border border-primary/20 p-5 rounded-2xl space-y-4">
             <div>
               <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-                 Channel Manager Simulator
+                Channel Manager Simulator
               </h4>
               <p className="text-[11px] text-text-secondary mt-1">
                 Simulate an incoming guest reservation webhook from {ota.name} to check calendar updates instantly.
@@ -2376,8 +3131,8 @@ function OtaConnectionModal({
             <div className="space-y-3">
               <div>
                 <label className="text-[10px] text-text-secondary font-bold block mb-1">Select Room to Book</label>
-                <select 
-                  value={simRoomId} 
+                <select
+                  value={simRoomId}
                   onChange={e => setSimRoomId(e.target.value)}
                   className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
                 >
@@ -2389,9 +3144,9 @@ function OtaConnectionModal({
 
               <div>
                 <label className="text-[10px] text-text-secondary font-bold block mb-1">Guest Name</label>
-                <input 
-                  type="text" 
-                  value={simGuestName} 
+                <input
+                  type="text"
+                  value={simGuestName}
                   onChange={e => setSimGuestName(e.target.value)}
                   placeholder="e.g. Jack Sparrow"
                   className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary/50 transition-colors"
@@ -2401,25 +3156,25 @@ function OtaConnectionModal({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] text-text-secondary font-bold block mb-1">Check-in Date</label>
-                  <input 
-                    type="date" 
-                    value={simCheckIn} 
+                  <input
+                    type="date"
+                    value={simCheckIn}
                     onChange={e => setSimCheckIn(e.target.value)}
                     className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] text-text-secondary font-bold block mb-1">Check-out Date</label>
-                  <input 
-                    type="date" 
-                    value={simCheckOut} 
+                  <input
+                    type="date"
+                    value={simCheckOut}
                     onChange={e => setSimCheckOut(e.target.value)}
                     className="w-full bg-[#101922] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer"
                   />
                 </div>
               </div>
 
-              <button 
+              <button
                 type="button"
                 disabled={simulating}
                 onClick={handleSimulateBooking}
@@ -2434,7 +3189,7 @@ function OtaConnectionModal({
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
           {mappings.length > 0 ? (
-            <button 
+            <button
               disabled={saving || disconnecting}
               onClick={handleDisconnect}
               className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider text-left border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
@@ -2444,13 +3199,13 @@ function OtaConnectionModal({
           ) : <div />}
 
           <div className="flex items-center gap-2 justify-end flex-1">
-            <button 
+            <button
               onClick={onClose}
               className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
             >
               Cancel
             </button>
-            <button 
+            <button
               disabled={saving || disconnecting}
               onClick={handleSave}
               className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:bg-primary/50 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
@@ -2465,356 +3220,360 @@ function OtaConnectionModal({
 }
 
 function TwilioConnectionModal({ propertyId, onClose }: { propertyId: string; onClose: () => void }) {
-    const [accountSid, setAccountSid] = useState('')
-    const [authToken, setAuthToken] = useState('')
-    const [phoneNumber, setPhoneNumber] = useState('')
-    const [whatsappNumber, setWhatsappNumber] = useState('')
-    const [isConnected, setIsConnected] = useState(false)
-    const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [disconnecting, setDisconnecting] = useState(false)
+  const [accountSid, setAccountSid] = useState('')
+  const [authToken, setAuthToken] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [isConnected, setIsConnected] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
 
-    useEffect(() => {
-        const fetchTwilioConfig = async () => {
-            try {
-                const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`)
-                const json = await res.json()
-                if (json.success && json.data.connection) {
-                    setIsConnected(json.data.connection.status === 'CONNECTED')
-                    const creds = json.data.connection.credentials || {}
-                    setAccountSid(creds.accountSid || '')
-                    setAuthToken(creds.authToken || '')
-                    setPhoneNumber(creds.phoneNumber || '')
-                    setWhatsappNumber(creds.whatsappNumber || '')
-                }
-            } catch {
-                toast.error('Failed to load Twilio settings')
-            } finally {
-                setLoading(false)
-            }
+  useEffect(() => {
+    const fetchTwilioConfig = async () => {
+      try {
+        const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`)
+        const json = await res.json()
+        if (json.success && json.data.connection) {
+          setIsConnected(json.data.connection.status === 'CONNECTED')
+          const creds = json.data.connection.credentials || {}
+          setAccountSid(creds.accountSid || '')
+          setAuthToken(creds.authToken || '')
+          setPhoneNumber(creds.phoneNumber || '')
+          setWhatsappNumber(creds.whatsappNumber || '')
         }
-        fetchTwilioConfig()
-    }, [propertyId])
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setSaving(true)
-        try {
-            const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    credentials: {
-                        accountSid: accountSid.trim(),
-                        authToken: authToken.trim(),
-                        phoneNumber: phoneNumber.trim(),
-                        whatsappNumber: whatsappNumber.trim() },
-                    mappings: []
-                })
-            })
-            const json = await res.json()
-            if (json.success) {
-                toast.success('Twilio account credentials saved successfully!')
-                onClose()
-            } else {
-                toast.error(json.error || 'Failed to save Twilio settings')
-            }
-        } catch {
-            toast.error('Connection error saving Twilio credentials')
-        } finally {
-            setSaving(false)
-        }
+      } catch {
+        toast.error('Failed to load Twilio settings')
+      } finally {
+        setLoading(false)
+      }
     }
+    fetchTwilioConfig()
+  }, [propertyId])
 
-    const handleDisconnect = async () => {
-        setDisconnecting(true)
-        try {
-            const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`, {
-                method: 'DELETE' })
-            const json = await res.json()
-            if (res.ok) {
-                toast.success('Twilio integration disconnected successfully')
-                onClose()
-            } else {
-                toast.error(json.message || 'Failed to disconnect Twilio')
-            }
-        } catch {
-            toast.error('Error disconnecting Twilio')
-        } finally {
-            setDisconnecting(false)
-        }
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credentials: {
+            accountSid: accountSid.trim(),
+            authToken: authToken.trim(),
+            phoneNumber: phoneNumber.trim(),
+            whatsappNumber: whatsappNumber.trim()
+          },
+          mappings: []
+        })
+      })
+      const json = await res.json()
+      if (json.success) {
+        toast.success('Twilio account credentials saved successfully!')
+        onClose()
+      } else {
+        toast.error(json.error || 'Failed to save Twilio settings')
+      }
+    } catch {
+      toast.error('Connection error saving Twilio credentials')
+    } finally {
+      setSaving(false)
     }
+  }
 
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="relative max-w-md w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#101922]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold">
-                            <MessageSquare className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-white">Twilio Gateway Settings</h3>
-                            <p className="text-[11px] text-gray-400">Configure custom SMS & WhatsApp marketing credentials</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+  const handleDisconnect = async () => {
+    setDisconnecting(true)
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/twilio?propertyId=${propertyId}`, {
+        method: 'DELETE'
+      })
+      const json = await res.json()
+      if (res.ok) {
+        toast.success('Twilio integration disconnected successfully')
+        onClose()
+      } else {
+        toast.error(json.message || 'Failed to disconnect Twilio')
+      }
+    } catch {
+      toast.error('Error disconnecting Twilio')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
 
-                <form onSubmit={handleSave} className="p-6 space-y-4">
-                    {loading ? (
-                        <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-                    ) : (
-                        <>
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Twilio Account SID</label>
-                                <input
-                                    required
-                                    type="text"
-                                    placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                    value={accountSid}
-                                    onChange={e => setAccountSid(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
-                                />
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Twilio Auth Token</label>
-                                <input
-                                    required
-                                    type="password"
-                                    placeholder="••••••••••••••••••••••••••••••••"
-                                    value={authToken}
-                                    onChange={e => setAuthToken(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">SMS Sender Phone</label>
-                                    <input
-                                        type="text"
-                                        placeholder="+18885550199"
-                                        value={phoneNumber}
-                                        onChange={e => setPhoneNumber(e.target.value)}
-                                        className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">WhatsApp Sender</label>
-                                    <input
-                                        type="text"
-                                        placeholder="+14155238886"
-                                        value={whatsappNumber}
-                                        onChange={e => setWhatsappNumber(e.target.value)}
-                                        className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
-                                    />
-                                </div>
-                            </div>
-
-                            <p className="text-[10px] text-gray-500 leading-normal pt-1">
-                                Used for dispatching automated booking OTPs, direct guest SMS blasts, and custom WhatsApp marketing campaigns.
-                            </p>
-
-                            <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
-                                {isConnected ? (
-                                    <button
-                                        type="button"
-                                        disabled={saving || disconnecting}
-                                        onClick={handleDisconnect}
-                                        className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                                    >
-                                        {disconnecting ? 'Disconnecting...' : 'Disconnect Twilio'}
-                                    </button>
-                                ) : <div />}
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={onClose}
-                                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={saving || disconnecting}
-                                        className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Twilio Credentials'}
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </form>
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="relative max-w-md w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#101922]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold">
+              <MessageSquare className="w-5 h-5" />
             </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Twilio Gateway Settings</h3>
+              <p className="text-[11px] text-gray-400">Configure custom SMS & WhatsApp marketing credentials</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-    )
+
+        <form onSubmit={handleSave} className="p-6 space-y-4">
+          {loading ? (
+            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Twilio Account SID</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={accountSid}
+                  onChange={e => setAccountSid(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Twilio Auth Token</label>
+                <input
+                  required
+                  type="password"
+                  placeholder="••••••••••••••••••••••••••••••••"
+                  value={authToken}
+                  onChange={e => setAuthToken(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">SMS Sender Phone</label>
+                  <input
+                    type="text"
+                    placeholder="+18885550199"
+                    value={phoneNumber}
+                    onChange={e => setPhoneNumber(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">WhatsApp Sender</label>
+                  <input
+                    type="text"
+                    placeholder="+14155238886"
+                    value={whatsappNumber}
+                    onChange={e => setWhatsappNumber(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 font-mono"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[10px] text-gray-500 leading-normal pt-1">
+                Used for dispatching automated booking OTPs, direct guest SMS blasts, and custom WhatsApp marketing campaigns.
+              </p>
+
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+                {isConnected ? (
+                  <button
+                    type="button"
+                    disabled={saving || disconnecting}
+                    onClick={handleDisconnect}
+                    className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                  >
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect Twilio'}
+                  </button>
+                ) : <div />}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || disconnecting}
+                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-600/30 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Twilio Credentials'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </form>
+      </div>
+    </div>
+  )
 }
 
 function RazorpayConnectionModal({ propertyId, onClose }: { propertyId: string; onClose: () => void }) {
-    const [keyId, setKeyId] = useState('')
-    const [keySecret, setKeySecret] = useState('')
-    const [isConnected, setIsConnected] = useState(false)
-    const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [disconnecting, setDisconnecting] = useState(false)
+  const [keyId, setKeyId] = useState('')
+  const [keySecret, setKeySecret] = useState('')
+  const [isConnected, setIsConnected] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
 
-    useEffect(() => {
-        const fetchRazorpayConfig = async () => {
-            try {
-                const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`)
-                const json = await res.json()
-                if (json.success && json.data.connection) {
-                    setIsConnected(json.data.connection.status === 'CONNECTED')
-                    const creds = json.data.connection.credentials || {}
-                    setKeyId(creds.keyId || creds.razorpayKeyId || '')
-                    setKeySecret(creds.keySecret || creds.razorpayKeySecret || '')
-                }
-            } catch {
-                toast.error('Failed to load Razorpay settings')
-            } finally {
-                setLoading(false)
-            }
+  useEffect(() => {
+    const fetchRazorpayConfig = async () => {
+      try {
+        const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`)
+        const json = await res.json()
+        if (json.success && json.data.connection) {
+          setIsConnected(json.data.connection.status === 'CONNECTED')
+          const creds = json.data.connection.credentials || {}
+          setKeyId(creds.keyId || creds.razorpayKeyId || '')
+          setKeySecret(creds.keySecret || creds.razorpayKeySecret || '')
         }
-        fetchRazorpayConfig()
-    }, [propertyId])
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setSaving(true)
-        try {
-            const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    credentials: {
-                        keyId: keyId.trim(),
-                        keySecret: keySecret.trim() },
-                    mappings: []
-                })
-            })
-            const json = await res.json()
-            if (json.success) {
-                toast.success('Property Razorpay gateway saved successfully!')
-                onClose()
-            } else {
-                toast.error(json.error || 'Failed to save Razorpay settings')
-            }
-        } catch {
-            toast.error('Connection error saving Razorpay settings')
-        } finally {
-            setSaving(false)
-        }
+      } catch {
+        toast.error('Failed to load Razorpay settings')
+      } finally {
+        setLoading(false)
+      }
     }
+    fetchRazorpayConfig()
+  }, [propertyId])
 
-    const handleDisconnect = async () => {
-        setDisconnecting(true)
-        try {
-            const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`, {
-                method: 'DELETE' })
-            const json = await res.json()
-            if (res.ok) {
-                toast.success('Razorpay gateway disconnected successfully')
-                onClose()
-            } else {
-                toast.error(json.message || 'Failed to disconnect Razorpay')
-            }
-        } catch {
-            toast.error('Error disconnecting Razorpay')
-        } finally {
-            setDisconnecting(false)
-        }
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credentials: {
+            keyId: keyId.trim(),
+            keySecret: keySecret.trim()
+          },
+          mappings: []
+        })
+      })
+      const json = await res.json()
+      if (json.success) {
+        toast.success('Property Razorpay gateway saved successfully!')
+        onClose()
+      } else {
+        toast.error(json.error || 'Failed to save Razorpay settings')
+      }
+    } catch {
+      toast.error('Connection error saving Razorpay settings')
+    } finally {
+      setSaving(false)
     }
+  }
 
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-            <div className="relative max-w-md w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#101922]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
-                            <CreditCard className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h3 className="text-base font-bold text-white">Razorpay Gateway Settings</h3>
-                            <p className="text-[11px] text-gray-400">Direct booking payments to your hotel&apos;s Razorpay account</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+  const handleDisconnect = async () => {
+    setDisconnecting(true)
+    try {
+      const res = await fetch(`/api/admin/settings/integrations/razorpay?propertyId=${propertyId}`, {
+        method: 'DELETE'
+      })
+      const json = await res.json()
+      if (res.ok) {
+        toast.success('Razorpay gateway disconnected successfully')
+        onClose()
+      } else {
+        toast.error(json.message || 'Failed to disconnect Razorpay')
+      }
+    } catch {
+      toast.error('Error disconnecting Razorpay')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
 
-                <form onSubmit={handleSave} className="p-6 space-y-4">
-                    {loading ? (
-                        <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-                    ) : (
-                        <>
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Razorpay Key ID</label>
-                                <input
-                                    required
-                                    type="text"
-                                    placeholder="rzp_live_xxxxxxxxxxxx"
-                                    value={keyId}
-                                    onChange={e => setKeyId(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 font-mono"
-                                />
-                            </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Razorpay Key Secret</label>
-                                <input
-                                    required
-                                    type="password"
-                                    placeholder="••••••••••••••••••••••••"
-                                    value={keySecret}
-                                    onChange={e => setKeySecret(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 font-mono"
-                                />
-                            </div>
-
-                            <p className="text-[10px] text-gray-400 leading-normal pt-1">
-                                When configured, 100% of guest room booking payments and service bill payments for this hotel will be deposited directly into your linked Razorpay account.
-                            </p>
-
-                            <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
-                                {isConnected ? (
-                                    <button
-                                        type="button"
-                                        disabled={saving || disconnecting}
-                                        onClick={handleDisconnect}
-                                        className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
-                                    >
-                                        {disconnecting ? 'Disconnecting...' : 'Disconnect Razorpay'}
-                                    </button>
-                                ) : <div />}
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={onClose}
-                                        className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={saving || disconnecting}
-                                        className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-50"
-                                    >
-                                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Razorpay Gateway'}
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </form>
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+      <div className="relative max-w-md w-full bg-[#182433] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-white/10 bg-[#101922]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold">
+              <CreditCard className="w-5 h-5" />
             </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Razorpay Gateway Settings</h3>
+              <p className="text-[11px] text-gray-400">Direct booking payments to your hotel&apos;s Razorpay account</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-lg bg-white/5 hover:bg-white/10">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-    )
+
+        <form onSubmit={handleSave} className="p-6 space-y-4">
+          {loading ? (
+            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Razorpay Key ID</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="rzp_live_xxxxxxxxxxxx"
+                  value={keyId}
+                  onChange={e => setKeyId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider">Razorpay Key Secret</label>
+                <input
+                  required
+                  type="password"
+                  placeholder="••••••••••••••••••••••••"
+                  value={keySecret}
+                  onChange={e => setKeySecret(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#101922] border border-white/10 rounded-xl text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50 font-mono"
+                />
+              </div>
+
+              <p className="text-[10px] text-gray-400 leading-normal pt-1">
+                When configured, 100% of guest room booking payments and service bill payments for this hotel will be deposited directly into your linked Razorpay account.
+              </p>
+
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+                {isConnected ? (
+                  <button
+                    type="button"
+                    disabled={saving || disconnecting}
+                    onClick={handleDisconnect}
+                    className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                  >
+                    {disconnecting ? 'Disconnecting...' : 'Disconnect Razorpay'}
+                  </button>
+                ) : <div />}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-semibold rounded-xl transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || disconnecting}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Razorpay Gateway'}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </form>
+      </div>
+    </div>
+  )
 }
 
 

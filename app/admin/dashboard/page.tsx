@@ -136,12 +136,12 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-3">
                 <Avatar name={item.guest} size="md" />
                 <div>
-                  <p className="font-bold text-white text-sm">{item.guest}</p>
+                  <p className="font-bold text-text-primary text-sm">{item.guest}</p>
                   <p className="text-xs text-text-tertiary">Room {item.room} · {item.phone}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{item.roomType}</p>
+                <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">{item.roomType}</p>
                 <p className="text-xs font-medium text-primary mt-1">{item.time ? new Date(item.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : item.eta ? new Date(item.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'Staying'}</p>
               </div>
             </div>
@@ -166,11 +166,11 @@ export default function AdminDashboard() {
         <div className="bg-gradient-to-r from-[#4A9EFF]/10 to-purple-500/10 border border-[#4A9EFF]/20 shadow-xl shadow-[#4A9EFF]/5 rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#4A9EFF]/10 rounded-full blur-3xl pointer-events-none" />
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#4A9EFF] to-purple-500 flex items-center justify-center text-white shadow-lg">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#4A9EFF] to-purple-500 flex items-center justify-center text-text-primary shadow-lg">
               <Crown className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="text-lg font-extrabold text-white">Super Admin Workspace Activated</h3>
+              <h3 className="text-lg font-extrabold text-text-primary">Super Admin Workspace Activated</h3>
               <p className="text-sm text-text-secondary mt-1 leading-relaxed max-w-2xl">
                 You are currently viewing the <span className="text-[#4A9EFF] font-bold">Global Network Context</span>. Operations, rooms, and analytics for specific hotels will appear here once you select a hotel using the **Property Switcher** in the top navigation bar.
               </p>
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
             </button>
             <button 
               onClick={() => router.push('/admin/subscription-plans')}
-              className="w-full md:w-auto px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md active:scale-95"
+              className="w-full md:w-auto px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-border/50 text-text-primary rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md active:scale-95"
             >
                Plan Designer
             </button>
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
       <div data-tour="stats-grid" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* Today Revenue */}
         <div className={cn(
-          "relative overflow-hidden bg-[#233648] border border-white/[0.08] rounded-[28px] p-6 hover:border-primary/30 transition-all group shadow-lg",
+          "relative overflow-hidden bg-surface border border-border rounded-[28px] p-6 hover:border-primary/30 transition-all group shadow-lg",
           isStatsLoading && "animate-pulse"
         )}>
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all" />
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
               <IndianRupee className="w-5 h-5 text-primary" />
             </div>
           </div>
-          <p className="text-3xl font-black text-white mb-1 tracking-tight truncate">{formatCurrency(safeStats.todayRevenue || 0)}</p>
+          <p className="text-3xl font-black text-text-primary mb-1 tracking-tight truncate">{formatCurrency(safeStats.todayRevenue || 0)}</p>
           <div className="flex items-center gap-2 mt-4">
              <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -219,35 +219,35 @@ export default function AdminDashboard() {
 
         {/* Month Revenue */}
         <div className={cn(
-          "bg-[#233648] border border-white/[0.07] rounded-2xl p-5 hover:border-white/[0.12] transition-all",
+          "bg-surface border border-border rounded-2xl p-5 hover:border-border transition-all",
           isStatsLoading && "animate-pulse"
         )}>
           <div className="flex items-start justify-between mb-4">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">MTD Revenue</p>
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-widest">MTD Revenue</p>
             <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
               <IndianRupee className="w-4 h-4 text-purple-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-white mb-1 tracking-tight truncate">{formatCurrency(safeStats.monthRevenue || 0)}</p>
-          <p className="text-[10px] text-gray-500 font-medium">Month to date performance</p>
+          <p className="text-2xl font-bold text-text-primary mb-1 tracking-tight truncate">{formatCurrency(safeStats.monthRevenue || 0)}</p>
+          <p className="text-[10px] text-text-tertiary font-medium">Month to date performance</p>
         </div>
 
         {/* Occupancy */}
         <div 
           onClick={() => setDrillDown({ type: 'OCCUPANCY', title: 'Current Occupancy', data: safeStats?.occupancyGuests || [] })}
           className={cn(
-            "bg-[#233648] border border-white/[0.07] rounded-2xl p-5 hover:border-[#4A9EFF]/30 transition-all cursor-pointer group",
+            "bg-surface border border-border rounded-2xl p-5 hover:border-[#4A9EFF]/30 transition-all cursor-pointer group",
             isStatsLoading && "animate-pulse"
           )}
         >
           <div className="flex items-start justify-between mb-3">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Occupancy</p>
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-widest group-hover:text-text-primary transition-colors">Occupancy</p>
             <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
               <BedDouble className="w-4 h-4 text-orange-400" />
             </div>
           </div>
           <div className="flex items-baseline gap-3 mb-2">
-            <p className="text-2xl font-bold text-white">{safeStats.occupancyRate}%</p>
+            <p className="text-2xl font-bold text-text-primary">{safeStats.occupancyRate}%</p>
             <div className="flex flex-col">
                <span className="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded uppercase w-fit">
                  {safeStats.avgMonthlyOccupancy || 0}% Monthly Avg
@@ -263,17 +263,17 @@ export default function AdminDashboard() {
         <div 
           onClick={() => setDrillDown({ type: 'ARRIVALS', title: 'Today Arrivals', data: safeStats?.recentCheckIns || [] })}
           className={cn(
-            "bg-[#233648] border border-white/[0.07] rounded-2xl p-5 hover:border-[#4A9EFF]/30 transition-all cursor-pointer group",
+            "bg-surface border border-border rounded-2xl p-5 hover:border-[#4A9EFF]/30 transition-all cursor-pointer group",
             isStatsLoading && "animate-pulse"
           )}
         >
           <div className="flex items-start justify-between mb-4">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Total Arrivals</p>
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-widest group-hover:text-text-primary transition-colors">Total Arrivals</p>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:bg-emerald-500/20">
               <LogIn className="w-4 h-4 text-emerald-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-white mb-1 tracking-tight">{safeStats.todayCheckIns}</p>
+          <p className="text-2xl font-bold text-text-primary mb-1 tracking-tight">{safeStats.todayCheckIns}</p>
           <div className="flex flex-col">
             <span className="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded uppercase w-fit">
               {safeStats.pendingArrivals || 0} Pending check-in
@@ -285,18 +285,18 @@ export default function AdminDashboard() {
         <div 
           onClick={() => setDrillDown({ type: 'DEPARTURES', title: 'Scheduled Departures', data: safeStats?.recentDepartures || [] })}
           className={cn(
-            "bg-[#233648] border border-white/[0.07] rounded-2xl p-5 hover:border-[#4A9EFF]/30 transition-all cursor-pointer group sm:col-span-2 md:col-span-1 xl:col-span-1",
+            "bg-surface border border-border rounded-2xl p-5 hover:border-[#4A9EFF]/30 transition-all cursor-pointer group sm:col-span-2 md:col-span-1 xl:col-span-1",
             isStatsLoading && "animate-pulse"
           )}
         >
           <div className="flex items-start justify-between mb-4">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-white transition-colors">Departures</p>
+            <p className="text-[11px] font-bold text-text-secondary uppercase tracking-widest group-hover:text-text-primary transition-colors">Departures</p>
             <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 group-hover:bg-rose-500/20">
               <LogOut className="w-4 h-4 text-rose-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-white mb-1 tracking-tight">{safeStats.todayCheckOuts}</p>
-          <p className="text-[10px] text-gray-500 font-medium">{safeStats.remainingDepartures || 0} Rooms remaining</p>
+          <p className="text-2xl font-bold text-text-primary mb-1 tracking-tight">{safeStats.todayCheckOuts}</p>
+          <p className="text-[10px] text-text-tertiary font-medium">{safeStats.remainingDepartures || 0} Rooms remaining</p>
         </div>
       </div>
 
@@ -307,11 +307,11 @@ export default function AdminDashboard() {
         <div className="space-y-4">
 
           {/* Today's Arrivals Table */}
-          <div className="bg-[#233648] border border-white/[0.07] rounded-xl overflow-hidden">
+          <div className="bg-surface border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-2">
                 
-                <h2 className="text-[14px] font-semibold text-white">Today&apos;s Arrivals</h2>
+                <h2 className="text-[14px] font-semibold text-text-primary">Today&apos;s Arrivals</h2>
               </div>
               <button 
                 onClick={() => router.push('/admin/bookings')} 
@@ -326,85 +326,85 @@ export default function AdminDashboard() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-t border-white/[0.06] bg-black/10">
-                      <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">GUEST NAME</th>
-                      <th className="hidden lg:table-cell px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">ROOM TYPE</th>
-                      <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">ETA</th>
-                      <th className="hidden sm:table-cell px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">STATUS</th>
-                      <th className="px-5 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">ACTION</th>
+                    <tr className="border-t border-border bg-black/10">
+                      <th className="px-5 py-3 text-[10px] font-black text-text-secondary uppercase tracking-widest">GUEST NAME</th>
+                      <th className="hidden lg:table-cell px-5 py-3 text-[10px] font-black text-text-secondary uppercase tracking-widest">ROOM TYPE</th>
+                      <th className="px-5 py-3 text-[10px] font-black text-text-secondary uppercase tracking-widest text-center">ETA</th>
+                      <th className="hidden sm:table-cell px-5 py-3 text-[10px] font-black text-text-secondary uppercase tracking-widest">STATUS</th>
+                      <th className="px-5 py-3 text-[10px] font-black text-text-secondary uppercase tracking-widest text-right">ACTION</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.04]">
                     {safeStats.recentCheckIns?.length > 0 ? safeStats.recentCheckIns.map((g: any) => (
-                      <tr key={g.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <tr key={g.id} className="hover:bg-surface-light transition-colors group">
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <Avatar name={g.guest} size="sm" src={g.guestAvatar} />
                             <div>
-                              <p className="text-[13px] font-bold text-white leading-none mb-1">{g.guest}</p>
-                              <p className="text-[10px] text-gray-500 font-bold tracking-tight uppercase">{g.guestId || 'ZEN-GUEST'}</p>
+                              <p className="text-[13px] font-bold text-text-primary leading-none mb-1">{g.guest}</p>
+                              <p className="text-[10px] text-text-tertiary font-bold tracking-tight uppercase">{g.guestId || 'ZEN-GUEST'}</p>
                             </div>
                           </div>
                         </td>
                         <td className="hidden lg:table-cell px-5 py-4">
                           <p className="text-[13px] text-gray-200 font-medium">{g.roomType}</p>
-                          <p className="text-[10px] text-gray-500 mt-0.5">Base Rate</p>
+                          <p className="text-[10px] text-text-tertiary mt-0.5">Base Rate</p>
                         </td>
-                        <td className="px-5 py-4 text-[13px] text-gray-400 font-bold text-center">{new Date(g.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</td>
+                        <td className="px-5 py-4 text-[13px] text-text-secondary font-bold text-center">{new Date(g.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</td>
                         <td className="hidden sm:table-cell px-5 py-4">{statusBadge(g.status)}</td>
                         <td className="px-5 py-4 text-right">
                           {g.status === 'RESERVED' ? (
                             <button 
                               onClick={() => handleCheckIn(g.id)} 
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
                             >
                               Check-in
                             </button>
                           ) : (
-                            <button className="p-2 text-gray-600 hover:text-white transition-all"><MoreHorizontal className="w-4 h-4" /></button>
+                            <button className="p-2 text-gray-600 hover:text-text-primary transition-all"><MoreHorizontal className="w-4 h-4" /></button>
                           )}
                         </td>
                       </tr>
                     )) : (
-                      <tr><td colSpan={5} className="text-center py-10 text-[12px] text-gray-500 font-bold uppercase tracking-widest">Sky is clear - No arrivals</td></tr>
+                      <tr><td colSpan={5} className="text-center py-10 text-[12px] text-text-tertiary font-bold uppercase tracking-widest">Sky is clear - No arrivals</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden divide-y divide-white/[0.04] border-t border-white/[0.06]">
+              <div className="md:hidden divide-y divide-white/[0.04] border-t border-border">
                 {safeStats.recentCheckIns?.length > 0 ? safeStats.recentCheckIns.map((g: any) => (
-                  <div key={g.id} className="p-4 flex flex-col gap-4 active:bg-white/[0.03] transition-colors">
+                  <div key={g.id} className="p-4 flex flex-col gap-4 active:bg-surface-light transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Avatar name={g.guest} size="md" src={g.guestAvatar} />
                         <div>
-                          <p className="text-[14px] font-bold text-white">{g.guest}</p>
-                          <p className="text-[10px] text-gray-500 font-bold tracking-tight uppercase">{g.roomType}</p>
+                          <p className="text-[14px] font-bold text-text-primary">{g.guest}</p>
+                          <p className="text-[10px] text-text-tertiary font-bold tracking-tight uppercase">{g.roomType}</p>
                         </div>
                       </div>
                       {statusBadge(g.status)}
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">ETA</p>
-                        <p className="text-[13px] text-white font-bold">{new Date(g.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                        <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest">ETA</p>
+                        <p className="text-[13px] text-text-primary font-bold">{new Date(g.eta).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
                       </div>
                       {g.status === 'RESERVED' ? (
                         <button 
                           onClick={() => handleCheckIn(g.id)} 
-                          className="px-4 py-2 bg-blue-500 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-500/20 active:scale-95"
+                          className="px-4 py-2 bg-blue-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-500/20 active:scale-95"
                         >
                           Confirm Check-in
                         </button>
                       ) : (
-                        <button className="p-2 text-gray-400"><MoreHorizontal className="w-5 h-5" /></button>
+                        <button className="p-2 text-text-secondary"><MoreHorizontal className="w-5 h-5" /></button>
                       )}
                     </div>
                   </div>
                 )) : (
-                  <div className="py-12 text-center text-[12px] text-gray-500 font-bold uppercase tracking-widest">
+                  <div className="py-12 text-center text-[12px] text-text-tertiary font-bold uppercase tracking-widest">
                     No arrivals scheduled
                   </div>
                 )}
@@ -413,59 +413,59 @@ export default function AdminDashboard() {
           </div>
 
           {/* Housekeeping Status */}
-          <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5">
+          <div className="bg-surface border border-border rounded-xl p-5">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <BedDouble className="w-4 h-4 text-blue-400" />
-                <h2 className="text-[14px] font-semibold text-white">Housekeeping Status</h2>
+                <h2 className="text-[14px] font-semibold text-text-primary">Housekeeping Status</h2>
               </div>
               <p className="text-[11px] text-gray-600">{loading ? 'Refreshing...' : 'Updated just now'}</p>
             </div>
 
             {/* 3 Status Cards */}
             <div className="grid grid-cols-3 gap-3 mb-5">
-              <div className="bg-[#182433] rounded-xl p-4 border border-white/[0.06]">
+              <div className="bg-surface rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center">
                     <BedDouble className="w-3.5 h-3.5 text-red-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">{safeStats.housekeeping?.dirty || 0}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">Dirty Rooms</p>
+                <p className="text-2xl font-bold text-text-primary">{safeStats.housekeeping?.dirty || 0}</p>
+                <p className="text-[11px] text-text-tertiary mt-0.5">Dirty Rooms</p>
               </div>
-              <div className="bg-[#182433] rounded-xl p-4 border border-white/[0.06]">
+              <div className="bg-surface rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center">
                     <BedDouble className="w-3.5 h-3.5 text-blue-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">{safeStats.housekeeping?.inProgress || 0}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">In Progress</p>
+                <p className="text-2xl font-bold text-text-primary">{safeStats.housekeeping?.inProgress || 0}</p>
+                <p className="text-[11px] text-text-tertiary mt-0.5">In Progress</p>
               </div>
-              <div className="bg-[#182433] rounded-xl p-4 border border-white/[0.06]">
+              <div className="bg-surface rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center">
                     <BedDouble className="w-3.5 h-3.5 text-emerald-400" />
                   </div>
                 </div>
-                <p className="text-2xl font-bold text-white">{safeStats.housekeeping?.clean || 0}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">Clean & Ready</p>
+                <p className="text-2xl font-bold text-text-primary">{safeStats.housekeeping?.clean || 0}</p>
+                <p className="text-[11px] text-text-tertiary mt-0.5">Clean & Ready</p>
               </div>
             </div>
 
             {/* Priority Cleaning */}
             {safeStats.housekeeping?.priority?.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Priority Cleaning</p>
+                <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest mb-3">Priority Cleaning</p>
                 {safeStats.housekeeping.priority.map((p: any) => (
-                  <div key={p.id} className="flex items-center justify-between p-3 bg-[#182433] rounded-lg border border-white/[0.06]">
+                  <div key={p.id} className="flex items-center justify-between p-3 bg-surface rounded-lg border border-border">
                     <div className="flex items-center gap-3">
-                      <span className="text-[13px] font-bold text-white">Room {p.room}</span>
+                      <span className="text-[13px] font-bold text-text-primary">Room {p.room}</span>
                       <span className="px-2 py-0.5 bg-orange-500/15 text-orange-400 text-[10px] font-semibold rounded-full">{p.status === 'PENDING' ? 'Checked Out' : 'In Progress'}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Avatar name={p.assignedTo} />
-                      <span className="text-[11px] text-gray-400">Assigned to: {p.assignedTo}</span>
+                      <span className="text-[11px] text-text-secondary">Assigned to: {p.assignedTo}</span>
                     </div>
                   </div>
                 ))}
@@ -474,15 +474,15 @@ export default function AdminDashboard() {
           </div>
 
           {/* Live Room Occupancy Widget (Left Column) */}
-          <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5 space-y-4 shadow-md">
+          <div className="bg-surface border border-border rounded-xl p-5 space-y-4 shadow-md">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#3B82F6]/15 flex items-center justify-center border border-[#3B82F6]/20">
+                <div className="w-7 h-7 rounded-lg bg-surface/15 flex items-center justify-center border border-[#3B82F6]/20">
                   <Building2 className="w-3.5 h-3.5 text-[#3B82F6]" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-white">Room Occupancy</h2>
-                  <p className="text-[10px] text-gray-400 font-medium">Real-time status per room</p>
+                  <h2 className="text-[14px] font-bold text-text-primary">Room Occupancy</h2>
+                  <p className="text-[10px] text-text-secondary font-medium">Real-time status per room</p>
                 </div>
               </div>
               <button
@@ -494,17 +494,17 @@ export default function AdminDashboard() {
             </div>
 
             {/* Micro KPI Bar */}
-            <div className="grid grid-cols-3 gap-2 bg-[#182433] p-2.5 rounded-xl border border-white/[0.06] text-center">
+            <div className="grid grid-cols-3 gap-2 bg-surface p-2.5 rounded-xl border border-border text-center">
               <div>
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Live Rate</p>
+                <p className="text-[9px] font-black text-text-secondary uppercase tracking-widest">Live Rate</p>
                 <p className="text-sm font-extrabold text-[#3B82F6]">{occupancySummary?.occupancyRate ?? safeStats.occupancyRate ?? 0}%</p>
               </div>
               <div>
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Occupied</p>
+                <p className="text-[9px] font-black text-text-secondary uppercase tracking-widest">Occupied</p>
                 <p className="text-sm font-extrabold text-purple-400">{occupancySummary?.occupiedCount ?? 0}</p>
               </div>
               <div>
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Available</p>
+                <p className="text-[9px] font-black text-text-secondary uppercase tracking-widest">Available</p>
                 <p className="text-sm font-extrabold text-emerald-400">{occupancySummary?.availableCount ?? 0}</p>
               </div>
             </div>
@@ -523,15 +523,15 @@ export default function AdminDashboard() {
                   )}
                 >
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[11px] font-extrabold text-white">R-{room.roomNumber}</span>
+                    <span className="text-[11px] font-extrabold text-text-primary">R-{room.roomNumber}</span>
                     <div className={cn("w-1.5 h-1.5 rounded-full", room.isOccupied ? "bg-purple-400" : room.isMaintenance ? "bg-amber-400" : "bg-emerald-400")} />
                   </div>
-                  <p className="text-[9px] font-bold truncate text-gray-300">
+                  <p className="text-[9px] font-bold truncate text-text-secondary">
                     {room.isOccupied ? (room.currentBooking?.guestName ?? 'Occupied') : room.isMaintenance ? 'Service' : 'Available'}
                   </p>
                 </div>
               )) : (
-                <div className="col-span-full py-4 text-center text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                <div className="col-span-full py-4 text-center text-[10px] text-text-tertiary font-bold uppercase tracking-widest">
                   Loading rooms...
                 </div>
               )}
@@ -543,8 +543,8 @@ export default function AdminDashboard() {
         <div className="space-y-4">
 
           {/* Quick Actions */}
-          <div data-tour="quick-actions" className="bg-[#233648] border border-white/[0.07] rounded-xl p-5">
-            <h2 className="text-[14px] font-semibold text-white mb-4">Quick Actions</h2>
+          <div data-tour="quick-actions" className="bg-surface border border-border rounded-xl p-5">
+            <h2 className="text-[14px] font-semibold text-text-primary mb-4">Quick Actions</h2>
             <Button
               onClick={() => { if (requireHotel('New Booking')) return; router.push('/admin/bookings/new') }}
               className="w-full py-3.5 mb-4 shadow-lg shadow-[#4A9EFF]/20"
@@ -564,26 +564,26 @@ export default function AdminDashboard() {
                 <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <MessageSquare className="w-4 h-4 text-emerald-400" />
                 </div>
-                <span className="text-[11px] font-bold text-gray-300 text-center uppercase tracking-tight">Check-in Assistant</span>
+                <span className="text-[11px] font-bold text-text-secondary text-center uppercase tracking-tight">Check-in Assistant</span>
               </button>
               <button
                 data-tour="raise-service"
                 onClick={() => { if (requireHotel('Add Service Request')) return; setShowServiceModal(true) }}
-                className="flex flex-col items-center gap-2 p-4 bg-[#182433] hover:bg-[#202e40] border border-white/[0.06] rounded-xl transition-all active:scale-95"
+                className="flex flex-col items-center gap-2 p-4 bg-surface hover:bg-surface border border-border rounded-xl transition-all active:scale-95"
               >
                 <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
                   <Bell className="w-4 h-4 text-blue-400" />
                 </div>
-                <span className="text-[11px] font-medium text-gray-300 text-center">Add Service Request</span>
+                <span className="text-[11px] font-medium text-text-secondary text-center">Add Service Request</span>
               </button>
             </div>
           </div>
 
           {/* On-Duty Staff */}
-          <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5">
+          <div className="bg-surface border border-border rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[14px] font-semibold text-white">On-Duty Staff</h2>
-              <button onClick={() => router.push('/admin/support')} className="text-gray-500 hover:text-white transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+              <h2 className="text-[14px] font-semibold text-text-primary">On-Duty Staff</h2>
+              <button onClick={() => router.push('/admin/support')} className="text-text-tertiary hover:text-text-primary transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
             </div>
             <div className="space-y-3">
               {safeStats.onDutyStaffDetails?.length > 0 ? safeStats.onDutyStaffDetails.map((staff: any, i: number) => (
@@ -591,8 +591,8 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-3">
                     <Avatar name={staff.name} />
                     <div>
-                      <p className="text-[13px] font-semibold text-white">{staff.name}</p>
-                      <p className="text-[11px] text-gray-500 capitalize">{staff.department}</p>
+                      <p className="text-[13px] font-semibold text-text-primary">{staff.name}</p>
+                      <p className="text-[11px] text-text-tertiary capitalize">{staff.department}</p>
                     </div>
                   </div>
                   <button
@@ -604,7 +604,7 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               )) : (
-                <div className="py-5 text-center border border-dashed border-white/[0.08] rounded-xl">
+                <div className="py-5 text-center border border-dashed border-border rounded-xl">
                   <p className="text-[11px] text-gray-600">No staff currently clocked in</p>
                 </div>
               )}
@@ -612,19 +612,19 @@ export default function AdminDashboard() {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5">
-            <h2 className="text-[14px] font-semibold text-white mb-4">Recent Activity</h2>
+          <div className="bg-surface border border-border rounded-xl p-5">
+            <h2 className="text-[14px] font-semibold text-text-primary mb-4">Recent Activity</h2>
             <div className="space-y-4">
               {safeStats.activityLog?.length > 0 ? safeStats.activityLog.map((log: any, i: number) => (
                 <div key={i} className="flex gap-3 items-start">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-[7px] shrink-0" />
                   <div>
-                    <p className="text-[11px] text-gray-500 font-medium">{new Date(log.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
-                    <p className="text-[12px] text-white leading-snug mt-0.5">{log.action}</p>
+                    <p className="text-[11px] text-text-tertiary font-medium">{new Date(log.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                    <p className="text-[12px] text-text-primary leading-snug mt-0.5">{log.action}</p>
                   </div>
                 </div>
               )) : (
-                <div className="py-5 text-center border border-dashed border-white/[0.08] rounded-xl">
+                <div className="py-5 text-center border border-dashed border-border rounded-xl">
                   <p className="text-[11px] text-gray-600">No recent activity</p>
                 </div>
               )}
@@ -637,20 +637,20 @@ export default function AdminDashboard() {
       <Modal isOpen={showCheckInModal} onClose={() => setShowCheckInModal(false)} title="Express Check-in" description="Quickly check-in guests with reservations for today">
         <div className="space-y-4 pt-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input type="text" placeholder="Search guest name..." className="w-full pl-10 pr-4 py-2 bg-[#182433] border border-white/[0.1] rounded-lg text-sm text-white placeholder:text-gray-600 outline-none focus:border-[#4A9EFF]/50 transition-colors" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+            <input type="text" placeholder="Search guest name..." className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-lg text-sm text-text-primary placeholder:text-gray-600 outline-none focus:border-[#4A9EFF]/50 transition-colors" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
           <div className="max-h-72 overflow-y-auto space-y-2">
             {todayReservations.filter((b: any) => b.guest?.name?.toLowerCase().includes(searchQuery.toLowerCase())).map((booking: any) => (
-              <div key={booking.id} className="p-4 bg-[#182433] rounded-xl border border-white/[0.06] flex items-center justify-between group hover:border-[#4A9EFF]/30 transition-all">
+              <div key={booking.id} className="p-4 bg-surface rounded-xl border border-border flex items-center justify-between group hover:border-[#4A9EFF]/30 transition-all">
                 <div>
-                  <p className="text-sm font-semibold text-white">{booking.guest.name}</p>
-                  <p className="text-[11px] text-gray-500">Room {booking.room?.roomNumber} · {booking.source}</p>
+                  <p className="text-sm font-semibold text-text-primary">{booking.guest.name}</p>
+                  <p className="text-[11px] text-text-tertiary">Room {booking.room?.roomNumber} · {booking.source}</p>
                 </div>
-                <button onClick={() => handleCheckIn(booking.id)} className="opacity-0 group-hover:opacity-100 px-3 py-1.5 bg-[#4A9EFF] text-white text-[12px] font-semibold rounded-lg transition-all">Check-in</button>
+                <button onClick={() => handleCheckIn(booking.id)} className="opacity-0 group-hover:opacity-100 px-3 py-1.5 bg-[#4A9EFF] text-text-primary text-[12px] font-semibold rounded-lg transition-all">Check-in</button>
               </div>
             ))}
-            {todayReservations.length === 0 && <p className="text-center py-8 text-sm text-gray-500">No pending reservations.</p>}
+            {todayReservations.length === 0 && <p className="text-center py-8 text-sm text-text-tertiary">No pending reservations.</p>}
           </div>
         </div>
       </Modal>

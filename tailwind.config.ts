@@ -14,7 +14,7 @@ const config: Config = {
         background: 'var(--bg-dark)',
         surface: 'rgb(var(--surface-dark-rgb) / <alpha-value>)',
         'surface-light': 'rgb(var(--surface-hover-rgb) / <alpha-value>)',
-        border: 'rgba(255, 255, 255, 0.07)',
+        border: 'var(--glass-border)',
 
         // Brand Colors — #4A9EFF (Zenbourg Blue)
         primary: {

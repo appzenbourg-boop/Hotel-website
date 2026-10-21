@@ -29,7 +29,14 @@ export async function GET(request: NextRequest) {
             where.propertyId = queryPropertyId
         }
     } else {
-        const propertyId = session.user.propertyId
+        let propertyId = session.user.propertyId
+        if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0]
+        }
         if (propertyId) where.propertyId = propertyId
     }
 
@@ -58,7 +65,7 @@ export async function GET(request: NextRequest) {
         const [guests, rooms] = await Promise.all([
             prisma.guest.findMany({
                 where: { id: { in: guestIds } },
-                select: { id: true, name: true, phone: true, email: true, address: true, idType: true, idNumber: true }
+                select: { id: true, name: true, phone: true, email: true, address: true, idType: true, idNumber: true, gstNumber: true }
             }),
             prisma.room.findMany({
                 where: { id: { in: roomIds } },
@@ -74,7 +81,7 @@ export async function GET(request: NextRequest) {
             const room = roomMap.get(b.roomId)
             return {
                 ...b,
-                guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email, address: guest.address, idType: guest.idType, idNumber: guest.idNumber } : { name: 'Unknown Guest', phone: 'N/A', email: '', address: '', idType: 'Aadhar', idNumber: '' },
+                guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email, address: guest.address, idType: guest.idType, idNumber: guest.idNumber, gstNumber: guest.gstNumber } : { name: 'Unknown Guest', phone: 'N/A', email: '', address: '', idType: 'Aadhar', idNumber: '', gstNumber: null },
                 room: room ? { roomNumber: room.roomNumber, type: room.type, category: room.category } : { roomNumber: 'N/A', type: 'N/A', category: 'STANDARD' }
             }
         })
@@ -100,6 +107,19 @@ export async function POST(request: NextRequest) {
         let propertyId = session.user.propertyId
         if (session.user.role === 'SUPER_ADMIN') {
             propertyId = body.propertyId || queryPropertyId
+        } else if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0]
+            if (!propertyId || propertyId === 'ALL') {
+                const fallbackProp = await prisma.property.findFirst({
+                    where: { ownerIds: { has: session.user.id } },
+                    select: { id: true }
+                })
+                if (fallbackProp) propertyId = fallbackProp.id
+            }
         }
 
         if (!propertyId || propertyId === 'ALL') {
@@ -108,7 +128,9 @@ export async function POST(request: NextRequest) {
 
         const { 
             guestId, roomId, checkIn, checkOut, numberOfGuests, totalAmount, source, 
-            discountPercent: manualDiscount, mealPlan: mealPlanType, mealPlanPricePerDay: customMealPlanRate,
+            discountPercent: manualDiscount, discountAmount: inputDiscountAmount,
+            marketSegment, billTo, taxExempt, isComplimentary,
+            mealPlan: mealPlanType, mealPlanPricePerDay: customMealPlanRate,
             extraAddons: inputExtraAddons
         } = body
 
@@ -153,9 +175,16 @@ export async function POST(request: NextRequest) {
             if (propSettings) pricingSettings = propSettings
         } catch { /* PropertySettings table may not exist yet */ }
 
+        if (taxExempt) {
+            pricingSettings.gstPercent = 0
+            pricingSettings.serviceChargePercent = 0
+            pricingSettings.luxuryTaxPercent = 0
+        }
+
         // Calculate nights
         const nights = Math.max(1, differenceInCalendarDays(new Date(checkOut), new Date(checkIn)))
-        const baseAmount = totalAmount ?? (room.basePrice * nights)
+        let baseAmount = totalAmount ?? (room.basePrice * nights)
+        if (isComplimentary) baseAmount = 0
 
         // Calculate meal plan amount
         let mealPlanAmount = 0
@@ -199,6 +228,13 @@ export async function POST(request: NextRequest) {
         // Apply pricing (on room cost only — meal plan & extra add-ons added separately)
         const pricing = calculatePricing(baseAmount, pricingSettings, manualDiscount)
 
+        // Adjust for Ad-hoc Discount Amount
+        if (inputDiscountAmount) {
+            pricing.discountAmount = (pricing.discountAmount || 0) + inputDiscountAmount
+            pricing.finalAmount = Math.max(0, pricing.finalAmount - inputDiscountAmount)
+            pricing.totalAmount = Math.max(0, pricing.totalAmount - inputDiscountAmount)
+        }
+
         const booking = await prisma.booking.create({
             data: {
                 propertyId,
@@ -228,6 +264,10 @@ export async function POST(request: NextRequest) {
                 extraAddonsAmount: extraAddonsAmount > 0 ? extraAddonsAmount : null,
                 status: 'RESERVED',
                 source: source ?? 'DIRECT',
+                marketSegment: marketSegment ?? null,
+                billTo: billTo ?? null,
+                taxExempt: taxExempt ?? false,
+                isComplimentary: isComplimentary ?? false,
             },
             include: {
                 guest: { select: { name: true, phone: true, email: true } },

@@ -14,6 +14,7 @@ import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import Textarea from '@/components/ui/Textarea'
+import { buildContextUrl } from '@/lib/admin-context'
 
 export default function StaffPerksPage() {
     const { data: session } = useSession()
@@ -42,11 +43,10 @@ export default function StaffPerksPage() {
     const fetchAdjustments = useCallback(async () => {
         setLoading(true)
         try {
-            const params = new URLSearchParams({
+            const res = await fetch(buildContextUrl('/api/admin/staff/adjustments', {
                 month: selectedMonth,
                 year: selectedYear
-            })
-            const res = await fetch(`/api/admin/staff/adjustments?${params}`)
+            }))
             if (res.ok) {
                 const json = await res.json()
                 setAdjustments(json.data || [])
@@ -57,7 +57,7 @@ export default function StaffPerksPage() {
 
     const fetchStaff = async () => {
         try {
-            const res = await fetch('/api/admin/staff')
+            const res = await fetch(buildContextUrl('/api/admin/staff'))
             if (res.ok) {
                 const json = await res.json()
                 setStaffList(json.data || [])
@@ -104,15 +104,21 @@ export default function StaffPerksPage() {
         }
     }
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to remove this adjustment?')) return
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    const handleConfirmDelete = async () => {
+        if (!deleteConfirmId) return
+        setIsDeleting(true)
         try {
-            const res = await fetch(`/api/admin/staff/adjustments?id=${id}`, { method: 'DELETE' })
+            const res = await fetch(`/api/admin/staff/adjustments?id=${deleteConfirmId}`, { method: 'DELETE' })
             if (res.ok) {
                 toast.success('Removed successfully')
+                setDeleteConfirmId(null)
                 fetchAdjustments()
             }
         } catch { toast.error('Failed to delete') }
+        finally { setIsDeleting(false) }
     }
 
     const filteredAdjustments = adjustments.filter(a => {
@@ -133,25 +139,25 @@ export default function StaffPerksPage() {
     ]
 
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#0d1117] overflow-hidden">
+        <div className="flex flex-col h-[calc(100vh-4rem)] bg-background overflow-hidden">
             {/* Header */}
-            <div className="shrink-0 p-8 border-b border-white/[0.06] bg-gradient-to-b from-[#161b22] to-[#0d1117]">
+            <div className="shrink-0 p-8 border-b border-border bg-gradient-to-b from-[#161b22] to-[#0d1117]">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                                 <Award className="w-5 h-5 text-blue-400" />
                             </div>
-                            <h1 className="text-2xl font-black text-white tracking-tight">Staff Incentives & Bonuses</h1>
+                            <h1 className="text-2xl font-black text-text-primary tracking-tight">Staff Incentives & Bonuses</h1>
                         </div>
-                        <p className="text-sm text-gray-500 font-medium">Click on a staff member to reward them or view recent records below.</p>
+                        <p className="text-sm text-text-tertiary font-medium">Click on a staff member to reward them or view recent records below.</p>
                     </div>
                 </div>
 
                 {/* Staff Selection Grid */}
                 <div className="mt-8">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Select Employee to Reward</h2>
+                        <h2 className="text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Select Employee to Reward</h2>
                         <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full">{filteredStaff.length} Team Members</span>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar snap-x">
@@ -159,7 +165,7 @@ export default function StaffPerksPage() {
                             <button
                                 key={staff.id}
                                 onClick={() => openModalForStaff(staff)}
-                                className="w-40 shrink-0 bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 flex flex-col items-center text-center group hover:bg-blue-500/10 hover:border-blue-500/30 transition-all hover:-translate-y-1 snap-start"
+                                className="w-40 shrink-0 bg-surface-light border border-border rounded-2xl p-4 flex flex-col items-center text-center group hover:bg-blue-500/10 hover:border-blue-500/30 transition-all hover:-translate-y-1 snap-start"
                             >
                                 <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20 mb-3 group-hover:scale-110 transition-transform overflow-hidden shadow-xl">
                                     {staff.profilePhoto ? (
@@ -168,9 +174,9 @@ export default function StaffPerksPage() {
                                         <span className="text-xs font-black text-blue-400">{staff.name.charAt(0)}</span>
                                     )}
                                 </div>
-                                <p className="text-xs font-black text-white truncate w-full">{staff.name}</p>
+                                <p className="text-xs font-black text-text-primary truncate w-full">{staff.name}</p>
                                 <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">{staff.department}</p>
-                                <div className="mt-3 px-3 py-1 rounded-full bg-white/[0.05] text-[8px] font-black text-gray-500 uppercase tracking-tighter group-hover:bg-blue-500 group-hover:text-white transition-all">
+                                <div className="mt-3 px-3 py-1 rounded-full bg-surface-light text-[8px] font-black text-text-tertiary uppercase tracking-tighter group-hover:bg-blue-600 text-white transition-all">
                                     Reward Now
                                 </div>
                             </button>
@@ -180,7 +186,7 @@ export default function StaffPerksPage() {
             </div>
 
             {/* Filters Bar */}
-            <div className="shrink-0 flex flex-wrap items-center gap-4 px-8 py-4 border-b border-white/[0.06] bg-[#11151c]">
+            <div className="shrink-0 flex flex-wrap items-center gap-4 px-8 py-4 border-b border-border bg-surface">
                 <div className="relative flex-1 min-w-[250px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                     <input
@@ -188,16 +194,16 @@ export default function StaffPerksPage() {
                         placeholder="Search records..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-gray-700 outline-none focus:border-blue-500/40 transition-all shadow-inner"
+                        className="w-full bg-surface-light border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-gray-700 outline-none focus:border-blue-500/40 transition-all shadow-inner"
                     />
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 shadow-lg">
+                    <div className="flex items-center gap-1 bg-surface-light border border-border rounded-xl p-1 shadow-lg">
                         <select 
                             value={typeFilter} 
                             onChange={e => setTypeFilter(e.target.value)}
-                            className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-400 outline-none px-3 py-2 cursor-pointer hover:text-white transition-colors border-none"
+                            className="bg-transparent text-[10px] font-black uppercase tracking-widest text-text-secondary outline-none px-3 py-2 cursor-pointer hover:text-text-primary transition-colors border-none"
                         >
                             <option value="ALL">All Types</option>
                             <option value="INCENTIVE">Incentives</option>
@@ -208,7 +214,7 @@ export default function StaffPerksPage() {
                         <select 
                             value={selectedMonth} 
                             onChange={e => setSelectedMonth(e.target.value)}
-                            className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-400 outline-none px-3 py-2 cursor-pointer hover:text-white transition-colors border-none"
+                            className="bg-transparent text-[10px] font-black uppercase tracking-widest text-text-secondary outline-none px-3 py-2 cursor-pointer hover:text-text-primary transition-colors border-none"
                         >
                             {months.map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
@@ -216,7 +222,7 @@ export default function StaffPerksPage() {
                         <select 
                             value={selectedYear} 
                             onChange={e => setSelectedYear(e.target.value)}
-                            className="bg-transparent text-[10px] font-black uppercase tracking-widest text-gray-400 outline-none px-3 py-2 cursor-pointer hover:text-white transition-colors border-none"
+                            className="bg-transparent text-[10px] font-black uppercase tracking-widest text-text-secondary outline-none px-3 py-2 cursor-pointer hover:text-text-primary transition-colors border-none"
                         >
                             {['2024', '2025', '2026'].map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
@@ -225,16 +231,16 @@ export default function StaffPerksPage() {
             </div>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto custom-scrollbar bg-[#0d1117]">
+            <div className="flex-1 overflow-auto custom-scrollbar bg-background">
                 <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-[#0d1117] z-10 border-b border-white/[0.06]">
+                    <thead className="sticky top-0 bg-background z-10 border-b border-border">
                         <tr>
-                            <th className="px-8 py-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Staff Member</th>
-                            <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Type</th>
-                            <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Reason / Note</th>
-                            <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Period</th>
-                            <th className="px-6 py-5 text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Amount</th>
-                            <th className="px-8 py-5 text-right text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Actions</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Staff Member</th>
+                            <th className="px-6 py-5 text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Type</th>
+                            <th className="px-6 py-5 text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Reason / Note</th>
+                            <th className="px-6 py-5 text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Period</th>
+                            <th className="px-6 py-5 text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Amount</th>
+                            <th className="px-8 py-5 text-right text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.03]">
@@ -243,14 +249,14 @@ export default function StaffPerksPage() {
                         ) : filteredAdjustments.length === 0 ? (
                             <tr><td colSpan={6} className="py-20 text-center text-gray-600 font-medium italic">No historical records found for this criteria.</td></tr>
                         ) : filteredAdjustments.map(item => (
-                            <tr key={item.id} className="group hover:bg-white/[0.01] transition-all">
+                            <tr key={item.id} className="group hover:bg-surface-light transition-all">
                                 <td className="px-8 py-5">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-full bg-white/[0.05] flex items-center justify-center border border-white/[0.1] overflow-hidden">
+                                        <div className="w-9 h-9 rounded-full bg-surface-light flex items-center justify-center border border-border overflow-hidden">
                                             {item.staff?.profilePhoto ? (
                                                 <img src={item.staff.profilePhoto} className="w-full h-full object-cover opacity-80" alt="" />
                                             ) : (
-                                                <span className="text-[10px] font-black text-gray-500">{item.staff?.user?.name.charAt(0)}</span>
+                                                <span className="text-[10px] font-black text-text-tertiary">{item.staff?.user?.name.charAt(0)}</span>
                                             )}
                                         </div>
                                         <div>
@@ -271,10 +277,10 @@ export default function StaffPerksPage() {
                                     </span>
                                 </td>
                                 <td className="px-6 py-5">
-                                    <p className="text-xs text-gray-500 font-medium truncate max-w-[200px] group-hover:text-gray-300 transition-colors">{item.reason || '—'}</p>
+                                    <p className="text-xs text-text-tertiary font-medium truncate max-w-[200px] group-hover:text-text-secondary transition-colors">{item.reason || '—'}</p>
                                 </td>
                                 <td className="px-6 py-5">
-                                    <div className="flex items-center gap-2 text-gray-600 group-hover:text-gray-400 transition-colors">
+                                    <div className="flex items-center gap-2 text-gray-600 group-hover:text-text-secondary transition-colors">
                                         <Calendar className="w-3 h-3" />
                                         <span className="text-[10px] font-black uppercase tracking-widest">{item.month} &apos;{item.year.toString().slice(-2)}</span>
                                     </div>
@@ -289,7 +295,7 @@ export default function StaffPerksPage() {
                                 </td>
                                 <td className="px-8 py-5 text-right">
                                     <button 
-                                        onClick={() => handleDelete(item.id)}
+                                        onClick={() => setDeleteConfirmId(item.id)}
                                         className="p-2 text-gray-700 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -364,11 +370,52 @@ export default function StaffPerksPage() {
                         />
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-6 border-t border-white/[0.06]">
+                    <div className="flex justify-end gap-3 pt-6 border-t border-border">
                         <Button variant="secondary" onClick={() => setShowAddModal(false)}>Cancel</Button>
                         <Button type="submit" loading={isSubmitting}>Apply Reward</Button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Delete Confirmation Popup Modal */}
+            <Modal
+                isOpen={!!deleteConfirmId}
+                onClose={() => !isDeleting && setDeleteConfirmId(null)}
+                size="sm"
+                showClose={!isDeleting}
+            >
+                <div className="flex flex-col items-center text-center p-2">
+                    <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-4 shadow-lg shadow-rose-500/5">
+                        <Trash2 className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-xl font-bold text-text-primary tracking-tight">
+                        Remove Adjustment?
+                    </h3>
+                    <p className="text-sm text-text-secondary mt-2 leading-relaxed">
+                        Are you sure you want to remove this financial adjustment? This action cannot be undone.
+                    </p>
+
+                    <div className="flex items-center gap-3 w-full mt-6">
+                        <Button
+                            variant="secondary"
+                            className="flex-1"
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => setDeleteConfirmId(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="danger"
+                            className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                            type="button"
+                            loading={isDeleting}
+                            onClick={handleConfirmDelete}
+                        >
+                            Remove
+                        </Button>
+                    </div>
+                </div>
             </Modal>
         </div>
     )

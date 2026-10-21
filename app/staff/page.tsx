@@ -12,7 +12,7 @@ import {
     MessageCircle, ShieldAlert, AlertTriangle, Volume2
 } from 'lucide-react'
 import { format, getHours } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn, getApiErrorMessage } from '@/lib/utils'
 import dynamic from 'next/dynamic'
 import { usePwaInstall } from '@/lib/hooks/usePwaInstall'
 const PWAInstall = dynamic(() => import('@/components/common/PWAInstall'), { ssr: false })
@@ -220,7 +220,7 @@ export default function StaffDashboard() {
                 }
                 fetchData()
             } else {
-                toast.error('Failed to update attendance')
+                toast.error(await getApiErrorMessage(res, 'Failed to update attendance'))
             }
         } catch (error) {
             toast.error('Something went wrong')

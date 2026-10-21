@@ -34,21 +34,33 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     }
 
     const body = await req.json()
-    const { status, paymentMethod, roomNumber, kitchenNotes } = body
+    const { status, paymentMethod, roomNumber, kitchenNotes, table, discountAmt, discountReason } = body
 
-    const existingTags = (await prisma.pOSOrder.findUnique({
+    const existingOrder = await prisma.pOSOrder.findUnique({
       where: { id: params.id },
-      select: { tags: true }
-    }))?.tags || []
+      include: { items: true }
+    })
+    
+    if (!existingOrder) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
 
-    const newTags = [...existingTags]
+    const newTags = [...(existingOrder.tags || [])]
     if (paymentMethod) newTags.push(`Paid: ${paymentMethod}`)
     if (roomNumber) newTags.push(`Room: ${roomNumber}`)
+    if (discountAmt && discountAmt > 0) newTags.push(`Discount: ₹${discountAmt} (${discountReason || 'Manual'})`)
 
     const updateData: any = {}
     if (status) updateData.status = status
-    if (paymentMethod) updateData.tags = newTags
+    if (paymentMethod || roomNumber || discountAmt) updateData.tags = newTags
     if (kitchenNotes !== undefined) updateData.kitchenNotes = kitchenNotes
+    if (table) updateData.table = table
+    
+    if (discountAmt && discountAmt > 0) {
+      const newSubtotal = Math.max(0, existingOrder.subtotal - discountAmt)
+      const newTax = newSubtotal * 0.17 // 10% service + 7% vat
+      updateData.total = newSubtotal + newTax
+    }
 
     const order = await prisma.pOSOrder.update({
       where: { id: params.id },

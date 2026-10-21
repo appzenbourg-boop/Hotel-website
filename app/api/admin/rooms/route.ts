@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { unauthorized, forbidden, badRequest, conflict, serverError } from '@/lib/api-response'
 import { redis } from '@/lib/redis'
+import { autoHealCleaningRooms, invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,6 +62,15 @@ export async function GET(request: NextRequest) {
             skip: (page - 1) * limit,
             take: limit,
         })
+
+        // Auto-heal any rooms stuck in CLEANING
+        const healedIds = await autoHealCleaningRooms(where.propertyId ? { propertyId: where.propertyId } : {})
+        if (healedIds.length > 0) {
+            const healedSet = new Set(healedIds)
+            rooms.forEach(r => {
+                if (healedSet.has(r.id)) r.status = 'AVAILABLE'
+            })
+        }
 
         const roomIds = rooms.map(r => r.id)
         
@@ -143,8 +153,23 @@ export async function POST(request: NextRequest) {
             return badRequest('roomNumber, category, type and basePrice are required')
         }
 
-        let propertyId = session.user.propertyId
-        if (session.user.role === 'SUPER_ADMIN' && bodyPropertyId) propertyId = bodyPropertyId
+        let propertyId = (session.user.role === 'SUPER_ADMIN' && bodyPropertyId) ? bodyPropertyId : session.user.propertyId
+        if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = (bodyPropertyId && dbUser?.ownedPropertyIds?.includes(bodyPropertyId))
+                ? bodyPropertyId
+                : (dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null)
+        }
+        if (!propertyId) {
+            const fallbackProp = await prisma.property.findFirst({
+                where: { ownerIds: { has: session.user.id } },
+                select: { id: true }
+            })
+            if (fallbackProp) propertyId = fallbackProp.id
+        }
         if (!propertyId) return badRequest('No property associated with account')
 
         const room = await prisma.room.create({
@@ -163,14 +188,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Invalidate common caches
-        try {
-            const keys = await redis.keys(`rooms:${propertyId}:*`)
-            if (keys && keys.length > 0) {
-                await redis.del(...keys)
-            }
-        } catch (err) {
-            console.error('Failed to invalidate rooms cache:', err)
-        }
+        await invalidateRoomAndDashboardCaches(propertyId)
 
         return NextResponse.json({ success: true, data: room }, { status: 201 })
     } catch (error: any) {

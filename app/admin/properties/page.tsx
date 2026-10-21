@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import {
     Plus, ChevronDown, ChevronRight, Building2, UserCircle, Users,
     Mail, MapPin, CheckCircle2, Zap, Star, Crown, Lock, Clock,
-    Phone, Edit2, Save, X, Loader2, DollarSign, ShieldAlert, Send, RefreshCw
+    Phone, Edit2, Save, X, Loader2, DollarSign, ShieldAlert, Send, RefreshCw,
+    Sliders, Search, Filter, Layers, Check, Key, ShieldCheck, Sparkles, ExternalLink
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -17,98 +18,288 @@ import { toast } from 'sonner'
 import Avatar from '@/components/common/Avatar'
 import { cn } from '@/lib/utils'
 import { PLAN_ORDER, normalizePlan, type PlanTier } from '@/lib/plan-features'
+import {
+    MASTER_FEATURES,
+    FEATURE_CATEGORIES,
+    FEATURE_PRESETS,
+    type MasterFeature,
+    type FeatureCategory
+} from '@/lib/master-features'
+import { setAdminContext } from '@/lib/admin-context'
+import { useRouter } from 'next/navigation'
 
 interface StaffMember {
     id: string
     user: { id: string; name: string; email: string; role: string; status: string }
 }
 interface Owner {
-    id: string; name: string; email: string; role: string; status: string
+    id: string; name: string; email: string; phone?: string; role: string; status: string
 }
 interface PropertyData {
-    id: string; name: string; address: string; email: string; phone: string
+    id: string; name: string; chainName?: string | null; address: string; email: string; phone: string
     description?: string; owners: Owner[]; staff: StaffMember[]
     plan: string; features: string[]
     planExpiresAt?: string | null
     customQuoteStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'PAID' | null
     customQuoteAmount?: number | null
     customQuoteAllowsTrial?: boolean
+    _count?: { rooms?: number; staff?: number; bookings?: number }
 }
 
 const PLAN_META: Record<string, { icon: React.ElementType; color: string; bg: string; border: string; label: string }> = {
-    BASE:       { icon: Building2, color: 'text-slate-400',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20',  label: 'Base' },
+    BASE:       { icon: Building2, color: 'text-text-secondary',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20',  label: 'Base' },
     STARTER:    { icon: Zap,       color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   label: 'Starter' },
     STANDARD:   { icon: Star,      color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20',  label: 'Standard' },
-    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', label: 'Enterprise' } }
-
-// Features that can be individually toggled per property (overrides)
-const FEATURE_FLAGS = [
-    { id: 'BASIC_OPS',             label: 'Core PMS & Reservations',       minPlan: 'BASE' as PlanTier },
-    { id: 'DIGITAL_CHECKIN',       label: 'Digital Check-in / Check-out',  minPlan: 'BASE' as PlanTier },
-    { id: 'STAFF_MANAGEMENT',      label: 'Staff App & Management',        minPlan: 'STARTER' as PlanTier },
-    { id: 'HOUSEKEEPING_DISPATCH', label: 'Housekeeping Dispatch',         minPlan: 'STARTER' as PlanTier },
-    { id: 'MARKETING',             label: 'Marketing Tools',               minPlan: 'STARTER' as PlanTier },
-    { id: 'LOYALTY',               label: 'Loyalty Module',                minPlan: 'STARTER' as PlanTier },
-    { id: 'ANALYTICS',             label: 'Advanced Analytics',            minPlan: 'STANDARD' as PlanTier },
-    { id: 'FB_SPA',                label: 'F&B and Spa Integration',       minPlan: 'STANDARD' as PlanTier },
-    { id: 'MULTI_PROPERTY',        label: 'Multi-property Admin',          minPlan: 'ENTERPRISE' as PlanTier },
-    { id: 'WHITE_LABEL',           label: 'White-label Guest Portal',      minPlan: 'ENTERPRISE' as PlanTier },
-]
+    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', label: 'Enterprise' }
+}
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function PropertiesPage() {
+    const router = useRouter()
     const [expandedProperties, setExpandedProperties] = useState<string[]>([])
-    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [updatingPlan, setUpdatingPlan] = useState<string | null>(null)
+
+    // Filter states
+    const [searchQuery, setSearchQuery] = useState('')
+    const [selectedChain, setSelectedChain] = useState('ALL')
+
+    // Feature Matrix Modal states
+    const [featureModalProperty, setFeatureModalProperty] = useState<PropertyData | null>(null)
+    const [activeFeatures, setActiveFeatures] = useState<string[]>([])
+    const [featureCategoryFilter, setFeatureCategoryFilter] = useState<string>('ALL')
+    const [featureSearchQuery, setFeatureSearchQuery] = useState<string>('')
+    const [isSavingFeatures, setIsSavingFeatures] = useState(false)
+
+    // Onboarding Form Data with Owner & Chain Provisioning
+    const [onboardingTab, setOnboardingTab] = useState<'property' | 'owner' | 'plan'>('property')
     const [formData, setFormData] = useState({
-        name: '', email: '', phone: '', address: '', description: '', latitude: '', longitude: '',
-        trialPeriod: true, upiId: ''
+        name: '',
+        chainName: '',
+        customChainName: '',
+        email: '',
+        phone: '',
+        address: '',
+        description: '',
+        latitude: '',
+        longitude: '',
+        plan: 'STANDARD',
+        selectedPreset: 'STANDARD_HOTEL',
+        ownerName: '',
+        ownerEmail: '',
+        ownerPhone: '',
+        ownerPassword: '',
+        trialPeriod: true,
+        upiId: ''
     })
-    
-    // Quoting states
-    const [quoteAmounts, setQuoteAmounts] = useState<Record<string, string>>({})
-    const [sendEmails, setSendEmails] = useState<Record<string, boolean>>({})
-    const [quoteAllowsTrial, setQuoteAllowsTrial] = useState<Record<string, boolean>>({})
-    const [quotingProperty, setQuotingProperty] = useState<string | null>(null)
 
     const { data: properties = [], mutate, isValidating: loading } = useSWR<PropertyData[]>(
-        '/api/admin/properties/hierarchy', fetcher,
+        '/api/admin/properties/hierarchy',
+        fetcher,
         { revalidateOnFocus: true, dedupingInterval: 5000 }
     )
 
+    // Collect distinct chain names
+    const chainsList = useMemo(() => {
+        const chains = new Set<string>()
+        properties.forEach(p => {
+            if (p.chainName?.trim()) chains.add(p.chainName.trim())
+        })
+        return Array.from(chains)
+    }, [properties])
+
+    // Filter properties based on search and chain
+    const filteredProperties = useMemo(() => {
+        return properties.filter(p => {
+            if (selectedChain !== 'ALL') {
+                if (selectedChain === 'INDEPENDENT') {
+                    if (p.chainName) return false
+                } else if (p.chainName !== selectedChain) {
+                    return false
+                }
+            }
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase()
+                const matchName = p.name.toLowerCase().includes(q)
+                const matchCity = p.address.toLowerCase().includes(q)
+                const matchEmail = p.email.toLowerCase().includes(q)
+                const matchChain = p.chainName?.toLowerCase().includes(q)
+                const matchOwner = p.owners.some(o => o.name.toLowerCase().includes(q) || o.email.toLowerCase().includes(q))
+                if (!matchName && !matchCity && !matchEmail && !matchChain && !matchOwner) return false
+            }
+            return true
+        })
+    }, [properties, selectedChain, searchQuery])
+
+    // Total stats
+    const stats = useMemo(() => {
+        const totalHotels = properties.length
+        const totalChains = chainsList.length
+        const totalRooms = properties.reduce((acc, p) => acc + (p._count?.rooms || 0), 0)
+        const activeSub = properties.filter(p => p.plan !== 'BASE').length
+        return { totalHotels, totalChains, totalRooms, activeSub }
+    }, [properties, chainsList])
+
+    // Generate random secure password for owner
+    const handleGeneratePassword = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&'
+        let pwd = ''
+        for (let i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length))
+        setFormData(prev => ({ ...prev, ownerPassword: pwd }))
+        toast.info(`Generated password: ${pwd}`)
+    }
+
+    // Open Feature Matrix Modal
+    const handleOpenFeatureModal = (property: PropertyData) => {
+        setFeatureModalProperty(property)
+        const currentFeats = property.features && property.features.length > 0
+            ? [...property.features]
+            : (FEATURE_PRESETS.find(p => p.id === 'STANDARD_HOTEL')?.features || MASTER_FEATURES.filter(f => f.defaultOn).map(f => f.id))
+        setActiveFeatures(currentFeats)
+        setFeatureCategoryFilter('ALL')
+        setFeatureSearchQuery('')
+    }
+
+    // Toggle a single feature
+    const handleToggleFeature = (featureId: string) => {
+        setActiveFeatures(prev => {
+            if (prev.includes(featureId)) {
+                return prev.filter(id => id !== featureId)
+            } else {
+                return [...prev, featureId]
+            }
+        })
+    }
+
+    // Apply a preset in feature modal
+    const handleApplyPreset = (presetId: string) => {
+        const preset = FEATURE_PRESETS.find(p => p.id === presetId)
+        if (preset) {
+            setActiveFeatures([...preset.features])
+            toast.success(`Applied "${preset.name}" (${preset.features.length} features)`)
+        }
+    }
+
+    // Enable / Disable all
+    const handleEnableAll = () => {
+        setActiveFeatures(MASTER_FEATURES.map(f => f.id))
+        toast.success(`Enabled all ${MASTER_FEATURES.length} features!`)
+    }
+
+    const handleDisableAll = () => {
+        setActiveFeatures([])
+        toast.info('Disabled all features for this property')
+    }
+
+    // Save Feature Matrix changes
+    const handleSaveFeatures = async () => {
+        if (!featureModalProperty) return
+        setIsSavingFeatures(true)
+        try {
+            const res = await fetch('/api/admin/settings/property', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    propertyId: featureModalProperty.id,
+                    features: activeFeatures
+                })
+            })
+
+            if (res.ok) {
+                toast.success(`Saved feature access matrix for ${featureModalProperty.name}! (${activeFeatures.length} active)`)
+                window.dispatchEvent(new CustomEvent('featuresUpdated', {
+                    detail: { propertyId: featureModalProperty.id, features: activeFeatures }
+                }))
+                mutate()
+                setFeatureModalProperty(null)
+            } else {
+                const d = await res.json()
+                toast.error(d.error || 'Failed to save feature settings')
+            }
+        } catch {
+            toast.error('Connection error while saving features')
+        } finally {
+            setIsSavingFeatures(false)
+        }
+    }
+
+    // Onboard New Property
     const handleAddProperty = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (formData.trialPeriod && !formData.upiId.trim()) {
-            return toast.error('UPI ID is required to configure auto-pay and activate your 14-day free trial.')
+        if (!formData.name.trim() || !formData.email.trim() || !formData.phone.trim() || !formData.address.trim()) {
+            setOnboardingTab('property')
+            return toast.error('Please fill in all mandatory property fields.')
         }
+
+        if (formData.trialPeriod && !formData.upiId.trim()) {
+            setOnboardingTab('plan')
+            return toast.error('UPI ID is required to configure auto-pay and activate the 14-day free trial.')
+        }
+
         setIsSubmitting(true)
         try {
+            const finalChain = formData.chainName === 'NEW'
+                ? formData.customChainName.trim()
+                : (formData.chainName === 'INDEPENDENT' ? '' : formData.chainName)
+
+            const preset = FEATURE_PRESETS.find(p => p.id === formData.selectedPreset)
+            const initialFeatures = preset ? preset.features : FEATURE_PRESETS[1].features
+
             const res = await fetch('/api/admin/properties', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData) })
+                body: JSON.stringify({
+                    name: formData.name,
+                    chainName: finalChain || undefined,
+                    email: formData.email,
+                    phone: formData.phone,
+                    address: formData.address,
+                    description: formData.description,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude,
+                    plan: formData.plan,
+                    features: initialFeatures,
+                    ownerName: formData.ownerName || undefined,
+                    ownerEmail: formData.ownerEmail || undefined,
+                    ownerPhone: formData.ownerPhone || undefined,
+                    ownerPassword: formData.ownerPassword || undefined,
+                    trialPeriod: formData.trialPeriod,
+                    upiId: formData.upiId
+                })
+            })
+
+            const data = await res.json()
             if (res.ok) {
-                toast.success('Property added successfully')
-                setIsModalOpen(false)
-                setFormData({ name: '', email: '', phone: '', address: '', description: '', latitude: '', longitude: '', trialPeriod: true, upiId: '' })
+                toast.success(`Hotel "${formData.name}" onboarded successfully! Owner account created.`)
+                setIsAddModalOpen(false)
+                setFormData({
+                    name: '', chainName: '', customChainName: '', email: '', phone: '', address: '', description: '',
+                    latitude: '', longitude: '', plan: 'STANDARD', selectedPreset: 'STANDARD_HOTEL',
+                    ownerName: '', ownerEmail: '', ownerPhone: '', ownerPassword: '', trialPeriod: true, upiId: ''
+                })
+                setOnboardingTab('property')
                 mutate()
             } else {
-                const d = await res.json()
-                toast.error(d.error || 'Failed to add property')
+                toast.error(data.error || 'Failed to onboard property')
             }
-        } catch { toast.error('An error occurred') }
-        finally { setIsSubmitting(false) }
+        } catch {
+            toast.error('An unexpected error occurred during onboarding')
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
+    // Plan Change handler
     const handlePlanChange = async (propertyId: string, plan: string) => {
         setUpdatingPlan(propertyId + plan)
         try {
             const res = await fetch('/api/admin/settings/property', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ propertyId, plan }) })
+                body: JSON.stringify({ propertyId, plan })
+            })
             if (res.ok) {
                 toast.success(`Plan updated to ${PLAN_META[plan]?.label ?? plan}`)
                 mutate()
@@ -119,384 +310,266 @@ export default function PropertiesPage() {
         finally { setUpdatingPlan(null) }
     }
 
-    const handleFeatureToggle = async (property: PropertyData, featureId: string) => {
-        const isActive = property.features.includes(featureId)
-        const newFeatures = isActive
-            ? property.features.filter(f => f !== featureId)
-            : [...property.features, featureId]
-
-        try {
-            const res = await fetch('/api/admin/settings/property', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ propertyId: property.id, features: newFeatures }) })
-            if (res.ok) {
-                toast.success(`Feature ${isActive ? 'disabled' : 'enabled'}`)
-                mutate()
-            } else {
-                toast.error('Failed to update feature')
-            }
-        } catch { toast.error('Connection error') }
+    // Switch active hotel in context
+    const handleSwitchToHotel = (propertyId: string, propertyName: string) => {
+        setAdminContext(propertyId)
+        toast.success(`Switched active workspace to ${propertyName}`)
+        router.push('/admin/dashboard')
     }
 
-    const handleAssignQuote = async (propertyId: string) => {
-        const amountStr = quoteAmounts[propertyId]
-        const amount = parseFloat(amountStr || '0')
-        if (!amount || amount <= 0) {
-            return toast.error('Please specify a valid annual enterprise quote amount.')
-        }
-
-        setQuotingProperty(propertyId)
-        try {
-            const res = await fetch('/api/admin/properties/quote', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    propertyId,
-                    quoteAmount: amount,
-                    shouldSendEmail: sendEmails[propertyId] ?? true,
-                    allowsTrial: quoteAllowsTrial[propertyId] ?? true
-                })
-            })
-
-            if (res.ok) {
-                toast.success('Enterprise Quote successfully applied and approved!')
-                mutate()
-            } else {
-                const d = await res.json()
-                toast.error(d.error || 'Failed to approve quote')
+    // Filter features inside Feature Matrix Modal
+    const modalFilteredFeatures = useMemo(() => {
+        return MASTER_FEATURES.filter(f => {
+            if (featureCategoryFilter !== 'ALL' && f.category !== featureCategoryFilter) return false
+            if (featureSearchQuery.trim()) {
+                const q = featureSearchQuery.toLowerCase()
+                return f.name.toLowerCase().includes(q) || f.description.toLowerCase().includes(q)
             }
-        } catch {
-            toast.error('Failed to communicate with the quotation module.')
-        } finally {
-            setQuotingProperty(null)
-        }
-    }
+            return true
+        })
+    }, [featureCategoryFilter, featureSearchQuery])
 
     if (loading && properties.length === 0) return (
-        <div className="space-y-4 animate-pulse">
+        <div className="space-y-4 animate-pulse p-6">
             <div className="flex justify-between items-center">
                 <div className="h-8 w-48 bg-white/5 rounded-lg" />
                 <div className="h-10 w-32 bg-white/5 rounded-lg" />
             </div>
-            {[1, 2, 3].map(i => <div key={i} className="h-16 w-full bg-white/5 rounded-2xl" />)}
+            <div className="grid grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-white/5 rounded-2xl" />)}
+            </div>
+            {[1, 2, 3].map(i => <div key={i} className="h-20 w-full bg-white/5 rounded-2xl" />)}
         </div>
     )
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex justify-between items-center">
+        <div className="space-y-8 p-1">
+            {/* Top Overview Banner */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Property Portfolio</h1>
-                    <p className="text-text-secondary text-sm mt-0.5">
-                        {properties.length} hotel{properties.length !== 1 ? 's' : ''} registered
-                    </p>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#4A9EFF]/10 border border-[#4A9EFF]/20 flex items-center justify-center text-[#4A9EFF]">
+                            <Building2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-black text-text-primary tracking-tight">Super Admin Hotel Portfolio</h1>
+                            <p className="text-text-secondary text-xs mt-0.5">
+                                Onboard independent hotels & hotel chains, provision owner credentials, and configure granular feature access
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <Button onClick={() => setIsModalOpen(true)} className="gap-2">
-                    <Plus className="w-4 h-4" /> Add Hotel
-                </Button>
+
+                <div className="flex items-center gap-3">
+                    <Button
+                        onClick={() => {
+                            setOnboardingTab('property')
+                            setIsAddModalOpen(true)
+                        }}
+                        className="bg-[#4A9EFF] hover:bg-[#3B82F6] text-white shadow-lg shadow-[#4A9EFF]/20 gap-2 border-0"
+                    >
+                        <Plus className="w-4 h-4" /> Onboard Hotel / Chain
+                    </Button>
+                </div>
             </div>
 
-            {/* Properties List */}
-            <div className="space-y-3">
-                {properties.map(property => {
+            {/* Platform Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-surface border border-border/60 flex items-center justify-between">
+                    <div>
+                        <p className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Total Hotels</p>
+                        <p className="text-2xl font-black text-text-primary mt-1">{stats.totalHotels}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                        <Building2 className="w-5 h-5" />
+                    </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-surface border border-border/60 flex items-center justify-between">
+                    <div>
+                        <p className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Hotel Chains & Brands</p>
+                        <p className="text-2xl font-black text-text-primary mt-1">{stats.totalChains}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                        <Layers className="w-5 h-5" />
+                    </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-surface border border-border/60 flex items-center justify-between">
+                    <div>
+                        <p className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Total Rooms Managed</p>
+                        <p className="text-2xl font-black text-text-primary mt-1">{stats.totalRooms}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-surface border border-border/60 flex items-center justify-between">
+                    <div>
+                        <p className="text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Active Subscriptions</p>
+                        <p className="text-2xl font-black text-text-primary mt-1">{stats.activeSub}</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <Crown className="w-5 h-5" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col md:flex-row gap-3 items-center justify-between bg-surface/50 border border-border p-3 rounded-2xl">
+                <div className="flex items-center gap-2 w-full md:w-auto flex-1">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="w-4 h-4 text-text-tertiary absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                            type="text"
+                            placeholder="Search by hotel name, city, owner, email, or chain..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="w-full bg-black/20 border border-border rounded-xl pl-9 pr-4 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-[#4A9EFF]"
+                        />
+                    </div>
+
+                    {/* Chain Filter Dropdown */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <Filter className="w-3.5 h-3.5 text-text-tertiary ml-2" />
+                        <select
+                            value={selectedChain}
+                            onChange={e => setSelectedChain(e.target.value)}
+                            className="bg-black/20 border border-border rounded-xl px-3 py-2 text-xs text-text-secondary outline-none focus:border-[#4A9EFF]"
+                        >
+                            <option value="ALL">All Chains & Brands ({properties.length})</option>
+                            <option value="INDEPENDENT">Independent Hotels</option>
+                            {chainsList.map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="text-xs text-text-tertiary px-2">
+                    Showing <span className="font-bold text-text-primary">{filteredProperties.length}</span> of {properties.length} properties
+                </div>
+            </div>
+
+            {/* Property Cards List */}
+            <div className="space-y-4">
+                {filteredProperties.map(property => {
                     const isExpanded = expandedProperties.includes(property.id)
                     const plan = normalizePlan(property.plan ?? 'BASE')
                     const planMeta = PLAN_META[plan] ?? PLAN_META.BASE
                     const PlanIcon = planMeta.icon
+                    const activeCount = property.features ? property.features.length : 0
+                    const totalFeatures = MASTER_FEATURES.length
+                    const activePercent = Math.round((activeCount / totalFeatures) * 100)
 
                     return (
-                        <Card key={property.id} className="overflow-hidden border-border bg-surface p-0">
-                            {/* Row header */}
-                            <div
-                                className="p-4 flex items-center gap-4 cursor-pointer hover:bg-surface-light transition-colors"
-                                onClick={() => setExpandedProperties(prev =>
-                                    prev.includes(property.id) ? prev.filter(p => p !== property.id) : [...prev, property.id]
-                                )}
-                            >
-                                <div className="p-2 bg-primary/10 rounded-lg shrink-0">
-                                    {isExpanded
-                                        ? <ChevronDown className="w-4 h-4 text-primary" />
-                                        : <ChevronRight className="w-4 h-4 text-primary" />
-                                    }
-                                </div>
-                                <Building2 className="w-5 h-5 text-primary shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-white truncate">{property.name}</h3>
-                                    <div className="flex items-center gap-3 text-xs text-text-secondary mt-0.5">
-                                        <span className="flex items-center gap-1 truncate"><MapPin className="w-3 h-3 shrink-0" />{property.address}</span>
-                                        <span className="flex items-center gap-1 shrink-0"><Mail className="w-3 h-3" />{property.email}</span>
+                        <Card key={property.id} className="overflow-hidden border-border bg-surface p-0 hover:border-[#4A9EFF]/40 transition-colors">
+                            {/* Card Top Row */}
+                            <div className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                    <button
+                                        onClick={() => setExpandedProperties(prev =>
+                                            prev.includes(property.id) ? prev.filter(p => p !== property.id) : [...prev, property.id]
+                                        )}
+                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-text-tertiary hover:text-text-primary transition-colors"
+                                    >
+                                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                    </button>
+
+                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#4A9EFF]/20 to-purple-500/10 border border-[#4A9EFF]/30 flex items-center justify-center text-[#4A9EFF] shrink-0 font-black text-sm">
+                                        {property.name.substring(0, 2).toUpperCase()}
+                                    </div>
+
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h3 className="font-bold text-base text-text-primary truncate">{property.name}</h3>
+                                            {property.chainName ? (
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/15 border border-purple-500/30 text-purple-300 flex items-center gap-1">
+                                                    <Layers className="w-2.5 h-2.5" /> {property.chainName}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-text-tertiary">
+                                                    Independent
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-4 text-xs text-text-secondary mt-1 flex-wrap">
+                                            <span className="flex items-center gap-1 truncate"><MapPin className="w-3 h-3 shrink-0 text-text-tertiary" />{property.address}</span>
+                                            <span className="flex items-center gap-1 shrink-0"><Mail className="w-3 h-3 text-text-tertiary" />{property.email}</span>
+                                            <span className="flex items-center gap-1 shrink-0"><Phone className="w-3 h-3 text-text-tertiary" />{property.phone}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    {property.customQuoteStatus === 'PENDING' && (
-                                        <span className="animate-pulse flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400">
-                                            <ShieldAlert className="w-3 h-3" /> Pending Quote
-                                        </span>
-                                    )}
-                                    {property.customQuoteStatus === 'APPROVED' && (
-                                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400">
-                                            <Clock className="w-3 h-3" /> Quote Unpaid
-                                        </span>
-                                    )}
-                                    {property.customQuoteStatus === 'PAID' && (
-                                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
-                                            <CheckCircle2 className="w-3 h-3" /> Quote Paid
-                                        </span>
-                                    )}
+
+                                {/* Right Action Badges & Buttons */}
+                                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                                    {/* Feature Access Button */}
+                                    <button
+                                        onClick={() => handleOpenFeatureModal(property)}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[#4A9EFF]/30 bg-[#4A9EFF]/10 hover:bg-[#4A9EFF]/20 text-[#4A9EFF] text-xs font-bold transition-all shadow-sm shadow-[#4A9EFF]/10"
+                                    >
+                                        <Sliders className="w-3.5 h-3.5" />
+                                        <span>Features ({activeCount}/{totalFeatures})</span>
+                                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#4A9EFF]/20 font-black">{activePercent}%</span>
+                                    </button>
+
                                     {/* Plan badge */}
                                     <span className={cn('flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border', planMeta.bg, planMeta.color, planMeta.border)}>
                                         <PlanIcon className="w-3 h-3" />{planMeta.label}
                                     </span>
-                                    <Badge variant="secondary" className="gap-1 text-xs">
-                                        <Users className="w-3 h-3" />{property.staff.length}
-                                    </Badge>
+
+                                    {/* Switch Context Button */}
+                                    <button
+                                        onClick={() => handleSwitchToHotel(property.id, property.name)}
+                                        title="Switch to this property context"
+                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-text-secondary hover:text-text-primary transition-colors border border-border"
+                                    >
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Expanded content */}
+                            {/* Expanded Details */}
                             {isExpanded && (
-                                <div className="border-t border-border bg-surface-light/20 p-6 space-y-8 animate-in fade-in slide-in-from-top-2 duration-200">
-
-                                    {/* Contact info */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                        {[
-                                            { icon: Mail,  label: 'Email',   value: property.email },
-                                            { icon: Phone, label: 'Phone',   value: property.phone },
-                                            { icon: MapPin, label: 'Address', value: property.address },
-                                        ].map(({ icon: Icon, label, value }) => (
-                                            <div key={label}>
-                                                <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">{label}</p>
-                                                <p className="text-white text-xs truncate">{value || '—'}</p>
-                                            </div>
-                                        ))}
-                                        <div>
-                                            <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider mb-1">Staff Count</p>
-                                            <p className="text-white text-xs">{property.staff.length} members</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Owners */}
+                                <div className="border-t border-border bg-black/20 p-6 space-y-6">
+                                    {/* Owners section */}
                                     <div>
                                         <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-3 flex items-center gap-2">
-                                            <UserCircle className="w-3.5 h-3.5" /> Owners & Admins ({property.owners.length})
+                                            <UserCircle className="w-3.5 h-3.5 text-[#4A9EFF]" /> Hotel Owners & Administrators
                                         </h4>
+
                                         {property.owners.length === 0 ? (
-                                            <p className="text-sm text-text-tertiary">No owners assigned yet.</p>
+                                            <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-text-tertiary">
+                                                No owner account assigned yet.
+                                            </div>
                                         ) : (
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                                 {property.owners.map(owner => (
-                                                    <div key={owner.id} className="flex items-center gap-3 p-3 bg-surface rounded-xl border border-border">
-                                                        <Avatar name={owner.name} size="sm" />
-                                                        <div className="min-w-0">
-                                                            <p className="font-medium text-sm text-white truncate">{owner.name}</p>
-                                                            <p className="text-xs text-text-secondary truncate">{owner.email}</p>
-                                                            <Badge variant="secondary" className="mt-1 text-[9px] h-4">{owner.role}</Badge>
+                                                    <div key={owner.id} className="p-3 bg-surface rounded-xl border border-border flex items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <Avatar name={owner.name} size="sm" />
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-bold text-text-primary truncate">{owner.name}</p>
+                                                                <p className="text-[11px] text-text-secondary truncate">{owner.email}</p>
+                                                                {owner.phone && <p className="text-[10px] text-text-tertiary">{owner.phone}</p>}
+                                                            </div>
                                                         </div>
+                                                        <Badge variant="secondary" className="text-[9px] uppercase tracking-wider">
+                                                            {owner.role}
+                                                        </Badge>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Staff */}
+                                    {/* Subscription Plan Change */}
                                     <div>
                                         <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-3 flex items-center gap-2">
-                                            <Users className="w-3.5 h-3.5" /> Staff Roster ({property.staff.length})
+                                            <Crown className="w-3.5 h-3.5 text-amber-400" /> Subscription Plan Tier
                                         </h4>
-                                        {property.staff.length === 0 ? (
-                                            <p className="text-sm text-text-tertiary">No staff mapped yet.</p>
-                                        ) : (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                {property.staff.slice(0, 9).map(member => (
-                                                    <div key={member.id} className="flex items-center gap-3 p-3 bg-surface rounded-xl border border-border">
-                                                        <Avatar name={member.user.name} size="sm" />
-                                                        <div className="min-w-0">
-                                                            <p className="font-medium text-sm text-white truncate">{member.user.name}</p>
-                                                            <p className="text-xs text-text-secondary truncate">{member.user.email}</p>
-                                                            <Badge variant="secondary" className="mt-1 text-[9px] h-4">{member.user.role}</Badge>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {property.staff.length > 9 && (
-                                                    <div className="flex items-center justify-center p-3 bg-surface rounded-xl border border-dashed border-border text-sm text-text-tertiary">
-                                                        +{property.staff.length - 9} more
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Enterprise Pricing Quotation Workflow */}
-                                    {plan === 'ENTERPRISE' && (
-                                        <div className="border-t border-border pt-6 space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-2">
-                                                        <Crown className="w-3.5 h-3.5" /> Enterprise Quotation Desk
-                                                    </h4>
-                                                    <p className="text-xs text-text-tertiary mt-0.5">
-                                                        Configure and approve custom contract rates for high-scale workspaces.
-                                                    </p>
-                                                </div>
-                                                {property.customQuoteStatus && (
-                                                    <span className={cn(
-                                                        'text-[10px] font-bold px-2.5 py-1 rounded-full border tracking-wide',
-                                                        (property.customQuoteStatus === 'PENDING' || property.customQuoteStatus === 'NONE') && 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                                                        property.customQuoteStatus === 'APPROVED' && 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-                                                        property.customQuoteStatus === 'PAID' && 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                                    )}>
-                                                        Status: {property.customQuoteStatus === 'NONE' ? 'PENDING' : property.customQuoteStatus}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <div className="bg-gradient-to-br from-purple-500/5 via-transparent to-transparent border border-purple-500/10 p-5 rounded-2xl space-y-5">
-                                                {/* Real User Telemetry Intake Details */}
-                                                <div className="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col gap-2">
-                                                    <p className="text-[10px] font-extrabold text-purple-400/80 uppercase tracking-[0.2em] flex items-center gap-1.5">
-                                                         Client Onboarding Profile Scale
-                                                    </p>
-                                                    <p className="text-sm font-medium text-white/90 leading-relaxed">
-                                                        {property.description || "📋 Custom Enterprise License Request · Awaiting detailed inventory mapping."}
-                                                    </p>
-                                                </div>
-
-                                                {/* Scenario 1: Fully Paid */}
-                                                {property.customQuoteStatus === 'PAID' && (
-                                                    <div className="flex items-center gap-3 text-sm text-emerald-400">
-                                                        <CheckCircle2 className="w-5 h-5 shrink-0" />
-                                                        <div>
-                                                            <p className="font-semibold">Enterprise Lifecycle Settled</p>
-                                                            <p className="text-xs text-text-secondary mt-0.5">
-                                                                The contract has been funded at <span className="text-white font-bold">₹{(property.customQuoteAmount || 0).toLocaleString('en-IN')}/year</span>. Fully functional dashboard unlocked.
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Scenario 2: Pending Assignment */}
-                                                {(!property.customQuoteStatus || property.customQuoteStatus === 'PENDING' || property.customQuoteStatus === 'NONE') && (
-                                                    <div className="space-y-4 border-t border-white/[0.05] pt-4">
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                                                            <div className="space-y-1.5">
-                                                                <label className="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Set Annual Price (INR)</label>
-                                                                <div className="relative">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary font-semibold">₹</span>
-                                                                    <input
-                                                                        type="number"
-                                                                        placeholder="e.g. 249999"
-                                                                        className="w-full bg-surface border border-border focus:border-purple-500 rounded-xl pl-8 pr-4 py-2 text-sm text-white focus:outline-none placeholder:text-text-tertiary transition-colors"
-                                                                        value={quoteAmounts[property.id] || ''}
-                                                                        onChange={e => setQuoteAmounts({ ...quoteAmounts, [property.id]: e.target.value })}
-                                                                    />
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="flex flex-col gap-2 md:pb-1.5">
-                                                                <label className="flex items-center gap-2 cursor-pointer select-none">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={quoteAllowsTrial[property.id] ?? true}
-                                                                        onChange={e => setQuoteAllowsTrial({ ...quoteAllowsTrial, [property.id]: e.target.checked })}
-                                                                        className="w-4 h-4 rounded border-border bg-surface accent-purple-500"
-                                                                    />
-                                                                    <span className="text-xs text-purple-300 font-bold flex items-center gap-1">
-                                                                         Allow 14-Day Free Trial (UPI Mandate Setup)
-                                                                    </span>
-                                                                </label>
-                                                                
-                                                                <label className="flex items-center gap-2 cursor-pointer select-none">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={sendEmails[property.id] ?? true}
-                                                                        onChange={e => setSendEmails({ ...sendEmails, [property.id]: e.target.checked })}
-                                                                        className="w-4 h-4 rounded border-border bg-surface accent-purple-500"
-                                                                    />
-                                                                    <span className="text-xs text-text-secondary flex items-center gap-1">
-                                                                        <Send className="w-3 h-3" /> Dispatch confirmation email to owners
-                                                                    </span>
-                                                                </label>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center justify-between border-t border-purple-500/5 pt-4 mt-2">
-                                                            <p className="text-[11px] text-text-tertiary max-w-md">
-                                                                Approving this quotation will instantly unblock the client&apos;s enterprise trap, prompting them with a secure Razorpay portal mapped to this customized billing scale.
-                                                            </p>
-                                                            <Button
-                                                                onClick={() => handleAssignQuote(property.id)}
-                                                                loading={quotingProperty === property.id}
-                                                                className="bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-600/20 gap-2 border-0"
-                                                            >
-                                                                <Crown className="w-4 h-4" /> Approve & Release Quote
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Scenario 3: Approved, Awaiting Checkout */}
-                                                {property.customQuoteStatus === 'APPROVED' && (
-                                                    <div className="space-y-4">
-                                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                            <div className="space-y-1">
-                                                                <p className="text-xs text-text-secondary flex items-center gap-1">
-                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" /> Approved Quote Active (Awaiting Payment)
-                                                                </p>
-                                                                <p className="text-2xl font-extrabold text-white mt-1 tracking-tight">
-                                                                    ₹{(property.customQuoteAmount || 0).toLocaleString('en-IN')}<span className="text-sm text-text-tertiary font-normal">/year</span>
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex items-center gap-2.5">
-                                                                <div className="relative w-40">
-                                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary text-xs font-semibold">₹</span>
-                                                                    <input
-                                                                        type="number"
-                                                                        placeholder="Revise quote..."
-                                                                        className="w-full bg-surface border border-border focus:border-purple-500 rounded-xl pl-6 pr-3 py-2 text-xs text-white focus:outline-none transition-colors"
-                                                                        value={quoteAmounts[property.id] || ''}
-                                                                        onChange={e => setQuoteAmounts({ ...quoteAmounts, [property.id]: e.target.value })}
-                                                                    />
-                                                                </div>
-                                                                <Button
-                                                                    onClick={() => handleAssignQuote(property.id)}
-                                                                    loading={quotingProperty === property.id}
-                                                                    variant="secondary"
-                                                                    className="text-xs h-[34px] gap-1.5"
-                                                                >
-                                                                    <RefreshCw className="w-3 h-3" /> Update Quote & Re-notify
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                        <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-[11px] text-text-secondary flex items-center gap-2 mt-2">
-                                                            <Mail className="w-3.5 h-3.5 text-blue-400" />
-                                                            <span>The client is currently presented with this quote at their gateway. Next update will trigger an automated email recalculation.</span>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Subscription Plan */}
-                                    <div className="border-t border-border pt-6">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div>
-                                                <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider flex items-center gap-2">
-                                                     Subscription Plan
-                                                </h4>
-                                                <p className="text-xs text-text-tertiary mt-0.5">
-                                                    Current: <span className={cn('font-bold', planMeta.color)}>{planMeta.label}</span>
-                                                    {property.planExpiresAt && (
-                                                        <span className="ml-2 text-text-tertiary">
-                                                            · Expires {new Date(property.planExpiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                        </span>
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                             {(['BASE', 'STARTER', 'STANDARD', 'ENTERPRISE'] as PlanTier[]).map(p => {
                                                 const meta = PLAN_META[p]
@@ -510,16 +583,17 @@ export default function PropertiesPage() {
                                                         onClick={() => !isCurrent && handlePlanChange(property.id, p)}
                                                         disabled={isCurrent || !!updatingPlan}
                                                         className={cn(
-                                                            'flex flex-col items-center gap-2 p-4 rounded-2xl border text-center transition-all',
+                                                            'flex flex-col items-center gap-2 p-3.5 rounded-xl border text-center transition-all',
                                                             isCurrent
-                                                                ? cn('border-2', meta.border, meta.bg)
-                                                                : 'border-border bg-surface hover:bg-surface-light cursor-pointer disabled:cursor-default'
+                                                                ? cn('border-2 shadow-md', meta.border, meta.bg)
+                                                                : 'border-border bg-surface hover:bg-surface-light cursor-pointer'
                                                         )}
                                                     >
-                                                        {isUpdating
-                                                            ? <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                                                            : <Icon className={cn('w-5 h-5', isCurrent ? meta.color : 'text-text-tertiary')} />
-                                                        }
+                                                        {isUpdating ? (
+                                                            <Loader2 className="w-5 h-5 animate-spin text-[#4A9EFF]" />
+                                                        ) : (
+                                                            <Icon className={cn('w-5 h-5', isCurrent ? meta.color : 'text-text-tertiary')} />
+                                                        )}
                                                         <span className={cn('text-xs font-bold', isCurrent ? meta.color : 'text-text-secondary')}>
                                                             {meta.label}
                                                         </span>
@@ -532,60 +606,22 @@ export default function PropertiesPage() {
                                         </div>
                                     </div>
 
-                                    {/* Feature Flags */}
-                                    <div>
-                                        <h4 className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-4 flex items-center gap-2">
-                                             Feature Flags
-                                            <span className="text-[9px] font-normal normal-case text-text-tertiary ml-1">
-                                                (Override individual features regardless of plan)
-                                            </span>
-                                        </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                            {FEATURE_FLAGS.map(feat => {
-                                                const isActive = property.features.includes(feat.id)
-                                                const planIdx = PLAN_ORDER.indexOf(normalizePlan(property.plan))
-                                                const reqIdx = PLAN_ORDER.indexOf(feat.minPlan)
-                                                const includedInPlan = planIdx >= reqIdx
-
-                                                return (
-                                                    <div
-                                                        key={feat.id}
-                                                        onClick={() => handleFeatureToggle(property, feat.id)}
-                                                        className={cn(
-                                                            'p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-3',
-                                                            isActive
-                                                                ? 'bg-primary/10 border-primary/30'
-                                                                : 'bg-surface border-border hover:border-white/20 opacity-60 hover:opacity-100'
-                                                        )}
-                                                    >
-                                                        <div className={cn(
-                                                            'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                                                            isActive ? 'bg-primary/20' : 'bg-white/5'
-                                                        )}>
-                                                            {includedInPlan
-                                                                ? <CheckCircle2 className={cn('w-4 h-4', isActive ? 'text-primary' : 'text-text-tertiary')} />
-                                                                : <Lock className="w-4 h-4 text-text-tertiary" />
-                                                            }
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-xs font-semibold text-white truncate">{feat.label}</p>
-                                                            <p className={cn('text-[10px]', includedInPlan ? 'text-text-tertiary' : 'text-amber-500/70')}>
-                                                                {includedInPlan ? (isActive ? 'Enabled' : 'Disabled') : `Requires ${feat.minPlan}`}
-                                                            </p>
-                                                        </div>
-                                                        <div className={cn(
-                                                            'w-8 h-4 rounded-full transition-all shrink-0',
-                                                            isActive ? 'bg-primary' : 'bg-white/10'
-                                                        )}>
-                                                            <div className={cn(
-                                                                'w-3 h-3 rounded-full bg-white mt-0.5 transition-all',
-                                                                isActive ? 'ml-4' : 'ml-0.5'
-                                                            )} />
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
+                                    {/* Quick Feature Summary & Direct Manage Button */}
+                                    <div className="p-4 rounded-2xl bg-[#4A9EFF]/5 border border-[#4A9EFF]/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-[#4A9EFF] uppercase tracking-wider flex items-center gap-1.5">
+                                                <Sliders className="w-3.5 h-3.5" /> Granular Module Permissions
+                                            </h4>
+                                            <p className="text-xs text-text-secondary mt-1">
+                                                Currently <span className="font-bold text-text-primary">{activeCount} of {totalFeatures} features</span> enabled. The client only sees features enabled here.
+                                            </p>
                                         </div>
+                                        <Button
+                                            onClick={() => handleOpenFeatureModal(property)}
+                                            className="bg-[#4A9EFF] hover:bg-[#3B82F6] text-white text-xs font-bold gap-2 self-start md:self-auto border-0"
+                                        >
+                                            <Sliders className="w-3.5 h-3.5" /> Open Feature Matrix
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -593,95 +629,495 @@ export default function PropertiesPage() {
                     )
                 })}
 
-                {properties.length === 0 && !loading && (
+                {filteredProperties.length === 0 && (
                     <div className="text-center py-16 bg-surface rounded-2xl border border-dashed border-border">
                         <Building2 className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-white">No properties yet</h3>
-                        <p className="text-text-secondary text-sm mt-1">Add your first hotel to get started.</p>
-                        <Button onClick={() => setIsModalOpen(true)} className="mt-4 gap-2">
-                            <Plus className="w-4 h-4" /> Add Property
+                        <h3 className="text-lg font-semibold text-text-primary">No hotels match your filters</h3>
+                        <p className="text-text-secondary text-sm mt-1">Try adjusting your search query or chain filter.</p>
+                        <Button
+                            onClick={() => { setSearchQuery(''); setSelectedChain('ALL') }}
+                            variant="secondary"
+                            className="mt-4"
+                        >
+                            Clear Filters
                         </Button>
                     </div>
                 )}
             </div>
 
-            {/* Add Property Modal */}
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Add New Hotel Property"
-                description="Register a new hotel to the Zenbourg portfolio"
-                footer={(
-                    <>
-                        <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleAddProperty} loading={isSubmitting}>Create Property</Button>
-                    </>
-                )}
-            >
-                <form onSubmit={handleAddProperty} className="space-y-4">
-                    <Input label="Hotel Name" placeholder="e.g. Grand Palace Hotel" required
-                        value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input label="Contact Email" type="email" placeholder="hotel@example.com" required
-                            value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                        <Input label="Phone Number" placeholder="+91 1234567890" required
-                            value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                    </div>
-                    <Input label="Address" placeholder="Full physical address" required
-                        value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
-                    <Textarea label="Description (optional)" placeholder="Brief overview of the property..."
-                        value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
-                    <div className="grid grid-cols-2 gap-4">
-                        <Input label="Latitude (optional)" placeholder="e.g. 28.6139"
-                            value={formData.latitude} onChange={e => setFormData({ ...formData, latitude: e.target.value })} />
-                        <Input label="Longitude (optional)" placeholder="e.g. 77.2090"
-                            value={formData.longitude} onChange={e => setFormData({ ...formData, longitude: e.target.value })} />
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (navigator.geolocation) {
-                                navigator.geolocation.getCurrentPosition(pos => {
-                                    setFormData({ ...formData, latitude: pos.coords.latitude.toString(), longitude: pos.coords.longitude.toString() })
-                                    toast.success('Location captured')
-                                })
-                            }
-                        }}
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                    >
-                        <MapPin className="w-3 h-3" /> Use my current location
-                    </button>
-
-                    {/* Free Trial & UPI Autopay configuration */}
-                    <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-3.5 mt-4">
-                        <label className="flex items-start gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={formData.trialPeriod}
-                                onChange={e => setFormData({ ...formData, trialPeriod: e.target.checked })}
-                                className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-surface-light accent-primary mt-1"
-                            />
-                            <div className="flex-1">
-                                <span className="text-sm font-semibold text-white block leading-tight">Activate 14-Day Free Trial</span>
-                                <span className="text-[11px] text-text-secondary block mt-1 leading-normal">
-                                    Capture UPI ID details now to configure secure autopay recurring deductions after the free trial concludes. No upfront charge will be made.
-                                </span>
+            {/* ═══════════════════════════════════════════════════════════════
+                 FEATURE ACCESS CONTROL MATRIX MODAL (GRANULAR TOGGLES)
+               ═══════════════════════════════════════════════════════════════ */}
+            {featureModalProperty && (
+                <Modal
+                    isOpen={!!featureModalProperty}
+                    onClose={() => setFeatureModalProperty(null)}
+                    title={`Feature Access Matrix · ${featureModalProperty.name}`}
+                    description={`Configure which modules and tools this hotel client has access to. Disabled features disappear from their dashboard and sidebar.`}
+                    size="xl"
+                    footer={(
+                        <div className="flex items-center justify-between w-full">
+                            <div className="text-xs text-text-tertiary flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-[#4A9EFF] animate-pulse"></span>
+                                <span className="font-bold text-text-primary">{activeFeatures.length}</span> of {MASTER_FEATURES.length} features enabled ({Math.round((activeFeatures.length / MASTER_FEATURES.length) * 100)}%)
                             </div>
-                        </label>
+                            <div className="flex items-center gap-2">
+                                <Button variant="secondary" onClick={() => setFeatureModalProperty(null)}>
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleSaveFeatures}
+                                    loading={isSavingFeatures}
+                                    className="bg-[#4A9EFF] hover:bg-[#3B82F6] text-white border-0 font-bold gap-2"
+                                >
+                                    <Save className="w-4 h-4" /> Save Feature Permissions
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                >
+                    <div className="space-y-6">
+                        {/* Presets and Global Controls Bar */}
+                        <div className="p-4 rounded-2xl bg-black/30 border border-border/80 space-y-3">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/40 pb-2.5">
+                                <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider flex items-center gap-1.5">
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-400" /> 1-Click Feature Presets
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleEnableAll}
+                                        className="text-[11px] font-bold text-[#4A9EFF] hover:underline px-2 py-0.5"
+                                    >
+                                        Enable All ({MASTER_FEATURES.length})
+                                    </button>
+                                    <span className="text-text-tertiary">·</span>
+                                    <button
+                                        onClick={handleDisableAll}
+                                        className="text-[11px] font-bold text-red-400 hover:underline px-2 py-0.5"
+                                    >
+                                        Disable All
+                                    </button>
+                                </div>
+                            </div>
 
-                        {formData.trialPeriod && (
-                            <div className="animate-in fade-in slide-in-from-top-1 duration-150 pt-2 border-t border-primary/10">
-                                <Input
-                                    label="UPI ID for Auto-Pay (Recurring Deductions)"
-                                    placeholder="e.g. hoteladmin@upi or 9876543210@paytm"
-                                    required={formData.trialPeriod}
-                                    value={formData.upiId}
-                                    onChange={e => setFormData({ ...formData, upiId: e.target.value })}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                {FEATURE_PRESETS.map(preset => (
+                                    <button
+                                        key={preset.id}
+                                        onClick={() => handleApplyPreset(preset.id)}
+                                        className="p-2.5 rounded-xl border border-border/60 bg-surface/60 hover:bg-surface hover:border-[#4A9EFF]/40 transition-all text-left flex flex-col justify-between"
+                                    >
+                                        <p className="text-xs font-bold text-text-primary leading-tight">{preset.name}</p>
+                                        <p className="text-[10px] text-text-tertiary mt-1 line-clamp-1">{preset.description}</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Search & Category Tabs */}
+                        <div className="space-y-3">
+                            <div className="relative">
+                                <Search className="w-4 h-4 text-text-tertiary absolute left-3.5 top-1/2 -translate-y-1/2" />
+                                <input
+                                    type="text"
+                                    placeholder="Search features (e.g. banquet, pos, ota, housekeeping, payroll)..."
+                                    value={featureSearchQuery}
+                                    onChange={e => setFeatureSearchQuery(e.target.value)}
+                                    className="w-full bg-black/20 border border-border rounded-xl pl-9 pr-4 py-2.5 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-[#4A9EFF]"
                                 />
                             </div>
-                        )}
+
+                            {/* Category Filter Pills */}
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
+                                <button
+                                    onClick={() => setFeatureCategoryFilter('ALL')}
+                                    className={cn(
+                                        'px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors border',
+                                        featureCategoryFilter === 'ALL'
+                                            ? 'bg-[#4A9EFF] text-white border-[#4A9EFF]'
+                                            : 'bg-surface text-text-secondary border-border hover:bg-surface-light'
+                                    )}
+                                >
+                                    All Categories ({MASTER_FEATURES.length})
+                                </button>
+                                {FEATURE_CATEGORIES.map(cat => {
+                                    const count = MASTER_FEATURES.filter(f => f.category === cat.id).length
+                                    const isSelected = featureCategoryFilter === cat.id
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setFeatureCategoryFilter(cat.id)}
+                                            className={cn(
+                                                'px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors border flex items-center gap-1.5',
+                                                isSelected
+                                                    ? 'bg-[#4A9EFF] text-white border-[#4A9EFF]'
+                                                    : 'bg-surface text-text-secondary border-border hover:bg-surface-light'
+                                            )}
+                                        >
+                                            <span>{cat.title}</span>
+                                            <span className={cn('text-[10px] px-1.5 rounded-full', isSelected ? 'bg-white/20' : 'bg-white/5')}>
+                                                {count}
+                                            </span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Feature Toggles Grid */}
+                        <div className="max-h-[50vh] overflow-y-auto pr-1 space-y-2.5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {modalFilteredFeatures.map(feature => {
+                                    const isEnabled = activeFeatures.includes(feature.id)
+                                    const catMeta = FEATURE_CATEGORIES.find(c => c.id === feature.category)
+
+                                    return (
+                                        <div
+                                            key={feature.id}
+                                            onClick={() => handleToggleFeature(feature.id)}
+                                            className={cn(
+                                                'p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 select-none',
+                                                isEnabled
+                                                    ? 'bg-[#4A9EFF]/10 border-[#4A9EFF]/40 shadow-sm shadow-[#4A9EFF]/5'
+                                                    : 'bg-surface/50 border-border/70 hover:border-border hover:bg-surface opacity-70 hover:opacity-100'
+                                            )}
+                                        >
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className={cn('text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5', catMeta?.color)}>
+                                                        {catMeta?.title || feature.category}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs font-bold text-text-primary leading-snug">{feature.name}</p>
+                                                <p className="text-[11px] text-text-secondary mt-0.5 leading-normal line-clamp-2">
+                                                    {feature.description}
+                                                </p>
+                                            </div>
+
+                                            {/* Custom Switch Toggle */}
+                                            <div
+                                                className={cn(
+                                                    'w-12 h-6 rounded-full transition-all duration-200 shrink-0 p-0.5 flex items-center',
+                                                    isEnabled ? 'bg-[#4A9EFF]' : 'bg-white/10'
+                                                )}
+                                            >
+                                                <div
+                                                    className={cn(
+                                                        'w-5 h-5 rounded-full bg-white transition-all duration-200 shadow-md flex items-center justify-center text-[10px]',
+                                                        isEnabled ? 'translate-x-6' : 'translate-x-0'
+                                                    )}
+                                                >
+                                                    {isEnabled && <Check className="w-3 h-3 text-[#4A9EFF] stroke-[3]" />}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+
+                            {modalFilteredFeatures.length === 0 && (
+                                <div className="text-center py-10 text-text-tertiary text-xs">
+                                    No features match &quot;{featureSearchQuery}&quot; in this category.
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </form>
+                </Modal>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════
+                 ONBOARDING WIZARD MODAL (HOTEL + CHAIN + OWNER PROVISIONING)
+               ═══════════════════════════════════════════════════════════════ */}
+            <Modal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                title="Onboard New Hotel or Chain Property"
+                description="Register a new hotel, assign its chain, provision the owner account, and define feature access."
+                size="lg"
+                footer={(
+                    <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            {onboardingTab !== 'property' && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setOnboardingTab(onboardingTab === 'plan' ? 'owner' : 'property')}
+                                >
+                                    Back
+                                </Button>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="secondary" onClick={() => setIsAddModalOpen(false)}>
+                                Cancel
+                            </Button>
+                            {onboardingTab !== 'plan' ? (
+                                <Button
+                                    onClick={() => setOnboardingTab(onboardingTab === 'property' ? 'owner' : 'plan')}
+                                    className="bg-[#4A9EFF] hover:bg-[#3B82F6] text-white border-0 font-bold"
+                                >
+                                    Next: {onboardingTab === 'property' ? 'Owner Account' : 'Plan & Features'}
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={handleAddProperty}
+                                    loading={isSubmitting}
+                                    className="bg-[#4A9EFF] hover:bg-[#3B82F6] text-white border-0 font-bold"
+                                >
+                                    Complete Onboarding
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            >
+                <div className="space-y-6">
+                    {/* Stepper Header */}
+                    <div className="flex items-center border-b border-border/80 pb-3">
+                        {[
+                            { key: 'property', label: '1. Hotel & Chain Info' },
+                            { key: 'owner',    label: '2. Owner Provisioning' },
+                            { key: 'plan',     label: '3. Plan & Feature Pack' }
+                        ].map(step => (
+                            <button
+                                key={step.key}
+                                type="button"
+                                onClick={() => setOnboardingTab(step.key as any)}
+                                className={cn(
+                                    'flex-1 text-center py-1.5 text-xs font-bold border-b-2 -mb-3 transition-colors',
+                                    onboardingTab === step.key
+                                        ? 'border-[#4A9EFF] text-[#4A9EFF]'
+                                        : 'border-transparent text-text-tertiary hover:text-text-secondary'
+                                )}
+                            >
+                                {step.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Step 1: Hotel & Chain Identity */}
+                    {onboardingTab === 'property' && (
+                        <div className="space-y-4">
+                            <Input
+                                label="Hotel Property Name"
+                                placeholder="e.g. The Grand Oberoi"
+                                required
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                            />
+
+                            {/* Chain / Brand Grouping */}
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                                    Hotel Chain / Brand Group
+                                </label>
+                                <select
+                                    value={formData.chainName}
+                                    onChange={e => setFormData({ ...formData, chainName: e.target.value })}
+                                    className="w-full bg-black/30 border border-border rounded-xl px-3 py-2.5 text-xs text-text-primary outline-none focus:border-[#4A9EFF]"
+                                >
+                                    <option value="">Independent Hotel (No Chain)</option>
+                                    {chainsList.map(c => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))}
+                                    <option value="NEW">+ Create New Hotel Chain / Brand</option>
+                                </select>
+                            </div>
+
+                            {formData.chainName === 'NEW' && (
+                                <Input
+                                    label="New Chain / Brand Name"
+                                    placeholder="e.g. Royal Heritage Hotels Group"
+                                    required
+                                    value={formData.customChainName}
+                                    onChange={e => setFormData({ ...formData, customChainName: e.target.value })}
+                                />
+                            )}
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input
+                                    label="Hotel Contact Email"
+                                    type="email"
+                                    placeholder="contact@hotel.com"
+                                    required
+                                    value={formData.email}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                />
+                                <Input
+                                    label="Hotel Contact Phone"
+                                    placeholder="+91 9876543210"
+                                    required
+                                    value={formData.phone}
+                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                />
+                            </div>
+
+                            <Input
+                                label="Physical Address"
+                                placeholder="Street, City, State, Pin Code"
+                                required
+                                value={formData.address}
+                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                            />
+
+                            <Textarea
+                                label="Description / Tagline"
+                                placeholder="Luxury boutique resort situated in the valleys..."
+                                value={formData.description}
+                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                            />
+                        </div>
+                    )}
+
+                    {/* Step 2: Hotel Owner Account Provisioning */}
+                    {onboardingTab === 'owner' && (
+                        <div className="space-y-4">
+                            <div className="p-3.5 rounded-xl bg-[#4A9EFF]/10 border border-[#4A9EFF]/20 text-xs text-text-secondary leading-relaxed">
+                                <span className="font-bold text-[#4A9EFF]">Owner Credentials:</span> When configured, an account with role <code className="text-white font-mono bg-black/40 px-1 rounded">HOTEL_ADMIN</code> will be immediately created so the hotel owner can log in straight away.
+                            </div>
+
+                            <Input
+                                label="Owner Full Name"
+                                placeholder="e.g. Vikramaditya Rathore"
+                                value={formData.ownerName}
+                                onChange={e => setFormData({ ...formData, ownerName: e.target.value })}
+                            />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input
+                                    label="Owner Login Email"
+                                    type="email"
+                                    placeholder="owner@hotel.com"
+                                    value={formData.ownerEmail}
+                                    onChange={e => setFormData({ ...formData, ownerEmail: e.target.value })}
+                                />
+                                <Input
+                                    label="Owner Mobile Phone"
+                                    placeholder="+91 9876543210"
+                                    value={formData.ownerPhone}
+                                    onChange={e => setFormData({ ...formData, ownerPhone: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                                        Owner Password
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleGeneratePassword}
+                                        className="text-[11px] font-bold text-[#4A9EFF] hover:underline flex items-center gap-1"
+                                    >
+                                        <Key className="w-3 h-3" /> Generate Random
+                                    </button>
+                                </div>
+                                <Input
+                                    type="text"
+                                    placeholder="Create password for owner login"
+                                    value={formData.ownerPassword}
+                                    onChange={e => setFormData({ ...formData, ownerPassword: e.target.value })}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3: Initial Subscription Plan & Feature Package */}
+                    {onboardingTab === 'plan' && (
+                        <div className="space-y-5">
+                            {/* Plan Selection */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                                    Subscription Plan Tier
+                                </label>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {(['BASE', 'STARTER', 'STANDARD', 'ENTERPRISE'] as PlanTier[]).map(p => {
+                                        const meta = PLAN_META[p]
+                                        const Icon = meta.icon
+                                        const isSelected = formData.plan === p
+                                        return (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, plan: p })}
+                                                className={cn(
+                                                    'p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5',
+                                                    isSelected
+                                                        ? 'bg-[#4A9EFF]/15 border-[#4A9EFF] text-[#4A9EFF] font-bold'
+                                                        : 'bg-surface border-border text-text-secondary hover:bg-surface-light'
+                                                )}
+                                            >
+                                                <Icon className="w-4 h-4" />
+                                                <span className="text-xs">{meta.label}</span>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Initial Feature Preset */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                                    Initial Feature Package (Can be toggled anytime later)
+                                </label>
+                                <div className="space-y-2">
+                                    {FEATURE_PRESETS.map(preset => {
+                                        const isSelected = formData.selectedPreset === preset.id
+                                        return (
+                                            <div
+                                                key={preset.id}
+                                                onClick={() => setFormData({ ...formData, selectedPreset: preset.id })}
+                                                className={cn(
+                                                    'p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between',
+                                                    isSelected
+                                                        ? 'bg-[#4A9EFF]/10 border-[#4A9EFF]'
+                                                        : 'bg-surface border-border hover:border-border/80'
+                                                )}
+                                            >
+                                                <div>
+                                                    <p className="text-xs font-bold text-text-primary">{preset.name}</p>
+                                                    <p className="text-[11px] text-text-secondary">{preset.description}</p>
+                                                </div>
+                                                <span className="text-xs font-bold text-[#4A9EFF] shrink-0">
+                                                    {preset.features.length} Features
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Free Trial & UPI Configuration */}
+                            <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 space-y-3">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.trialPeriod}
+                                        onChange={e => setFormData({ ...formData, trialPeriod: e.target.checked })}
+                                        className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-surface-light accent-primary mt-1"
+                                    />
+                                    <div className="flex-1">
+                                        <span className="text-sm font-semibold text-text-primary block leading-tight">Activate 14-Day Free Trial</span>
+                                        <span className="text-[11px] text-text-secondary block mt-1 leading-normal">
+                                            Capture UPI ID details now to configure secure autopay recurring deductions after the free trial concludes.
+                                        </span>
+                                    </div>
+                                </label>
+
+                                {formData.trialPeriod && (
+                                    <div className="pt-2 border-t border-primary/10">
+                                        <Input
+                                            label="UPI ID for Auto-Pay"
+                                            placeholder="e.g. hoteladmin@upi or 9876543210@paytm"
+                                            required={formData.trialPeriod}
+                                            value={formData.upiId}
+                                            onChange={e => setFormData({ ...formData, upiId: e.target.value })}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </Modal>
         </div>
     )

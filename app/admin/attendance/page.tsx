@@ -144,14 +144,14 @@ export default function AttendancePage() {
                         type="date"
                         value={filterDate}
                         onChange={(e) => setFilterDate(e.target.value)}
-                        className="bg-surface border border-white/10 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [color-scheme:dark]"
+                        className="bg-surface border border-border/50 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all [color-scheme:dark]"
                     />
                     <div className="flex items-center gap-2">
                         <Button
                             variant="secondary"
                             size="sm"
                             leftIcon={<Download className="w-4 h-4" />}
-                            className="bg-white/5 border-white/5 hover:bg-white/10"
+                            className="bg-white/5 border-border hover:bg-white/10"
                             onClick={() => {
                                 if (!filteredAttendance || filteredAttendance.length === 0) {
                                     toast.error('No records available to export')
@@ -253,11 +253,11 @@ export default function AttendancePage() {
                     { label: 'Late', value: stats.late, icon: AlertCircle, color: 'text-warning' },
                     { label: 'Absent', value: stats.onLeave, icon: XCircle, color: 'text-danger' },
                 ].map((item, idx) => (
-                    <Card key={idx} className="p-3 md:p-4 border-white/[0.05] bg-surface-light/30">
+                    <Card key={idx} className="p-3 md:p-4 border-border bg-surface-light/30">
                         <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-2">
                             <div>
                                 <p className="text-[9px] md:text-xs font-bold text-text-tertiary uppercase tracking-wider">{item.label}</p>
-                                <p className="text-xl md:text-2xl font-black text-white mt-0.5">{item.value}</p>
+                                <p className="text-xl md:text-2xl font-black text-text-primary mt-0.5">{item.value}</p>
                             </div>
                             <div className={cn("p-1.5 md:p-2 rounded-xl bg-surface-light", item.color)}>
                                 <item.icon className="w-4 h-4 md:w-5 md:h-5" />
@@ -268,15 +268,15 @@ export default function AttendancePage() {
             </div>
 
             {/* Main List */}
-            <Card className="bg-surface border-white/[0.08]">
-                <div className="p-4 border-b border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <Card className="bg-surface border-border">
+                <div className="p-4 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="relative w-full md:w-72">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                         <input
                             placeholder="Search staff members..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary transition-all"
+                            className="w-full pl-9 pr-4 py-2 bg-surface-light border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary transition-all"
                         />
                     </div>
                     <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ export default function AttendancePage() {
                 <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-white/[0.04] bg-white/[0.02]">
+                            <tr className="border-b border-border bg-surface-light">
                                 <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Employee</th>
                                 <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Punch In/Out</th>
                                 <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest text-center">Working Hours</th>
@@ -314,7 +314,7 @@ export default function AttendancePage() {
                                 </tr>
                             ) : filteredAttendance.length > 0 ? (
                                 filteredAttendance.map((record) => (
-                                    <tr key={record.id} className="group hover:bg-white/[0.02] transition-all">
+                                    <tr key={record.id} className="group hover:bg-surface-light transition-all">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar name={record.staff?.user?.name} size="sm" />
@@ -390,7 +390,7 @@ export default function AttendancePage() {
                         </div>
                     ) : filteredAttendance.length > 0 ? (
                         filteredAttendance.map((record) => (
-                            <div key={record.id} className="p-4 space-y-4 active:bg-white/[0.03] transition-colors">
+                            <div key={record.id} className="p-4 space-y-4 active:bg-surface-light transition-colors">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <Avatar name={record.staff?.user?.name} size="md" />
@@ -407,7 +407,7 @@ export default function AttendancePage() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3 bg-black/10 rounded-xl p-3 border border-white/5">
+                                <div className="grid grid-cols-2 gap-3 bg-black/10 rounded-xl p-3 border border-border">
                                     <div className="space-y-1">
                                         <p className="text-[9px] text-text-tertiary font-bold uppercase tracking-tighter">Punch In / Out</p>
                                         <div className="flex flex-col gap-0.5">

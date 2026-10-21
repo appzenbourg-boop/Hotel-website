@@ -165,33 +165,33 @@ export default function BulkImportPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#0d1117] text-gray-300 p-8 font-sans">
+        <div className="min-h-screen bg-background text-text-secondary p-8 font-sans">
             <div className="max-w-[1600px] mx-auto space-y-8">
 
                 {/* ΓöÇΓöÇ HEADER ΓöÇΓöÇ */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
-                        <div className="flex items-center gap-2 mb-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                            <span className="hover:text-white cursor-pointer transition-colors">Dashboard</span>
+                        <div className="flex items-center gap-2 mb-2 text-xs font-bold text-text-tertiary uppercase tracking-widest">
+                            <span className="hover:text-text-primary cursor-pointer transition-colors">Dashboard</span>
                             <span>ΓÇó</span>
-                            <span className="hover:text-white cursor-pointer transition-colors">Bookings</span>
+                            <span className="hover:text-text-primary cursor-pointer transition-colors">Bookings</span>
                             <span>ΓÇó</span>
                             <span className="text-blue-500">Bulk Import</span>
                         </div>
-                        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Bulk Booking Import</h1>
-                        <p className="text-gray-500 font-medium text-lg">Batch upload guest data and synchronize your property calendar.</p>
+                        <h1 className="text-4xl font-bold text-text-primary tracking-tight mb-2">Bulk Booking Import</h1>
+                        <p className="text-text-tertiary font-medium text-lg">Batch upload guest data and synchronize your property calendar.</p>
                     </div>
                     <div className="flex items-center gap-4">
                         <button 
                             onClick={handleDownloadTemplate}
-                            className="flex items-center gap-2 px-6 py-3 bg-[#161b22] border border-white/5 rounded-xl text-sm font-bold text-white hover:bg-white/10 transition-all active:scale-[0.98]"
+                            className="flex items-center gap-2 px-6 py-3 bg-surface border border-border rounded-xl text-sm font-bold text-text-primary hover:bg-white/10 transition-all active:scale-[0.98]"
                         >
                             <Download className="w-4 h-4" /> Download Template
                         </button>
                         <button
                             onClick={startImport}
                             disabled={importing || rawData.filter(r => r._valid).length === 0}
-                            className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl shadow-2xl shadow-blue-600/30 transition-all active:scale-[0.98] uppercase tracking-widest"
+                            className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-2xl shadow-blue-600/30 transition-all active:scale-[0.98] uppercase tracking-widest"
                         >
                             {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                             Start Import
@@ -202,15 +202,15 @@ export default function BulkImportPage() {
                 {/* ΓöÇΓöÇ TOP STATS ΓöÇΓöÇ */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     {[
-                        { label: 'Total Rows Detected', value: stats.total.toLocaleString(), color: 'border-white/5 bg-[#161b22]' },
-                        { label: 'Valid Rows', value: stats.valid.toLocaleString(), color: 'border-emerald-500/20 bg-emerald-500/5', tag: stats.total > 0 ? `${Math.round((stats.valid/stats.total)*100)}%` : '0%', tagColor: 'bg-emerald-500 text-white' },
+                        { label: 'Total Rows Detected', value: stats.total.toLocaleString(), color: 'border-border bg-surface' },
+                        { label: 'Valid Rows', value: stats.valid.toLocaleString(), color: 'border-emerald-500/20 bg-emerald-500/5', tag: stats.total > 0 ? `${Math.round((stats.valid/stats.total)*100)}%` : '0%', tagColor: 'bg-emerald-600 text-white' },
                         { label: 'Warnings', value: stats.warnings, color: 'border-amber-500/20 bg-amber-500/5', tagColor: 'text-amber-500' },
                         { label: 'Invalid Rows', value: stats.invalid, color: 'border-red-500/20 bg-red-500/5', tagColor: 'text-red-500' },
                     ].map((s, i) => (
                         <div key={i} className={cn("border rounded-2xl p-7 relative transition-all hover:scale-[1.02]", s.color)}>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">{s.label}</p>
+                            <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-[0.2em] mb-3">{s.label}</p>
                             <div className="flex items-center gap-4">
-                                <p className="text-4xl font-bold text-white">{s.value}</p>
+                                <p className="text-4xl font-bold text-text-primary">{s.value}</p>
                                 {s.tag && (
                                     <span className={cn("px-2 py-0.5 rounded text-[10px] font-bold", s.tagColor)}>{s.tag}</span>
                                 )}
@@ -226,8 +226,8 @@ export default function BulkImportPage() {
                             <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                         </div>
                         <div>
-                            <p className="text-base font-bold text-white">Import Complete!</p>
-                            <p className="text-sm text-gray-400 mt-1">
+                            <p className="text-base font-bold text-text-primary">Import Complete!</p>
+                            <p className="text-sm text-text-secondary mt-1">
                                 <span className="text-emerald-400 font-bold">{importResult.created}</span> bookings created &nbsp;·&nbsp;
                                 <span className="text-emerald-400 font-bold">{importResult.guestsCreated}</span> new guests &nbsp;·&nbsp;
                                 <span className="text-emerald-400 font-bold">{importResult.guestsUpdated}</span> guests updated &nbsp;·&nbsp;
@@ -251,16 +251,16 @@ export default function BulkImportPage() {
                     <div className="lg:col-span-4 space-y-8">
 
                         {/* 1. Upload File */}
-                        <div className="bg-[#161b22] border border-white/5 rounded-2xl p-8 shadow-sm">
+                        <div className="bg-surface border border-border rounded-2xl p-8 shadow-sm">
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-500 font-bold text-xs">1</div>
-                                <h3 className="text-lg font-bold text-white">Upload File</h3>
+                                <h3 className="text-lg font-bold text-text-primary">Upload File</h3>
                             </div>
 
                             <div
                                 onClick={() => fileInputRef.current?.click()}
                                 className={cn(
-                                    "border-2 border-dashed border-white/5 rounded-2xl p-12 text-center cursor-pointer transition-all hover:border-blue-500/30 group relative overflow-hidden",
+                                    "border-2 border-dashed border-border rounded-2xl p-12 text-center cursor-pointer transition-all hover:border-blue-500/30 group relative overflow-hidden",
                                     file && "bg-blue-600/5 border-blue-500/20"
                                 )}
                             >
@@ -270,25 +270,25 @@ export default function BulkImportPage() {
                                         <Upload className="w-8 h-8" />
                                     </div>
                                     <div>
-                                        <p className="text-white font-bold text-lg">Drop your file here</p>
-                                        <p className="text-gray-500 text-sm mt-1">Supports CSV, XLSX up to 20MB</p>
+                                        <p className="text-text-primary font-bold text-lg">Drop your file here</p>
+                                        <p className="text-text-tertiary text-sm mt-1">Supports CSV, XLSX up to 20MB</p>
                                     </div>
-                                    <button className="mt-2 px-6 py-2.5 bg-[#0d1117] border border-white/5 rounded-xl text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">
+                                    <button className="mt-2 px-6 py-2.5 bg-background border border-border rounded-xl text-xs font-bold text-text-secondary uppercase tracking-widest hover:text-text-primary transition-colors">
                                         Browse files
                                     </button>
                                 </div>
                             </div>
 
                             {file && (
-                                <div className="mt-6 flex items-center gap-4 p-4 bg-[#0d1117] border border-white/5 rounded-xl">
+                                <div className="mt-6 flex items-center gap-4 p-4 bg-background border border-border rounded-xl">
                                     <div className="w-10 h-10 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-500">
                                         <FileSpreadsheet className="w-6 h-6" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-white truncate">{file.name}</p>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">2.4MB ΓÇó Uploaded 2m ago</p>
+                                        <p className="text-sm font-bold text-text-primary truncate">{file.name}</p>
+                                        <p className="text-[10px] text-text-tertiary uppercase tracking-widest">2.4MB ΓÇó Uploaded 2m ago</p>
                                     </div>
-                                    <button onClick={() => setFile(null)} className="p-2 text-gray-500 hover:text-red-500 transition-colors">
+                                    <button onClick={() => setFile(null)} className="p-2 text-text-tertiary hover:text-red-500 transition-colors">
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -296,11 +296,11 @@ export default function BulkImportPage() {
                         </div>
 
                         {/* 2. Field Mapping */}
-                        <div className="bg-[#161b22] border border-white/5 rounded-2xl p-8 shadow-sm">
+                        <div className="bg-surface border border-border rounded-2xl p-8 shadow-sm">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-500 font-bold text-xs">2</div>
-                                    <h3 className="text-lg font-bold text-white">Required Fields</h3>
+                                    <h3 className="text-lg font-bold text-text-primary">Required Fields</h3>
                                 </div>
                                 <span className="text-[9px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded tracking-tighter uppercase">Auto-Matched</span>
                             </div>
@@ -318,13 +318,13 @@ export default function BulkImportPage() {
                                     { col: 'total_amount',  label: 'Total Amount (₹)',  required: false, example: '5000' },
                                     { col: 'notes',         label: 'Notes',             required: false, example: 'Early check-in' },
                                 ].map((field, i) => (
-                                    <div key={i} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
+                                    <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                                         <div className="flex items-center gap-2">
                                             {field.required
                                                 ? <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
                                                 : <span className="w-1.5 h-1.5 rounded-full bg-gray-700 shrink-0" />
                                             }
-                                            <span className="text-xs font-medium text-gray-300">{field.label}</span>
+                                            <span className="text-xs font-medium text-text-secondary">{field.label}</span>
                                             {field.required && <span className="text-[9px] text-rose-400 font-bold">*</span>}
                                         </div>
                                         <code className="text-[10px] text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded font-mono">{field.col}</code>
@@ -341,7 +341,7 @@ export default function BulkImportPage() {
                             <button
                                 onClick={runValidation}
                                 disabled={validating || !file}
-                                className="w-full py-4 bg-[#0d1117] border border-white/5 hover:border-blue-500/50 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.2em] transition-all shadow-lg active:scale-[0.98] disabled:opacity-20 flex items-center justify-center gap-2"
+                                className="w-full py-4 bg-background border border-border hover:border-blue-500/50 text-text-primary rounded-2xl font-bold text-xs uppercase tracking-[0.2em] transition-all shadow-lg active:scale-[0.98] disabled:opacity-20 flex items-center justify-center gap-2"
                             >
                                 {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Run Validation'}
                             </button>
@@ -350,13 +350,13 @@ export default function BulkImportPage() {
 
                     {/* Right Column: Validation Preview */}
                     <div className="lg:col-span-8">
-                        <div className="bg-[#161b22] border border-white/5 rounded-2xl shadow-sm h-full flex flex-col overflow-hidden">
-                            <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                        <div className="bg-surface border border-border rounded-2xl shadow-sm h-full flex flex-col overflow-hidden">
+                            <div className="p-8 border-b border-border flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-blue-500 font-bold text-xs">3</div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Validation Preview</h3>
-                                        <p className="text-xs text-gray-500 font-medium tracking-tight">Showing first 100 rows of your dataset</p>
+                                        <h3 className="text-lg font-bold text-text-primary">Validation Preview</h3>
+                                        <p className="text-xs text-text-tertiary font-medium tracking-tight">Showing first 100 rows of your dataset</p>
                                     </div>
                                 </div>
                             </div>
@@ -364,7 +364,7 @@ export default function BulkImportPage() {
                             <div className="flex-1 overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
-                                        <tr className="bg-[#0d1117] text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
+                                        <tr className="bg-background text-[10px] font-bold text-text-tertiary uppercase tracking-[0.2em]">
                                             <th className="px-4 py-4 whitespace-nowrap">Status</th>
                                             <th className="px-4 py-4 whitespace-nowrap">Guest Name</th>
                                             <th className="px-4 py-4 whitespace-nowrap">Phone</th>
@@ -379,7 +379,7 @@ export default function BulkImportPage() {
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
                                         {previewData.map((row, i) => (
-                                            <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                                            <tr key={i} className="hover:bg-surface-light transition-colors">
                                                 <td className="px-4 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <div className={cn(
@@ -387,17 +387,17 @@ export default function BulkImportPage() {
                                                             row.status === 'Ready' ? "bg-emerald-500" :
                                                             row.status === 'Alert' ? "bg-amber-500" : "bg-red-500"
                                                         )} />
-                                                        <span className="text-[10px] font-bold uppercase tracking-tighter text-gray-300">{row.status}</span>
+                                                        <span className="text-[10px] font-bold uppercase tracking-tighter text-text-secondary">{row.status}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-4 text-sm font-semibold text-white whitespace-nowrap">{row.name}</td>
-                                                <td className="px-4 py-4 text-xs text-gray-400 font-mono whitespace-nowrap">{row.phone}</td>
-                                                <td className="px-4 py-4 text-xs text-gray-400 whitespace-nowrap">{row.checkIn}</td>
-                                                <td className="px-4 py-4 text-xs text-gray-400 whitespace-nowrap">{row.checkOut}</td>
-                                                <td className="px-4 py-4 text-xs text-gray-400 whitespace-nowrap">{row.room}</td>
-                                                <td className="px-4 py-4 text-xs text-gray-400 text-center">{row.guests}</td>
-                                                <td className="px-4 py-4 text-xs text-gray-400 whitespace-nowrap">{row.source}</td>
-                                                <td className="px-4 py-4 text-xs text-gray-400 whitespace-nowrap">{row.amount}</td>
+                                                <td className="px-4 py-4 text-sm font-semibold text-text-primary whitespace-nowrap">{row.name}</td>
+                                                <td className="px-4 py-4 text-xs text-text-secondary font-mono whitespace-nowrap">{row.phone}</td>
+                                                <td className="px-4 py-4 text-xs text-text-secondary whitespace-nowrap">{row.checkIn}</td>
+                                                <td className="px-4 py-4 text-xs text-text-secondary whitespace-nowrap">{row.checkOut}</td>
+                                                <td className="px-4 py-4 text-xs text-text-secondary whitespace-nowrap">{row.room}</td>
+                                                <td className="px-4 py-4 text-xs text-text-secondary text-center">{row.guests}</td>
+                                                <td className="px-4 py-4 text-xs text-text-secondary whitespace-nowrap">{row.source}</td>
+                                                <td className="px-4 py-4 text-xs text-text-secondary whitespace-nowrap">{row.amount}</td>
                                                 <td className="px-4 py-4">
                                                     <span className={cn(
                                                         "px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider border",
@@ -427,13 +427,13 @@ export default function BulkImportPage() {
                                 </table>
                             </div>
 
-                            <div className="p-8 border-t border-white/5 flex items-center justify-between bg-[#0d1117]/30">
+                            <div className="p-8 border-t border-border flex items-center justify-between bg-background/30">
                                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Rows 1-6 of 1,248</p>
                                 <div className="flex items-center gap-3">
-                                    <button className="p-3 bg-white/5 rounded-xl text-gray-600 cursor-not-allowed border border-white/5 transition-all">
+                                    <button className="p-3 bg-white/5 rounded-xl text-gray-600 cursor-not-allowed border border-border transition-all">
                                         <ChevronDown className="w-4 h-4 rotate-90" />
                                     </button>
-                                    <button className="p-3 bg-white/5 rounded-xl text-white border border-white/10 hover:bg-white/10 transition-all shadow-xl">
+                                    <button className="p-3 bg-white/5 rounded-xl text-text-primary border border-border/50 hover:bg-white/10 transition-all shadow-xl">
                                         <ChevronDown className="w-4 h-4 -rotate-90" />
                                     </button>
                                 </div>

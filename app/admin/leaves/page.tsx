@@ -90,18 +90,18 @@ export default function LeavesManagementPage() {
         <div className="space-y-8 animate-fade-in max-w-[1400px] mx-auto pb-20">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight ">Leave Approvals</h1>
-                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-1">Manage staff absence and time-off requests</p>
+                    <h1 className="text-3xl font-bold text-text-primary tracking-tight ">Leave Approvals</h1>
+                    <p className="text-text-tertiary font-bold uppercase tracking-widest text-[10px] mt-1">Manage staff absence and time-off requests</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                    <div className="flex bg-white/5 p-1 rounded-xl border border-border">
                         {['PENDING', 'APPROVED', 'REJECTED', 'ALL'].map((s) => (
                             <button
                                 key={s}
                                 onClick={() => setFilterStatus(s)}
                                 className={cn(
                                     "px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
-                                    filterStatus === s ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-gray-500 hover:text-gray-300"
+                                    filterStatus === s ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "text-text-tertiary hover:text-text-secondary"
                                 )}
                             >
                                 {s}
@@ -118,7 +118,7 @@ export default function LeavesManagementPage() {
                         <p className="text-xs font-bold uppercase tracking-widest text-gray-700">Fetching requests...</p>
                     </div>
                 ) : requests.length === 0 ? (
-                    <div className="py-32 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-[3rem]">
+                    <div className="py-32 text-center bg-surface-light border border-dashed border-border/50 rounded-[3rem]">
                         <CalendarDays className="w-16 h-16 text-gray-800 mx-auto mb-6" />
                         <p className="text-lg font-bold text-gray-600 ">No pending leave requests found</p>
                     </div>
@@ -129,7 +129,7 @@ export default function LeavesManagementPage() {
                             return (
                                 <Card
                                     key={req.id}
-                                    className="bg-[#161b22] border-white/5 rounded-[2.5rem] p-6 hover:border-blue-500/20 transition-all cursor-pointer group relative overflow-hidden"
+                                    className="bg-surface border-border rounded-[2.5rem] p-6 hover:border-blue-500/20 transition-all cursor-pointer group relative overflow-hidden"
                                     onClick={() => {
                                         setSelectedRequest(req)
                                         setShowProcessModal(true)
@@ -143,12 +143,12 @@ export default function LeavesManagementPage() {
 
                                     <div className="flex items-start justify-between mb-6">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-border group-hover:bg-blue-600 text-white transition-all">
                                                 <Icon className="w-6 h-6" />
                                             </div>
                                             <div>
-                                                <h3 className="font-bold text-white  tracking-tight">{req.staff.user.name}</h3>
-                                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{req.staff.designation}</p>
+                                                <h3 className="font-bold text-text-primary  tracking-tight">{req.staff.user.name}</h3>
+                                                <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">{req.staff.designation}</p>
                                             </div>
                                         </div>
                                         <Badge variant={req.status === 'PENDING' ? 'warning' : req.status === 'APPROVED' ? 'success' : 'danger'}>
@@ -157,36 +157,36 @@ export default function LeavesManagementPage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="bg-black/20 rounded-2xl p-4 border border-white/5">
+                                        <div className="bg-black/20 rounded-2xl p-4 border border-border">
                                             <div className="flex items-center justify-between mb-2">
                                                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Type</p>
                                                 <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">{req.leaveType}</p>
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Duration</p>
-                                                <p className="text-sm font-bold text-white ">{req.totalDays} Days</p>
+                                                <p className="text-sm font-bold text-text-primary ">{req.totalDays} Days</p>
                                             </div>
                                         </div>
 
                                         <div className="flex items-center gap-4 px-2">
                                             <div className="flex-1">
                                                 <p className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.2em] mb-1">From</p>
-                                                <p className="text-xs font-bold text-white">{format(new Date(req.startDate), 'MMM dd, yyyy')}</p>
+                                                <p className="text-xs font-bold text-text-primary">{format(new Date(req.startDate), 'MMM dd, yyyy')}</p>
                                             </div>
                                             <ChevronRight className="w-4 h-4 text-gray-800" />
                                             <div className="flex-1 text-right">
                                                 <p className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.2em] mb-1">To</p>
-                                                <p className="text-xs font-bold text-white">{format(new Date(req.endDate), 'MMM dd, yyyy')}</p>
+                                                <p className="text-xs font-bold text-text-primary">{format(new Date(req.endDate), 'MMM dd, yyyy')}</p>
                                             </div>
                                         </div>
 
-                                        <div className="pt-4 border-t border-white/5">
+                                        <div className="pt-4 border-t border-border">
                                             <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2">Reason</p>
-                                            <p className="text-xs font-medium text-gray-400 line-clamp-2 leading-relaxed ">&ldquo;{req.reason}&rdquo;</p>
+                                            <p className="text-xs font-medium text-text-secondary line-clamp-2 leading-relaxed ">&ldquo;{req.reason}&rdquo;</p>
                                         </div>
 
                                         {req.evidence && (
-                                            <div className="pt-4 border-t border-white/5 flex items-center justify-between group/evidence">
+                                            <div className="pt-4 border-t border-border flex items-center justify-between group/evidence">
                                                 <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Evidence Attached</p>
                                                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
                                                     <Camera className="w-4 h-4 text-blue-500" />
@@ -198,7 +198,7 @@ export default function LeavesManagementPage() {
                                     {req.status === 'PENDING' && (
                                         <div className="mt-6 flex gap-3">
                                             <Button
-                                                className="flex-1 bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white h-11 text-[10px]"
+                                                className="flex-1 bg-emerald-600 text-white h-11 text-[10px]"
                                                 onClick={(e) => {
                                                     e.stopPropagation()
                                                     setSelectedRequest(req)
@@ -208,7 +208,7 @@ export default function LeavesManagementPage() {
                                                 Approve
                                             </Button>
                                             <Button
-                                                className="flex-1 bg-rose-500/10 border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white h-11 text-[10px]"
+                                                className="flex-1 bg-rose-500/10 border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-text-primary h-11 text-[10px]"
                                                 onClick={(e) => {
                                                     e.stopPropagation()
                                                     setSelectedRequest(req)
@@ -237,24 +237,24 @@ export default function LeavesManagementPage() {
                 <div className="space-y-6">
                     <div className="bg-white/5 rounded-2xl p-5 space-y-4">
                         <div className="flex justify-between">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Leave Type</span>
-                            <span className="text-xs font-bold text-white">{selectedRequest?.leaveType}</span>
+                            <span className="text-xs font-bold text-text-tertiary uppercase tracking-widest">Leave Type</span>
+                            <span className="text-xs font-bold text-text-primary">{selectedRequest?.leaveType}</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Dates</span>
-                            <span className="text-xs font-bold text-white">
+                            <span className="text-xs font-bold text-text-tertiary uppercase tracking-widest">Dates</span>
+                            <span className="text-xs font-bold text-text-primary">
                                 {selectedRequest && format(new Date(selectedRequest.startDate), 'MMM dd')} - {selectedRequest && format(new Date(selectedRequest.endDate), 'MMM dd, yyyy')}
                             </span>
                         </div>
-                        <div className="pt-3 border-t border-white/5">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Employee Statement</p>
-                            <p className="text-sm font-medium text-gray-300 leading-relaxed ">&ldquo;{selectedRequest?.reason}&rdquo;</p>
+                        <div className="pt-3 border-t border-border">
+                            <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest mb-2">Employee Statement</p>
+                            <p className="text-sm font-medium text-text-secondary leading-relaxed ">&ldquo;{selectedRequest?.reason}&rdquo;</p>
                         </div>
 
                         {selectedRequest?.evidence && (
-                            <div className="pt-4 border-t border-white/5">
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Proof Documentation</p>
-                                <div className="w-full h-48 rounded-2xl overflow-hidden border border-white/10 bg-black/40 relative group">
+                            <div className="pt-4 border-t border-border">
+                                <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest mb-3">Proof Documentation</p>
+                                <div className="w-full h-48 rounded-2xl overflow-hidden border border-border/50 bg-black/40 relative group">
                                     <img 
                                         src={selectedRequest.evidence} 
                                         className="w-full h-full object-contain cursor-zoom-in transition-transform group-hover:scale-105" 
@@ -262,7 +262,7 @@ export default function LeavesManagementPage() {
                                         onClick={() => window.open(selectedRequest.evidence, '_blank')}
                                     />
                                     <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span className="text-[9px] font-black text-white uppercase tracking-widest">Click to enlarge</span>
+                                        <span className="text-[9px] font-black text-text-primary uppercase tracking-widest">Click to enlarge</span>
                                         <Camera className="w-3.5 h-3.5 text-blue-400" />
                                     </div>
                                 </div>
@@ -271,12 +271,12 @@ export default function LeavesManagementPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Rejection Reason (If rejecting)</label>
+                        <label className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest ml-1">Rejection Reason (If rejecting)</label>
                         <textarea
                             value={rejectionReason}
                             onChange={(e) => setRejectionReason(e.target.value)}
                             placeholder="e.g. Operational requirement during peak dates..."
-                            className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-sm text-white outline-none focus:border-blue-500 transition-all min-h-[100px] resize-none"
+                            className="w-full bg-black/30 border border-border/50 rounded-2xl p-4 text-sm text-text-primary outline-none focus:border-blue-500 transition-all min-h-[100px] resize-none"
                         ></textarea>
                     </div>
 
@@ -300,7 +300,7 @@ export default function LeavesManagementPage() {
                             </Button>
                             <Button
                                 variant="secondary"
-                                className="flex-1 h-14 bg-rose-600/10 border-rose-600/20 text-rose-500 hover:bg-rose-600 hover:text-white"
+                                className="flex-1 h-14 bg-rose-600/10 border-rose-600/20 text-rose-500 hover:bg-rose-600 hover:text-text-primary"
                                 onClick={() => handleProcess('REJECTED')}
                                 loading={isProcessing}
                             >

@@ -3,16 +3,17 @@ import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        // In real app, we get guestId from session
-        const guest = await prisma.guest.findFirst()
-        if (!guest) {
+        const { searchParams } = new URL(req.url)
+        const guestId = searchParams.get('guestId')
+        
+        if (!guestId) {
             return NextResponse.json([], { status: 200 })
         }
 
         const requests = await prisma.serviceRequest.findMany({
-            where: { guestId: guest.id },
+            where: { guestId },
             orderBy: { createdAt: 'desc' }
         })
 

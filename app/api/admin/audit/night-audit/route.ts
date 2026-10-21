@@ -12,7 +12,24 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const propertyId = (session.user as any).propertyId
+        const { searchParams } = new URL(req.url)
+        let propertyId = searchParams.get('propertyId') || (session.user as any).propertyId
+
+        if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+        }
+
+        if (!propertyId || propertyId === 'ALL') {
+            const prop = await prisma.property.findFirst({
+                where: { ownerIds: { has: session.user.id } },
+                select: { id: true }
+            })
+            propertyId = prop?.id || null
+        }
 
         // If no property selected, return empty structure
         if (!propertyId) {

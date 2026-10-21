@@ -37,10 +37,16 @@ export async function POST(req: Request) {
 
         const { searchParams } = new URL(req.url)
         const queryPropertyId = searchParams.get('propertyId')
-        const propertyId = body.propertyId || queryPropertyId || (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
+        let propertyId = (session.user as any)?.propertyId
+        if (session.user.role === 'SUPER_ADMIN') {
+            if (queryPropertyId && queryPropertyId !== 'ALL') propertyId = queryPropertyId
+        } else {
+            if (!propertyId && queryPropertyId && queryPropertyId !== 'ALL') propertyId = queryPropertyId
+        }
+        if (!propertyId) propertyId = body.propertyId
 
         if (!propertyId || !name || !category) {
-            return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 })
+            return NextResponse.json({ success: false, error: 'Missing required fields or Property ID' }, { status: 400 })
         }
 
         const newVendor = await prisma.vendor.create({

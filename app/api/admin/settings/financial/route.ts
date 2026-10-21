@@ -22,6 +22,7 @@ const DEFAULTS = {
     gstNumber: null,
     defaultDiscountPercent: 0.0,
     discountLabel: 'Discount',
+    managerPin: '1234',
     invoicePrefix: 'INV',
     invoiceFooter: null,
     currency: 'INR',
@@ -46,9 +47,27 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const queryPropertyId = searchParams.get('propertyId')
 
-    const propertyId = session.user.role === 'SUPER_ADMIN'
+    let propertyId = session.user.role === 'SUPER_ADMIN'
         ? (queryPropertyId ?? session.user.propertyId)
         : session.user.propertyId
+
+    if (!propertyId || propertyId === 'ALL') {
+        const dbUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { workplaceId: true, ownedPropertyIds: true }
+        })
+        propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+        if (!propertyId) {
+            const firstProp = await prisma.property.findFirst({
+                where: session.user.role === 'SUPER_ADMIN' ? undefined : { ownerIds: { has: session.user.id } }
+            })
+            if (firstProp) propertyId = firstProp.id
+        }
+        if (!propertyId && session.user.role === 'SUPER_ADMIN') {
+            const anyProp = await prisma.property.findFirst()
+            if (anyProp) propertyId = anyProp.id
+        }
+    }
 
     if (!propertyId || propertyId === 'ALL') return badRequest('propertyId is required')
 
@@ -88,8 +107,8 @@ export async function POST(req: NextRequest) {
             propertyId: bodyPropertyId,
             // Tax
             gstPercent, serviceChargePercent, luxuryTaxPercent, gstNumber,
-            // Discount
-            defaultDiscountPercent, discountLabel,
+            // Discount & POS Auth
+            defaultDiscountPercent, discountLabel, managerPin,
             // Invoice
             invoicePrefix, invoiceFooter,
             // Currency
@@ -141,6 +160,7 @@ export async function POST(req: NextRequest) {
         setIfDefined('gstNumber', gstNumber ? gstNumber.trim().toUpperCase() : gstNumber)
         setIfDefined('defaultDiscountPercent', defaultDiscountPercent !== undefined ? parseFloat(defaultDiscountPercent) : undefined)
         setIfDefined('discountLabel', discountLabel)
+        setIfDefined('managerPin', managerPin !== undefined ? String(managerPin).trim() : undefined)
         setIfDefined('invoicePrefix', invoicePrefix)
         setIfDefined('invoiceFooter', invoiceFooter)
         setIfDefined('currency', currency)

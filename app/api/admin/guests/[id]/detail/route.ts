@@ -20,11 +20,12 @@ export async function GET(
 
         if (!guest) return new NextResponse('Guest not found', { status: 404 })
 
-        // Bookings with room info
+        // Bookings with room and property info
         const bookings = await prisma.booking.findMany({
             where: { guestId: params.id },
             include: {
-                room: { select: { roomNumber: true, type: true } },
+                room: { select: { roomNumber: true, type: true, basePrice: true } },
+                property: { select: { name: true, address: true, phone: true, email: true } },
             },
             orderBy: { checkIn: 'desc' },
         })
@@ -42,16 +43,10 @@ export async function GET(
         return NextResponse.json({
             guest,
             bookings: bookings.map(b => ({
-                id: b.id,
+                ...b,
                 roomNumber: b.room?.roomNumber,
                 roomType: b.room?.type,
-                checkIn: b.checkIn,
-                checkOut: b.checkOut,
-                status: b.status,
-                source: b.source,
-                totalAmount: b.totalAmount,
-                paidAmount: b.paidAmount,
-                paymentStatus: b.paymentStatus,
+                guest,
             })),
             services: services.map(s => ({
                 id: s.id,

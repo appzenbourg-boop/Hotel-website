@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { redis } from '@/lib/redis'
+import { reconcileRoomStatus, invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,11 +97,14 @@ export async function POST(
             }
         }
 
+        // Update room status if task was linked to a room
+        if (updated.roomId) {
+            await reconcileRoomStatus(updated.roomId)
+        }
+
         // Invalidate Caches
         await redis.del(`staff_me:${session.user.id}`)
-        if (updated.propertyId) {
-            await redis.del(`dashboard:${updated.propertyId}`)
-        }
+        await invalidateRoomAndDashboardCaches(updated.propertyId)
 
         return NextResponse.json(updated)
 

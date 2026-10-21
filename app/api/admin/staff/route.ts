@@ -45,6 +45,20 @@ export async function GET(request: NextRequest) {
         if (!targetPropertyId && queryPropertyId && queryPropertyId !== 'ALL') {
             targetPropertyId = queryPropertyId
         }
+        if (!targetPropertyId || targetPropertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            targetPropertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+            if (!targetPropertyId) {
+                const fallbackProp = await prisma.property.findFirst({
+                    where: { ownerIds: { has: session.user.id } },
+                    select: { id: true }
+                })
+                if (fallbackProp) targetPropertyId = fallbackProp.id
+            }
+        }
         if (!targetPropertyId) return NextResponse.json({ success: true, data: [], pagination: { page: 1, limit, total: 0, pages: 0 } })
         where.propertyId = targetPropertyId
     }
@@ -119,6 +133,8 @@ export async function GET(request: NextRequest) {
                 isVerified: s.isVerified,
                 verificationRequested: s.verificationRequested,
                 salary: canSeeSalary ? s.baseSalary : null,
+                allowance: canSeeSalary ? ((s as any).allowance ?? 0) : null,
+                workShift: s.workShift || 'Day Shift',
                 employeeId: s.employeeId,
                 dateOfJoining: s.dateOfJoining,
                 documents: s.documents ?? null,
@@ -148,7 +164,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json()
-        const { name, email, phone, designation, department, salary, password, userRole, profilePhoto, propertyId: bodyPropertyId } = body
+        const { name, email, phone, designation, department, salary, allowance, workShift, password, userRole, profilePhoto, propertyId: bodyPropertyId } = body
 
         if (!name || !email || !phone || !department) {
             return badRequest('name, email, phone and department are required')
@@ -157,6 +173,19 @@ export async function POST(request: NextRequest) {
         let targetPropertyId = session.user.propertyId
         if (session.user.role === 'SUPER_ADMIN' && bodyPropertyId) {
             targetPropertyId = bodyPropertyId
+        } else if (!targetPropertyId || targetPropertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            targetPropertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+            if (!targetPropertyId) {
+                const fallbackProp = await prisma.property.findFirst({
+                    where: { ownerIds: { has: session.user.id } },
+                    select: { id: true }
+                })
+                if (fallbackProp) targetPropertyId = fallbackProp.id
+            }
         }
         if (!targetPropertyId) return badRequest('Missing property ID')
 
@@ -175,14 +204,16 @@ export async function POST(request: NextRequest) {
                 },
             })
 
-            const staff = await tx.staff.create({
+            const staff = await (tx.staff as any).create({
                 data: {
                     userId: user.id,
                     propertyId: targetPropertyId!,
                     employeeId: `EMP-${Date.now().toString().slice(-6)}`,
                     department: department as any,
                     designation: designation ?? 'Member',
+                    workShift: workShift || 'Day Shift',
                     baseSalary: parseFloat(salary) || 0,
+                    allowance: parseFloat(allowance) || 0,
                     profilePhoto: profilePhoto || null,
                     dateOfJoining: new Date(),
                 },

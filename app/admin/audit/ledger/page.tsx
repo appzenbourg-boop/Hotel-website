@@ -75,7 +75,7 @@ export default function LedgerPage() {
             disabled={isExporting}
           >
             {isExporting ? (
-              <span className="w-4 h-4 mr-2 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+              <span className="w-4 h-4 mr-2 border-2 border-border border-t-white rounded-full animate-spin"></span>
             ) : (
               <FileSpreadsheet className="w-4 h-4 mr-2" />
             )}

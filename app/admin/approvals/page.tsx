@@ -54,7 +54,7 @@ export default function ApprovalsPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Operation Approvals</h1>
+                    <h1 className="text-3xl font-bold text-text-primary tracking-tight">Operation Approvals</h1>
                     <p className="text-text-secondary mt-1 text-sm font-medium">Review and authorize room upgrades and stay extensions</p>
                 </div>
                 <div className="flex items-center gap-2 bg-surface-light border border-border p-1 rounded-xl">
@@ -65,7 +65,7 @@ export default function ApprovalsPage() {
                             className={cn(
                                 "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
                                 statusFilter === s 
-                                    ? "bg-primary text-white shadow-lg" 
+                                    ? "bg-primary text-text-primary shadow-lg" 
                                     : "text-text-tertiary hover:text-text-secondary"
                             )}
                         >
@@ -86,7 +86,7 @@ export default function ApprovalsPage() {
                     <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6 border border-primary/10">
                         <CheckCircle2 className="w-8 h-8 text-primary opacity-20" />
                     </div>
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">Queue Clear</h3>
+                    <h3 className="text-lg font-bold text-text-primary uppercase tracking-tight">Queue Clear</h3>
                     <p className="text-xs text-text-tertiary uppercase tracking-widest max-w-xs mx-auto mt-2 leading-relaxed">
                         There are no {statusFilter.toLowerCase()} requests at the moment. High five! 
                     </p>
@@ -111,7 +111,7 @@ export default function ApprovalsPage() {
                                             {req.type === 'UPGRADE' ? <ArrowUp className="w-6 h-6" /> : <Calendar className="w-6 h-6" />}
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                                            <h3 className="text-lg font-black text-text-primary uppercase tracking-tight">
                                                 {req.type} REQUEST
                                             </h3>
                                             <div className="flex items-center gap-2 mt-1">
@@ -140,7 +140,7 @@ export default function ApprovalsPage() {
                                             <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                                                 <User className="w-3 h-3" /> Guest Details
                                             </p>
-                                            <p className="text-sm font-bold text-white">{req.booking?.guest?.name}</p>
+                                            <p className="text-sm font-bold text-text-primary">{req.booking?.guest?.name}</p>
                                             <p className="text-[11px] text-text-secondary mt-0.5">Room {req.booking?.room?.roomNumber} ({req.booking?.room?.type})</p>
                                         </div>
                                         <div>
@@ -154,7 +154,7 @@ export default function ApprovalsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-black/20 rounded-2xl p-4 border border-white/5 flex flex-col justify-center">
+                                    <div className="bg-black/20 rounded-2xl p-4 border border-border flex flex-col justify-center">
                                         {req.type === 'UPGRADE' ? (
                                             <>
                                                 <p className="text-[9px] font-black text-text-tertiary uppercase tracking-widest mb-2">Target Room</p>
@@ -163,7 +163,7 @@ export default function ApprovalsPage() {
                                                         <Building2 className="w-4 h-4 text-blue-400" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-white">Room {req.details.newRoomId?.slice(-3)}</p>
+                                                        <p className="text-sm font-black text-text-primary">Room {req.details.newRoomId?.slice(-3)}</p>
                                                         <p className="text-[9px] text-text-tertiary uppercase font-bold">Premium Tier</p>
                                                     </div>
                                                 </div>
@@ -176,7 +176,7 @@ export default function ApprovalsPage() {
                                                         <Calendar className="w-4 h-4 text-emerald-400" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-white">
+                                                        <p className="text-sm font-black text-text-primary">
                                                             {format(new Date(req.details.newCheckOut), 'EEE, MMM dd')}
                                                         </p>
                                                         <p className="text-[9px] text-text-tertiary uppercase font-bold">Extended Stay</p>
@@ -189,11 +189,11 @@ export default function ApprovalsPage() {
 
                                 {/* Actions */}
                                 {req.status === 'PENDING' ? (
-                                    <div className="flex gap-3 pt-4 border-t border-white/[0.05]">
+                                    <div className="flex gap-3 pt-4 border-t border-border">
                                         <button
                                             disabled={processingId === req.id}
                                             onClick={() => handleProcess(req.id, 'APPROVE')}
-                                            className="flex-1 h-11 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                            className="flex-1 h-11 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
                                             {processingId === req.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                                             Approve Request
@@ -204,13 +204,13 @@ export default function ApprovalsPage() {
                                                 const reason = window.prompt('Enter rejection reason:')
                                                 if (reason !== null) handleProcess(req.id, 'REJECT', reason)
                                             }}
-                                            className="h-11 px-6 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/20 text-text-tertiary hover:text-red-400 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                            className="h-11 px-6 bg-white/5 hover:bg-red-500/10 border border-border/50 hover:border-red-500/20 text-text-tertiary hover:text-red-400 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
                                             Reject
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="pt-4 border-t border-white/[0.05] flex items-center justify-between">
+                                    <div className="pt-4 border-t border-border flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             {req.status === 'APPROVED' ? (
                                                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />

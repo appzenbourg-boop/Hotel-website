@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
+import { reconcileRoomStatus, invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -126,6 +127,14 @@ export async function PATCH(
                 console.error('[NOTIFICATION_ERR]', notifyErr);
             }
         }
+
+        // Update room status if task is completed or changed for a room
+        if (updated.roomId) {
+            await reconcileRoomStatus(updated.roomId)
+        }
+
+        // Invalidate Room and Dashboard Caches
+        await invalidateRoomAndDashboardCaches(updated.propertyId)
 
         return NextResponse.json(updated)
     } catch (error) {

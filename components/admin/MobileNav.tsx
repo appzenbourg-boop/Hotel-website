@@ -26,7 +26,7 @@ export default function MobileNav() {
     if (pathname.includes('/login') || pathname.includes('/register')) return null
 
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0d1117]/95 backdrop-blur-md border-t border-white/[0.08] z-40 px-2 flex items-center justify-around no-print">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-md border-t border-border z-40 px-2 flex items-center justify-around no-print">
             {navItems.map((item) => {
                 const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href))
                 const Icon = item.icon
@@ -37,7 +37,7 @@ export default function MobileNav() {
                         href={item.href}
                         className={cn(
                             "flex flex-col items-center justify-center gap-1 w-full h-full transition-all active:scale-90",
-                            isActive ? "text-[#4A9EFF]" : "text-gray-500"
+                            isActive ? "text-[#4A9EFF]" : "text-text-tertiary"
                         )}
                     >
                         <div className={cn(

@@ -35,8 +35,6 @@ export async function GET(request: NextRequest) {
 
         if (statusFilter && statusFilter !== 'ALL') {
             where.status = statusFilter
-        } else {
-            where.status = { not: 'COMPLETED' }
         }
 
         if (typeFilter && typeFilter !== 'ALL') where.type = typeFilter
@@ -85,6 +83,9 @@ export async function GET(request: NextRequest) {
                 ? { id: s.assignedTo.id, name: s.assignedTo.user?.name ?? 'Unknown', photo: s.assignedTo.profilePhoto }
                 : null,
             requestTime: s.createdAt,
+            createdAt: s.createdAt,
+            updatedAt: s.updatedAt,
+            completedAt: s.completedAt,
             acceptedAt: s.acceptedAt,
             slaLimit: s.slaMinutes,
         }))

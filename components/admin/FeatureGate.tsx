@@ -18,7 +18,7 @@ interface FeatureGateProps {
 const PLAN_LABELS: Record<string, string> = {
     BASE: 'Base', STARTER: 'Starter', STANDARD: 'Standard', ENTERPRISE: 'Enterprise' }
 const PLAN_COLORS: Record<string, string> = {
-    BASE: 'text-slate-400', STARTER: 'text-blue-400',
+    BASE: 'text-text-secondary', STARTER: 'text-blue-400',
     STANDARD: 'text-amber-400', ENTERPRISE: 'text-purple-400' }
 
 export default function FeatureGate({ feature, minPlan, showLocked = true, children }: FeatureGateProps) {
@@ -44,16 +44,16 @@ export default function FeatureGate({ feature, minPlan, showLocked = true, child
             </div>
 
             {/* Lock overlay */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d1117]/80 backdrop-blur-sm rounded-2xl border border-white/[0.06] z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl border border-border z-10">
                 <div className="flex flex-col items-center gap-3 p-6 text-center max-w-xs">
                     <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
                         <Lock className="w-5 h-5 text-amber-400" />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-white">
+                        <p className="text-sm font-bold text-text-primary">
                             {PLAN_LABELS[requiredPlan] ?? requiredPlan} Plan Required
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-text-tertiary mt-1">
                             Your current plan doesn&apos;t include this feature.
                             Upgrade to unlock it.
                         </p>

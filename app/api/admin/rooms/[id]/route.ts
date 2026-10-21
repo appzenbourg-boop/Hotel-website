@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { unauthorized, forbidden, badRequest, notFound, noContent, serverError } from '@/lib/api-response'
 import { redis } from '@/lib/redis'
+import { invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -78,15 +79,23 @@ export async function PATCH(
             data: updateData,
         })
 
-        // Invalidate common caches
-        try {
-            const keys = await redis.keys(`rooms:${room.propertyId}:*`)
-            if (keys && keys.length > 0) {
-                await redis.del(...keys)
-            }
-        } catch (err) {
-            console.error('Failed to invalidate rooms cache:', err)
+        // If marked AVAILABLE, resolve any pending/in-progress housekeeping tasks
+        if (updateData.status === 'AVAILABLE') {
+            await prisma.serviceRequest.updateMany({
+                where: {
+                    roomId: params.id,
+                    type: { in: ['HOUSEKEEPING', 'MAINTENANCE'] },
+                    status: { in: ['PENDING', 'IN_PROGRESS', 'ACCEPTED'] }
+                },
+                data: {
+                    status: 'COMPLETED',
+                    completedAt: new Date()
+                }
+            })
         }
+
+        // Invalidate common caches
+        await invalidateRoomAndDashboardCaches(room.propertyId)
 
         return NextResponse.json({ success: true, data: room })
     } catch (error: any) {

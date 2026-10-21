@@ -258,21 +258,21 @@ export default function ContentManagementPage() {
 
     if (!['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER'].includes(session?.user?.role || '')) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-6 text-white">
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center p-6 text-text-primary">
                 <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 text-rose-500">
                     <Lock className="w-10 h-10" />
                 </div>
                 <h1 className="text-3xl font-bold mb-3  tracking-tighter uppercase">Restricted Access</h1>
-                <p className="text-gray-500 max-w-md font-medium">This module is reserved for Content Administrators and Managers.</p>
+                <p className="text-text-tertiary max-w-md font-medium">This module is reserved for Content Administrators and Managers.</p>
             </div>
         )
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#101922] text-white">
+        <div className="flex flex-col h-full bg-surface text-text-primary">
             {/* ── HEADER ── */}
             <div className="p-8 pb-4">
-                <div className="flex items-center gap-2 text-[11px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-4">
+                <div className="flex items-center gap-2 text-[11px] text-text-tertiary font-bold uppercase tracking-[0.2em] mb-4">
                     <span>Dashboard</span>
                     <ChevronRight className="w-3 h-3" />
                     <span>Settings</span>
@@ -282,18 +282,18 @@ export default function ContentManagementPage() {
 
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-4xl font-bold tracking-tighter text-white mb-2">Content Management</h1>
-                        <p className="text-sm text-gray-500 font-medium ">Manage hotel branding, media, amenities, and guest services.</p>
+                        <h1 className="text-4xl font-bold tracking-tighter text-text-primary mb-2">Content Management</h1>
+                        <p className="text-sm text-text-tertiary font-medium ">Manage hotel branding, media, amenities, and guest services.</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-6 py-2.5 bg-white/[0.04] border border-white/[0.1] hover:bg-white/[0.08] text-white text-[13px] font-bold rounded-xl transition-all">
+                        <button className="flex items-center gap-2 px-6 py-2.5 bg-surface-light border border-border hover:bg-white/[0.08] text-text-primary text-[13px] font-bold rounded-xl transition-all">
                             <Eye className="w-4 h-4" /> Preview Site
                         </button>
                         {(activeTab === 'general' || activeTab === 'policies') && (
                             <button
                                 onClick={activeTab === 'general' ? handleSaveGeneral : handleSavePolicies}
                                 disabled={saving}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-[#4A9EFF] hover:bg-[#3b8ae6] text-white text-[13px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-[#4A9EFF]/20 transition-all active:scale-95 disabled:opacity-50"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-[#4A9EFF] hover:bg-surface text-text-primary text-[13px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-[#4A9EFF]/20 transition-all active:scale-95 disabled:opacity-50"
                             >
                                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save Updates
                             </button>
@@ -302,7 +302,7 @@ export default function ContentManagementPage() {
                 </div>
 
                 {/* ── TABS ── */}
-                <div className="flex items-center gap-8 border-b border-white/[0.06] overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-8 border-b border-border overflow-x-auto no-scrollbar">
                     {TABS.map(tab => (
                         <button
                             key={tab.id}
@@ -311,8 +311,8 @@ export default function ContentManagementPage() {
                             className={cn(
                                 "flex items-center gap-2.5 pb-4 text-[13px] font-bold whitespace-nowrap transition-all border-b-2",
                                 activeTab === tab.id
-                                    ? "text-white border-[#4A9EFF]"
-                                    : "text-gray-500 border-transparent hover:text-gray-300",
+                                    ? "text-text-primary border-[#4A9EFF]"
+                                    : "text-text-tertiary border-transparent hover:text-text-secondary",
                                 currentPropertyId === 'ALL' && "opacity-30 cursor-not-allowed"
                             )}
                         >
@@ -330,8 +330,8 @@ export default function ContentManagementPage() {
                         <div className="w-24 h-24 bg-[#4A9EFF]/5 border border-[#4A9EFF]/10 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl">
                             <Building2 className="w-10 h-10 text-[#4A9EFF] opacity-40" />
                         </div>
-                        <h2 className="text-3xl font-bold text-white  tracking-tighter uppercase mb-4">Select a Property</h2>
-                        <p className="text-gray-500 max-w-sm font-medium leading-relaxed">
+                        <h2 className="text-3xl font-bold text-text-primary  tracking-tighter uppercase mb-4">Select a Property</h2>
+                        <p className="text-text-tertiary max-w-sm font-medium leading-relaxed">
                             Content Management is property-specific. Please select a specific hotel from the sidebar to manage its assets, menus, and amenities.
                         </p>
                     </div>
@@ -343,7 +343,7 @@ export default function ContentManagementPage() {
                             <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-6">
-                                        <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                                        <h3 className="text-xl font-bold text-text-primary flex items-center gap-3">
                                             <Building2 className="w-5 h-5 text-[#4A9EFF]" /> Basic Identity
                                         </h3>
                                         <div className="space-y-4">
@@ -351,14 +351,14 @@ export default function ContentManagementPage() {
                                                 label="Hotel Name"
                                                 value={propertyInfo.name}
                                                 onChange={e => setPropertyInfo({ ...propertyInfo, name: e.target.value })}
-                                                className="bg-white/[0.02] border-white/[0.08]"
+                                                className="bg-surface-light border-border"
                                             />
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest block ml-1">About Hotel</label>
                                                 <textarea
                                                     value={propertyInfo.description || ''}
                                                     onChange={e => setPropertyInfo({ ...propertyInfo, description: e.target.value })}
-                                                    className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl p-4 text-sm text-white outline-none focus:border-[#4A9EFF]/40 min-h-[120px] resize-none"
+                                                    className="w-full bg-surface-light border border-border rounded-xl p-4 text-sm text-text-primary outline-none focus:border-[#4A9EFF]/40 min-h-[120px] resize-none"
                                                     placeholder="Write a brief overview of the property..."
                                                 />
                                             </div>
@@ -366,7 +366,7 @@ export default function ContentManagementPage() {
                                     </div>
 
                                     <div className="space-y-6">
-                                        <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                                        <h3 className="text-xl font-bold text-text-primary flex items-center gap-3">
                                             <MapPin className="w-5 h-5 text-[#4A9EFF]" /> Contact & location
                                         </h3>
                                         <div className="space-y-4">
@@ -377,7 +377,7 @@ export default function ContentManagementPage() {
                                             </div>
                                         </div>
 
-                                        <h3 className="text-xl font-bold text-white pt-4 flex items-center gap-3">
+                                        <h3 className="text-xl font-bold text-text-primary pt-4 flex items-center gap-3">
                                             <Clock className="w-5 h-5 text-[#4A9EFF]" /> Operating times
                                         </h3>
                                         <div className="grid grid-cols-2 gap-4">
@@ -394,10 +394,10 @@ export default function ContentManagementPage() {
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-white">Media Assets Library</h2>
-                                        <p className="text-sm text-gray-500 font-medium  mt-1">Stately photography for listings and digital concierge.</p>
+                                        <h2 className="text-2xl font-bold text-text-primary">Media Assets Library</h2>
+                                        <p className="text-sm text-text-tertiary font-medium  mt-1">Stately photography for listings and digital concierge.</p>
                                     </div>
-                                    <label className="flex items-center gap-2 px-6 py-2.5 bg-[#4A9EFF] hover:bg-[#3b8ae6] text-white text-[13px] font-bold uppercase tracking-widest rounded-xl cursor-pointer transition-all active:scale-95">
+                                    <label className="flex items-center gap-2 px-6 py-2.5 bg-[#4A9EFF] hover:bg-surface text-text-primary text-[13px] font-bold uppercase tracking-widest rounded-xl cursor-pointer transition-all active:scale-95">
                                         <Upload className="w-4 h-4" /> {uploading ? 'Processing...' : 'Upload Photos'}
                                         <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'gallery')} accept="image/*" disabled={uploading} />
                                     </label>
@@ -405,7 +405,7 @@ export default function ContentManagementPage() {
 
                                 <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                                     {galleryImages.map((img, idx) => (
-                                        <div key={idx} className="aspect-[4/3] rounded-[2rem] overflow-hidden group relative bg-white/[0.02] border border-white/[0.06] shadow-2xl">
+                                        <div key={idx} className="aspect-[4/3] rounded-[2rem] overflow-hidden group relative bg-surface-light border border-border shadow-2xl">
                                             <Image src={img} alt="" fill className="object-cover group-hover:scale-110 transition-all duration-1000" unoptimized />
                                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-4">
                                                 <button className="w-12 h-12 bg-white text-slate-900 rounded-2xl flex items-center justify-center hover:scale-110 transition-all shadow-xl">
@@ -413,7 +413,7 @@ export default function ContentManagementPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => removeGalleryImage(img)}
-                                                    className="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center hover:scale-110 transition-all shadow-lg"
+                                                    className="w-12 h-12 bg-rose-500 text-text-primary rounded-2xl flex items-center justify-center hover:scale-110 transition-all shadow-lg"
                                                 >
                                                     <Trash2 className="w-5 h-5" />
                                                 </button>
@@ -422,7 +422,7 @@ export default function ContentManagementPage() {
                                         </div>
                                     ))}
                                     {galleryImages.length === 0 && Array(5).fill(0).map((_: any, i: number) => (
-                                        <div key={i} className="aspect-[4/3] rounded-[2rem] border-2 border-dashed border-white/[0.04] flex items-center justify-center text-gray-800">
+                                        <div key={i} className="aspect-[4/3] rounded-[2rem] border-2 border-dashed border-border flex items-center justify-center text-gray-800">
                                             <ImageIcon className="w-10 h-10" />
                                         </div>
                                     ))}
@@ -435,8 +435,8 @@ export default function ContentManagementPage() {
                             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-white tracking-tight">Hotel Amenities</h2>
-                                        <p className="text-sm text-gray-500 font-medium  mt-1">Define what makes your property unique.</p>
+                                        <h2 className="text-2xl font-bold text-text-primary tracking-tight">Hotel Amenities</h2>
+                                        <p className="text-sm text-text-tertiary font-medium  mt-1">Define what makes your property unique.</p>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="relative w-[280px]">
@@ -446,7 +446,7 @@ export default function ContentManagementPage() {
                                                 placeholder="Search amenities..."
                                                 value={search}
                                                 onChange={e => setSearch(e.target.value)}
-                                                className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder:text-gray-700 outline-none"
+                                                className="w-full bg-surface-light border border-border rounded-xl pl-10 pr-4 py-2 text-sm text-text-primary placeholder:text-gray-700 outline-none"
                                             />
                                         </div>
                                         <button
@@ -455,7 +455,7 @@ export default function ContentManagementPage() {
                                                 setFormData({ name: '', category: 'General', icon: 'Waves', description: '', isActive: true });
                                                 setIsModalOpen(true);
                                             }}
-                                            className="flex items-center gap-2 px-6 py-2 bg-[#4A9EFF] text-white text-[12px] font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                            className="flex items-center gap-2 px-6 py-2 bg-[#4A9EFF] text-text-primary text-[12px] font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95"
                                         >
                                             <Plus className="w-4 h-4" /> New Amenity
                                         </button>
@@ -464,7 +464,7 @@ export default function ContentManagementPage() {
 
                                 <div className="flex items-center gap-3">
                                     {['All Items', ...AMENITY_CATEGORIES].map(cat => (
-                                        <button key={cat} onClick={() => setSelectedCategory(cat)} className={cn("px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all border", selectedCategory === cat ? "bg-[#4A9EFF]/10 text-[#4A9EFF] border-[#4A9EFF]/20" : "bg-white/[0.02] text-gray-500 border-white/[0.06] hover:bg-white/[0.04]")}>
+                                        <button key={cat} onClick={() => setSelectedCategory(cat)} className={cn("px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all border", selectedCategory === cat ? "bg-[#4A9EFF]/10 text-[#4A9EFF] border-[#4A9EFF]/20" : "bg-surface-light text-text-tertiary border-border hover:bg-surface-light")}>
                                             {cat}
                                         </button>
                                     ))}
@@ -472,7 +472,7 @@ export default function ContentManagementPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {filteredAmenities.map(amenity => (
-                                        <div key={amenity.id} className="group p-6 bg-white/[0.01] border border-white/[0.06] rounded-[2rem] hover:bg-white/[0.03] transition-all relative overflow-hidden">
+                                        <div key={amenity.id} className="group p-6 bg-surface-light border border-border rounded-[2rem] hover:bg-surface-light transition-all relative overflow-hidden">
                                             <div className="flex items-start justify-between">
                                                 <div className="w-14 h-14 bg-[#4A9EFF]/10 rounded-2xl flex items-center justify-center text-[#4A9EFF] shadow-inner ring-1 ring-[#4A9EFF]/20">
                                                     <Waves className="w-7 h-7" />
@@ -484,7 +484,7 @@ export default function ContentManagementPage() {
                                                             setFormData(amenity);
                                                             setIsModalOpen(true);
                                                         }}
-                                                        className="p-2.5 bg-white/[0.04] rounded-xl text-gray-500 hover:text-white transition-all transform group-hover:scale-110"
+                                                        className="p-2.5 bg-surface-light rounded-xl text-text-tertiary hover:text-text-primary transition-all transform group-hover:scale-110"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
@@ -495,12 +495,12 @@ export default function ContentManagementPage() {
                                             </div>
                                             <div className="mt-6">
                                                 <div className="flex items-center justify-between">
-                                                    <h4 className="text-xl font-bold text-white">{amenity.name}</h4>
+                                                    <h4 className="text-xl font-bold text-text-primary">{amenity.name}</h4>
                                                     <span className="text-[10px] font-bold uppercase tracking-widest text-[#4A9EFF]">{amenity.category}</span>
                                                 </div>
-                                                <p className="text-sm text-gray-500 mt-2 font-medium  leading-relaxed line-clamp-2">{amenity.description || 'No description available for this amenity.'}</p>
+                                                <p className="text-sm text-text-tertiary mt-2 font-medium  leading-relaxed line-clamp-2">{amenity.description || 'No description available for this amenity.'}</p>
                                             </div>
-                                            {!amenity.isActive && <div className="absolute inset-0 bg-[#101922]/60 backdrop-blur-sm flex items-center justify-center font-bold text-xs uppercase tracking-[0.3em] text-gray-600">Archived</div>}
+                                            {!amenity.isActive && <div className="absolute inset-0 bg-surface/60 backdrop-blur-sm flex items-center justify-center font-bold text-xs uppercase tracking-[0.3em] text-gray-600">Archived</div>}
                                         </div>
                                     ))}
                                 </div>
@@ -513,8 +513,8 @@ export default function ContentManagementPage() {
                                 {/* RESTAURANT HEADING */}
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-white tracking-tight">Restaurant & Bar Menus</h2>
-                                        <p className="text-sm text-gray-500 font-medium  mt-1">Manage dishes, pricing, and availability for guest ordering.</p>
+                                        <h2 className="text-2xl font-bold text-text-primary tracking-tight">Restaurant & Bar Menus</h2>
+                                        <p className="text-sm text-text-tertiary font-medium  mt-1">Manage dishes, pricing, and availability for guest ordering.</p>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="relative w-[280px]">
@@ -524,7 +524,7 @@ export default function ContentManagementPage() {
                                                 placeholder="Search dishes..."
                                                 value={search}
                                                 onChange={e => setSearch(e.target.value)}
-                                                className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder:text-gray-700 outline-none focus:border-[#4A9EFF]/40 transition-all"
+                                                className="w-full bg-surface-light border border-border rounded-xl pl-10 pr-4 py-2 text-sm text-text-primary placeholder:text-gray-700 outline-none focus:border-[#4A9EFF]/40 transition-all"
                                             />
                                         </div>
                                         <button
@@ -533,7 +533,7 @@ export default function ContentManagementPage() {
                                                 setFormData({ id: '', name: '', category: 'Lunch', price: 0, isAvailable: true, isVeg: true, description: '', images: [] })
                                                 setIsModalOpen(true)
                                             }}
-                                            className="flex items-center gap-2 px-6 py-2 bg-[#4A9EFF] text-white text-[12px] font-bold uppercase tracking-widest rounded-xl"
+                                            className="flex items-center gap-2 px-6 py-2 bg-[#4A9EFF] text-text-primary text-[12px] font-bold uppercase tracking-widest rounded-xl"
                                         >
                                             <Plus className="w-4 h-4" /> Add Dish
                                         </button>
@@ -542,15 +542,15 @@ export default function ContentManagementPage() {
 
                                 <div className="flex items-center gap-3">
                                     {MENU_CATEGORIES.map(cat => (
-                                        <button key={cat} onClick={() => setSelectedCategory(cat)} className={cn("px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all border", selectedCategory === cat ? "bg-[#4A9EFF]/10 text-[#4A9EFF] border-[#4A9EFF]/20" : "bg-white/[0.02] text-gray-500 border-white/[0.06] hover:bg-white/[0.04]")}>
+                                        <button key={cat} onClick={() => setSelectedCategory(cat)} className={cn("px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all border", selectedCategory === cat ? "bg-[#4A9EFF]/10 text-[#4A9EFF] border-[#4A9EFF]/20" : "bg-surface-light text-text-tertiary border-border hover:bg-surface-light")}>
                                             {cat}
                                         </button>
                                     ))}
                                 </div>
 
-                                <div className="bg-white/[0.01] border border-white/[0.06] rounded-[2rem] overflow-hidden shadow-2xl">
+                                <div className="bg-surface-light border border-border rounded-[2rem] overflow-hidden shadow-2xl">
                                     <table className="w-full text-left">
-                                        <thead className="bg-white/[0.03] border-b border-white/[0.06]">
+                                        <thead className="bg-surface-light border-b border-border">
                                             <tr>
                                                 <th className="px-8 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Dish Details</th>
                                                 <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Category</th>
@@ -565,7 +565,7 @@ export default function ContentManagementPage() {
                                             ) : filteredMenu.length === 0 ? (
                                                 <tr><td colSpan={5} className="py-20 text-center  text-gray-700">No dishes matched filter</td></tr>
                                             ) : filteredMenu.map(item => (
-                                                <tr key={item.id} className="group hover:bg-white/[0.02] transition-colors">
+                                                <tr key={item.id} className="group hover:bg-surface-light transition-colors">
                                                     <td className="px-8 py-5">
                                                         <div className="flex items-center gap-5">
                                                             <div className="w-16 h-16 rounded-2xl overflow-hidden ring-1 ring-white/[0.08] shadow-lg relative">
@@ -573,15 +573,15 @@ export default function ContentManagementPage() {
                                                             </div>
                                                             <div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <h4 className="text-[15px] font-bold text-white">{item.name}</h4>
+                                                                    <h4 className="text-[15px] font-bold text-text-primary">{item.name}</h4>
                                                                     {item.isVeg && <div className="w-3 h-3 border border-emerald-500 p-[1px] flex items-center justify-center"><div className="w-full h-full bg-emerald-500 rounded-full" /></div>}
                                                                 </div>
-                                                                <p className="text-[11px] text-gray-500 mt-1  line-clamp-1">{item.description}</p>
+                                                                <p className="text-[11px] text-text-tertiary mt-1  line-clamp-1">{item.description}</p>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-5 text-[11px] font-bold uppercase text-gray-400 tracking-widest">{item.category}</td>
-                                                    <td className="px-6 py-5 text-center font-bold text-white">${item.price.toFixed(2)}</td>
+                                                    <td className="px-6 py-5 text-[11px] font-bold uppercase text-text-secondary tracking-widest">{item.category}</td>
+                                                    <td className="px-6 py-5 text-center font-bold text-text-primary">${item.price.toFixed(2)}</td>
                                                     <td className="px-6 py-5">
                                                         <div className="flex justify-center">
                                                             <Switch checked={item.isAvailable} onChange={async (val) => {
@@ -612,8 +612,8 @@ export default function ContentManagementPage() {
                             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-2xl font-bold text-white tracking-tight">Spa & Wellness Services</h2>
-                                        <p className="text-sm text-gray-500 font-medium  mt-1">Manage treatments, massages, and therapy durations.</p>
+                                        <h2 className="text-2xl font-bold text-text-primary tracking-tight">Spa & Wellness Services</h2>
+                                        <p className="text-sm text-text-tertiary font-medium  mt-1">Manage treatments, massages, and therapy durations.</p>
                                     </div>
                                     <button
                                         onClick={() => {
@@ -621,7 +621,7 @@ export default function ContentManagementPage() {
                                             setFormData({ name: '', duration: 60, price: 100, description: '', isAvailable: true });
                                             setIsModalOpen(true);
                                         }}
-                                        className="flex items-center gap-2 px-6 py-2 bg-[#4A9EFF] text-white text-[12px] font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95"
+                                        className="flex items-center gap-2 px-6 py-2 bg-[#4A9EFF] text-text-primary text-[12px] font-bold uppercase tracking-widest rounded-xl transition-all active:scale-95"
                                     >
                                         <Plus className="w-4 h-4" /> Add Treatment
                                     </button>
@@ -629,7 +629,7 @@ export default function ContentManagementPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     {wellnessItems.map(item => (
-                                        <div key={item.id} className="group bg-white/[0.01] border border-white/[0.06] rounded-[2.5rem] overflow-hidden hover:bg-white/[0.02] transition-all shadow-2xl">
+                                        <div key={item.id} className="group bg-surface-light border border-border rounded-[2.5rem] overflow-hidden hover:bg-surface-light transition-all shadow-2xl">
                                             <div className="aspect-[4/3] relative">
                                                 <Image src={item.image || item.images?.[0] || 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&q=80'} alt="" fill className="object-cover group-hover:scale-110 transition-all duration-1000" unoptimized />
                                                 <div className="absolute top-4 right-4 z-10">
@@ -642,20 +642,20 @@ export default function ContentManagementPage() {
                                                         if (res.ok) setWellnessItems(prev => prev.map(i => i.id === item.id ? { ...i, isAvailable: val } : i));
                                                     }} />
                                                 </div>
-                                                <div className="absolute bottom-4 left-4 px-4 py-2 bg-black/40 backdrop-blur-md rounded-2xl flex items-center gap-2 border border-white/[0.08]">
+                                                <div className="absolute bottom-4 left-4 px-4 py-2 bg-black/40 backdrop-blur-md rounded-2xl flex items-center gap-2 border border-border">
                                                     <Clock className="w-3.5 h-3.5 text-[#4A9EFF]" />
                                                     <span className="text-[11px] font-bold tracking-widest">{item.duration} MIN</span>
                                                 </div>
                                             </div>
                                             <div className="p-8">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <h4 className="text-xl font-bold text-white">{item.name}</h4>
+                                                    <h4 className="text-xl font-bold text-text-primary">{item.name}</h4>
                                                     <p className="text-2xl font-bold text-[#4A9EFF] tracking-tighter">${item.price}</p>
                                                 </div>
-                                                <p className="text-sm text-gray-500 font-medium  mb-8 leading-relaxed line-clamp-2">{item.description || 'Pamper your guests with a world-class spa experience.'}</p>
+                                                <p className="text-sm text-text-tertiary font-medium  mb-8 leading-relaxed line-clamp-2">{item.description || 'Pamper your guests with a world-class spa experience.'}</p>
                                                 <button
                                                     onClick={() => { setSelectedItem(item); setFormData(item); setIsModalOpen(true); }}
-                                                    className="w-full flex items-center justify-center gap-2 py-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-[11px] font-bold uppercase tracking-widest hover:bg-[#4A9EFF] hover:text-white transition-all shadow-inner"
+                                                    className="w-full flex items-center justify-center gap-2 py-3 bg-surface-light border border-border rounded-2xl text-[11px] font-bold uppercase tracking-widest hover:bg-[#4A9EFF] hover:text-text-primary transition-all shadow-inner"
                                                 >
                                                     <Edit2 className="w-4 h-4" /> Modify Service
                                                 </button>
@@ -671,27 +671,27 @@ export default function ContentManagementPage() {
                             <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <section className="space-y-10">
                                     <div className="space-y-4">
-                                        <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                                        <h3 className="text-2xl font-bold text-text-primary flex items-center gap-3">
                                             <ShieldCheck className="w-7 h-7 text-[#4A9EFF]" /> Cancellation & refund Policy
                                         </h3>
-                                        <p className="text-sm text-gray-500 ">This will be displayed prominently on the checkout and booking details pages.</p>
+                                        <p className="text-sm text-text-tertiary ">This will be displayed prominently on the checkout and booking details pages.</p>
                                         <textarea
                                             value={policies.cancellationPolicy}
                                             onChange={e => setPolicies({ ...policies, cancellationPolicy: e.target.value })}
-                                            className="w-full bg-white/[0.02] border border-white/[0.08] rounded-[2rem] p-8 text-[15px] leading-relaxed text-white outline-none focus:border-[#4A9EFF]/40 min-h-[160px] shadow-2xl "
+                                            className="w-full bg-surface-light border border-border rounded-[2rem] p-8 text-[15px] leading-relaxed text-text-primary outline-none focus:border-[#4A9EFF]/40 min-h-[160px] shadow-2xl "
                                             placeholder="Enter cancellation rules (e.g., Free cancellation up to 24 hours before check-in)..."
                                         />
                                     </div>
 
                                     <div className="space-y-4">
-                                        <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+                                        <h3 className="text-2xl font-bold text-text-primary flex items-center gap-3">
                                             <AlertCircle className="w-7 h-7 text-[#4A9EFF]" /> General House Rules
                                         </h3>
-                                        <p className="text-sm text-gray-500 ">Standard policies around smoking, pets, noise, and guest behavior.</p>
+                                        <p className="text-sm text-text-tertiary ">Standard policies around smoking, pets, noise, and guest behavior.</p>
                                         <textarea
                                             value={policies.houseRules}
                                             onChange={e => setPolicies({ ...policies, houseRules: e.target.value })}
-                                            className="w-full bg-white/[0.02] border border-white/[0.08] rounded-[2rem] p-8 text-[15px] leading-relaxed text-white outline-none focus:border-[#4A9EFF]/40 min-h-[220px] shadow-2xl "
+                                            className="w-full bg-surface-light border border-border rounded-[2rem] p-8 text-[15px] leading-relaxed text-text-primary outline-none focus:border-[#4A9EFF]/40 min-h-[220px] shadow-2xl "
                                             placeholder="List the rules your guests must follow during their stay..."
                                         />
                                     </div>
@@ -702,7 +702,7 @@ export default function ContentManagementPage() {
                         {loading && (
                             <div className="flex flex-col items-center justify-center h-[40vh] gap-4">
                                 <Loader2 className="w-10 h-10 text-[#4A9EFF] animate-spin" />
-                                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500 animate-pulse">Syncing Cloud Content...</span>
+                                <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-text-tertiary animate-pulse">Syncing Cloud Content...</span>
                             </div>
                         )}
                     </>
@@ -724,7 +724,7 @@ export default function ContentManagementPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest block mb-2 px-1">Category</label>
-                                    <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:border-[#4A9EFF]/40 outline-none">
+                                    <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-surface-light border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:border-[#4A9EFF]/40 outline-none">
                                         {MENU_CATEGORIES.filter(c => c !== 'All Items').map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
@@ -742,7 +742,7 @@ export default function ContentManagementPage() {
                         {activeTab === 'amenities' && (
                             <div>
                                 <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest block mb-2 px-1">Category</label>
-                                <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-white/[0.02] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white focus:border-[#4A9EFF]/40 outline-none">
+                                <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full bg-surface-light border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:border-[#4A9EFF]/40 outline-none">
                                     {AMENITY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
@@ -753,7 +753,7 @@ export default function ContentManagementPage() {
                             <textarea
                                 value={formData.description || ''}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full bg-white/[0.02] border border-white/[0.08] rounded-2xl p-4 text-sm text-white outline-none focus:border-[#4A9EFF]/40 min-h-[140px] resize-none "
+                                className="w-full bg-surface-light border border-border rounded-2xl p-4 text-sm text-text-primary outline-none focus:border-[#4A9EFF]/40 min-h-[140px] resize-none "
                             />
                         </div>
                         <div className="flex justify-end gap-3 mt-4">
@@ -764,7 +764,7 @@ export default function ContentManagementPage() {
 
                     <div className="space-y-4">
                         <label className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em] block ml-1">Asset imagery</label>
-                        <div className="aspect-square rounded-3xl bg-[#101922] border border-white/[0.08] overflow-hidden relative group shadow-inner">
+                        <div className="aspect-square rounded-3xl bg-surface border border-border overflow-hidden relative group shadow-inner">
                             {(formData.images?.length > 0 || formData.image) ? (
                                 <>
                                     <Image src={formData.images?.[0] || formData.image} alt="" fill className="object-cover" unoptimized />
@@ -773,15 +773,15 @@ export default function ContentManagementPage() {
                                             <Upload className="w-5 h-5" />
                                             <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'formData')} accept="image/*" />
                                         </label>
-                                        <button onClick={() => setFormData({ ...formData, images: [], image: '' })} className="w-12 h-12 bg-rose-500 text-white rounded-2xl flex items-center justify-center hover:scale-110 transition-all shadow-lg"><X className="w-5 h-5" /></button>
+                                        <button onClick={() => setFormData({ ...formData, images: [], image: '' })} className="w-12 h-12 bg-rose-500 text-text-primary rounded-2xl flex items-center justify-center hover:scale-110 transition-all shadow-lg"><X className="w-5 h-5" /></button>
                                     </div>
                                 </>
                             ) : (
-                                <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-white/[0.03] transition-all">
-                                    <div className="w-16 h-16 bg-white/[0.04] rounded-full flex items-center justify-center mb-4 ring-1 ring-white/[0.08]">
+                                <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-surface-light transition-all">
+                                    <div className="w-16 h-16 bg-surface-light rounded-full flex items-center justify-center mb-4 ring-1 ring-white/[0.08]">
                                         {uploading ? <Loader2 className="w-6 h-6 text-[#4A9EFF] animate-spin" /> : <ImageIcon className="w-6 h-6 text-gray-600" />}
                                     </div>
-                                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Select Image</span>
+                                    <span className="text-[11px] font-bold text-text-tertiary uppercase tracking-widest">Select Image</span>
                                     <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'formData')} accept="image/*" />
                                 </label>
                             )}

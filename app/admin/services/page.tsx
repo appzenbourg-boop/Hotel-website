@@ -40,7 +40,7 @@ const getServiceColor = (type: string) => {
         case 'HOUSEKEEPING': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
         case 'MAINTENANCE': return 'bg-orange-500/10 text-orange-400 border-orange-500/20'
         case 'LAUNDRY': return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-        default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+        default: return 'bg-gray-500/10 text-text-secondary border-gray-500/20'
     }
 }
 
@@ -49,9 +49,9 @@ const getStatusStyle = (status: string) => {
         case 'OVERDUE': return 'bg-rose-500/10 text-rose-500 border-rose-500/20'
         case 'IN_PROGRESS': return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
         case 'COMPLETED': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-        case 'PENDING': return 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+        case 'PENDING': return 'bg-gray-500/10 text-text-secondary border-gray-500/20'
         case 'ACCEPTED': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-        default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+        default: return 'bg-gray-500/10 text-text-secondary border-gray-500/20'
     }
 }
 
@@ -71,27 +71,27 @@ const getSLAPrecent = (timeStr: string, limit: number) => {
 }
 
 const SkeletonRow = () => (
-    <tr className="border-b border-white/[0.03] animate-pulse">
+    <tr className="border-b border-border animate-pulse">
         <td className="px-8 py-5">
             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white/[0.05] border border-white/[0.05]" />
+                <div className="w-12 h-12 rounded-2xl bg-surface-light border border-border" />
                 <div className="space-y-2">
-                    <div className="w-32 h-4 bg-white/[0.05] rounded" />
-                    <div className="w-20 h-3 bg-white/[0.03] rounded" />
+                    <div className="w-32 h-4 bg-surface-light rounded" />
+                    <div className="w-20 h-3 bg-surface-light rounded" />
                 </div>
             </div>
         </td>
-        <td className="px-6 py-5"><div className="w-12 h-6 bg-white/[0.05] rounded" /></td>
-        <td className="px-6 py-5"><div className="w-28 h-4 bg-white/[0.05] rounded" /></td>
-        <td className="px-6 py-5"><div className="w-24 h-8 bg-white/[0.05] rounded-xl" /></td>
+        <td className="px-6 py-5"><div className="w-12 h-6 bg-surface-light rounded" /></td>
+        <td className="px-6 py-5"><div className="w-28 h-4 bg-surface-light rounded" /></td>
+        <td className="px-6 py-5"><div className="w-24 h-8 bg-surface-light rounded-xl" /></td>
         <td className="px-6 py-5">
             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white/[0.05]" />
-                <div className="w-24 h-4 bg-white/[0.05] rounded" />
+                <div className="w-8 h-8 rounded-full bg-surface-light" />
+                <div className="w-24 h-4 bg-surface-light rounded" />
             </div>
         </td>
         <td className="px-4 py-5 text-right pr-10">
-            <div className="w-20 h-6 bg-white/[0.05] rounded-full ml-auto" />
+            <div className="w-20 h-6 bg-surface-light rounded-full ml-auto" />
         </td>
     </tr>
 )
@@ -106,8 +106,8 @@ function KpiSection({ stats, requests }: { stats: any, requests: any[] }) {
             label: 'Completed Today',
             value: (requests || []).filter((r: any) => {
                 if (r.status !== 'COMPLETED') return false;
-                const dateToUse = r.completedAt || r.updatedAt || r.createdAt;
-                if (!dateToUse) return false;
+                const dateToUse = r.completedAt || r.updatedAt || r.requestTime || r.createdAt;
+                if (!dateToUse) return true;
                 const completedDate = new Date(dateToUse);
                 const today = new Date();
                 return completedDate.getDate() === today.getDate() &&
@@ -124,9 +124,9 @@ function KpiSection({ stats, requests }: { stats: any, requests: any[] }) {
             {kpiData.map((s, i) => {
                 const Icon = s.icon;
                 return (
-                    <div key={i} className="bg-white/[0.02] border border-white/[0.04] rounded-2xl p-4 flex items-center justify-between">
+                    <div key={i} className="bg-surface-light border border-border rounded-2xl p-4 flex items-center justify-between">
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">{s.label}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-1">{s.label}</p>
                             <p className={cn("text-2xl font-bold", s.color)}>{s.value}</p>
                         </div>
                         <Icon className={cn("w-5 h-5 opacity-20", s.color)} />
@@ -174,8 +174,10 @@ export default function ServicesPage() {
         data: requests = [],
         isLoading: reqLoading,
         mutate: mutateRequests
-    } = useSWR(currentPropertyId ? buildContextUrl('/api/admin/services', { status: 'ALL' }) : null, fetcher, {
-        refreshInterval: 10000
+    } = useSWR(currentPropertyId ? buildContextUrl('/api/admin/services', { status: 'ALL', limit: 200 }) : null, fetcher, {
+        refreshInterval: 10000,
+        revalidateOnFocus: true,
+        revalidateOnMount: true
     });
 
     const { data: rooms = [] } = useSWR(
@@ -275,18 +277,18 @@ export default function ServicesPage() {
     }, [requests, search, typeFilter, statusFilter, staffFilter]);
 
     return (
-        <div className="flex flex-col bg-[#101922] w-full min-h-screen animate-fade-in pb-20">
-            <div className="shrink-0 p-6 sm:px-8 bg-[#101922] border-b border-white/[0.06]">
+        <div className="flex flex-col bg-surface w-full min-h-screen animate-fade-in pb-20">
+            <div className="shrink-0 p-6 sm:px-8 bg-surface border-b border-border">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div>
-                        <h1 className="text-2xl font-bold text-white tracking-tight">Service Operations</h1>
-                        <p className="text-sm text-gray-500 mt-1">Manage and track guest requests in real-time</p>
+                        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Service Operations</h1>
+                        <p className="text-sm text-text-tertiary mt-1">Manage and track guest requests in real-time</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button variant="secondary" className="bg-white/[0.04] border-white/[0.1] hover:bg-white/[0.08]" onClick={() => router.push('/admin/rooms')}>
+                        <Button variant="secondary" className="bg-surface-light border-border hover:bg-white/[0.08]" onClick={() => router.push('/admin/rooms')}>
                             <LayoutGrid className="w-4 h-4 mr-2" /> Room Config
                         </Button>
-                        <Button variant="secondary" className="bg-white/[0.04] border-white/[0.1] hover:bg-white/[0.08]" onClick={() => setShowSettingsModal(true)}>
+                        <Button variant="secondary" className="bg-surface-light border-border hover:bg-white/[0.08]" onClick={() => setShowSettingsModal(true)}>
                             <Tools className="w-4 h-4 mr-2" /> Edit Timers
                         </Button>
                         <Button onClick={() => setShowAddModal(true)} className="shadow-lg shadow-blue-500/20">
@@ -297,8 +299,8 @@ export default function ServicesPage() {
                 <KpiSection stats={stats} requests={requests} />
             </div>
 
-            <div className="flex-1 flex flex-col min-w-0 bg-[#101922]">
-                <div className="shrink-0 flex flex-wrap items-center gap-3 p-4 sm:px-8 py-3 border-b border-white/[0.06]">
+            <div className="flex-1 flex flex-col min-w-0 bg-surface">
+                <div className="shrink-0 flex flex-wrap items-center gap-3 p-4 sm:px-8 py-3 border-b border-border">
                     <div className="relative flex-1 min-w-[200px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                         <input
@@ -306,25 +308,25 @@ export default function ServicesPage() {
                             placeholder="Search by room, guest or item..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder:text-gray-700 outline-none focus:border-blue-500/40 transition-colors"
+                            className="w-full bg-surface-light border border-border rounded-xl pl-10 pr-4 py-2 text-sm text-text-primary placeholder:text-gray-700 outline-none focus:border-blue-500/40 transition-colors"
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-gray-400 font-bold outline-none cursor-pointer hover:border-white/10">
+                        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="bg-surface-light border border-border rounded-xl px-3 py-2 text-xs text-text-secondary font-bold outline-none cursor-pointer hover:border-border/50">
                             <option value="ALL">All Services</option>
                             <option value="HOUSEKEEPING">Housekeeping</option>
                             <option value="FOOD_ORDER">Food & Bv.</option>
                             <option value="MAINTENANCE">Maintenance</option>
                             <option value="LAUNDRY">Laundry</option>
                         </select>
-                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-2 text-xs text-gray-400 font-bold outline-none cursor-pointer hover:border-white/10">
+                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="bg-surface-light border border-border rounded-xl px-3 py-2 text-xs text-text-secondary font-bold outline-none cursor-pointer hover:border-border/50">
                             <option value="ALL">All Status</option>
                             <option value="PENDING">Pending</option>
                             <option value="ACCEPTED">Accepted</option>
                             <option value="IN_PROGRESS">In Progress</option>
                             <option value="COMPLETED">Completed</option>
                         </select>
-                        <button onClick={() => mutateRequests()} className="p-2 hover:bg-white/[0.04] rounded-xl transition-colors">
+                        <button onClick={() => mutateRequests()} className="p-2 hover:bg-surface-light rounded-xl transition-colors">
                             <RefreshCw className={cn("w-4 h-4 text-gray-600", reqLoading && "animate-spin")} />
                         </button>
                     </div>
@@ -332,7 +334,7 @@ export default function ServicesPage() {
 
                 <div className="w-full">
                     <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-[#0f1115] z-20 border-b border-white/[0.06]">
+                        <thead className="sticky top-0 bg-background z-20 border-b border-border">
                             <tr>
                                 <th className="px-8 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Request Type</th>
                                 <th className="px-6 py-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Room #</th>
@@ -346,30 +348,30 @@ export default function ServicesPage() {
                             {reqLoading && requests.length === 0 ? (
                                 Array(6).fill(0).map((_: any, i: number) => <SkeletonRow key={i} />)
                             ) : filtered.length === 0 ? (
-                                <tr><td colSpan={6} className="py-20 text-center text-gray-500">No requests found matching filters</td></tr>
+                                <tr><td colSpan={6} className="py-20 text-center text-text-tertiary">No requests found matching filters</td></tr>
                             ) : (
                                 filtered.map((req: any) => (
-                                    <tr key={req.id} onClick={() => router.push(`/admin/services/${req.id}`)} className="group cursor-pointer border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors relative">
+                                    <tr key={req.id} onClick={() => router.push(`/admin/services/${req.id}`)} className="group cursor-pointer border-b border-border hover:bg-surface-light transition-colors relative">
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-lg", getServiceColor(req.type))}>{getServiceIcon(req.type)}</div>
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-[15px] font-bold text-white leading-tight">{req.title}</p>
+                                                        <p className="text-[15px] font-bold text-text-primary leading-tight">{req.title}</p>
                                                         {(req.title?.includes('[Cafe Order]') || req.description?.includes('[CAFE_ORDER]')) && (
                                                             <span className="inline-flex items-center gap-1 bg-[#4A9EFF]/15 text-[#4A9EFF] border border-[#4A9EFF]/30 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
                                                                 <Coffee className="w-3 h-3" /> CAFE ORDER
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{req.type.toLowerCase().replace('_', ' ')}</p>
+                                                    <p className="text-[11px] text-text-tertiary font-bold uppercase tracking-widest mt-0.5">{req.type.toLowerCase().replace('_', ' ')}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5"><span className="text-lg font-bold text-white">{req.room}</span></td>
-                                        <td className="px-6 py-5 text-[14px] font-bold text-gray-300">{req.guest}</td>
-                                        <td className="px-6 py-5"><div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold border", req.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : getSLAPrecent(req.requestTime, req.slaLimit) > 75 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-[#1db954]/10 text-[#1db954] border-[#1db954]/20')}><Clock className="w-3.5 h-3.5" />{getElapsedTime(req.requestTime)}</div></td>
-                                        <td className="px-6 py-5">{req.assignedTo ? (<div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center overflow-hidden border border-blue-500/30">{req.assignedTo.photo ? <img src={req.assignedTo.photo} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-blue-400" />}</div><span className="text-[13px] font-bold text-gray-300">{req.assignedTo.name || 'Staff Member'}</span></div>) : (<div className="flex items-center gap-3 text-gray-600"><div className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/[0.05] flex items-center justify-center"><Users className="w-4 h-4" /></div><span className="text-[13px] font-medium">Unassigned</span></div>)}</td>
+                                        <td className="px-6 py-5"><span className="text-lg font-bold text-text-primary">{req.room}</span></td>
+                                        <td className="px-6 py-5 text-[14px] font-bold text-text-secondary">{req.guest}</td>
+                                        <td className="px-6 py-5"><div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold border", req.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : getSLAPrecent(req.requestTime, req.slaLimit) > 75 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-surface/10 text-[#1db954] border-[#1db954]/20')}><Clock className="w-3.5 h-3.5" />{getElapsedTime(req.requestTime)}</div></td>
+                                        <td className="px-6 py-5">{req.assignedTo ? (<div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center overflow-hidden border border-blue-500/30">{req.assignedTo.photo ? <img src={req.assignedTo.photo} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-blue-400" />}</div><span className="text-[13px] font-bold text-text-secondary">{req.assignedTo.name || 'Staff Member'}</span></div>) : (<div className="flex items-center gap-3 text-gray-600"><div className="w-8 h-8 rounded-full bg-surface-light border border-border flex items-center justify-center"><Users className="w-4 h-4" /></div><span className="text-[13px] font-medium">Unassigned</span></div>)}</td>
                                         <td className="px-4 py-5 text-right pr-10"><span className={cn('px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-full border', getStatusStyle(req.status))}>{req.status === 'ACCEPTED' ? 'OPEN' : req.status.replace('_', ' ')}</span></td>
                                     </tr>
                                 )))}
@@ -395,9 +397,9 @@ export default function ServicesPage() {
                 <div className="space-y-6 pt-4">
                     <Select label="Service Type" value={selectedConfigType} onChange={e => setSelectedConfigType(e.target.value as ServiceType)} options={[{ value: 'FOOD_ORDER', label: 'Food Order' }, { value: 'HOUSEKEEPING', label: 'Housekeeping' }, { value: 'ROOM_SERVICE', label: 'Room Service' }, { value: 'LAUNDRY', label: 'Laundry' }, { value: 'MAINTENANCE', label: 'Maintenance' }]} />
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-widest text-gray-400">Path Steps & Durations</p><Button variant="secondary" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setConfigSteps([...configSteps, { name: '', duration: 5 }])}><Plus className="w-3 h-3 mr-1" /> Add Step</Button></div>
+                        <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-widest text-text-secondary">Path Steps & Durations</p><Button variant="secondary" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setConfigSteps([...configSteps, { name: '', duration: 5 }])}><Plus className="w-3 h-3 mr-1" /> Add Step</Button></div>
                         {configSteps.map((step, i) => (
-                            <div key={i} className="flex gap-3 items-end bg-white/[0.02] p-3 rounded-xl border border-white/[0.05]">
+                            <div key={i} className="flex gap-3 items-end bg-surface-light p-3 rounded-xl border border-border">
                                 <div className="flex-1"><Input label={i === 0 ? "Step Name" : ""} placeholder="e.g. Cooking, Staff Transfer" value={step.name} onChange={e => { const next = [...configSteps]; next[i].name = e.target.value; setConfigSteps(next); }} /></div>
                                 <div className="w-24"><Input type="number" label={i === 0 ? "Mins" : ""} value={step.duration.toString()} onChange={e => { const next = [...configSteps]; next[i].duration = parseInt(e.target.value) || 0; setConfigSteps(next); }} /></div>
                                 <button onClick={() => setConfigSteps(configSteps.filter((_, idx) => idx !== i))} className="p-2 mb-1 h-9 rounded-lg hover:bg-rose-500/10 text-rose-500"><AlertCircle className="w-4 h-4 rotate-45" /></button>
@@ -406,9 +408,9 @@ export default function ServicesPage() {
                         <div className="bg-blue-500/5 p-4 rounded-xl border border-blue-500/10 flex justify-between items-center"><span className="text-sm font-bold text-blue-400">Total SLA Duration</span><span className="text-lg font-bold text-blue-400">{configSteps.reduce((acc, s) => acc + s.duration, 0)} Minutes</span></div>
                     </div>
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-widest text-gray-400">Guest Options (App Display)</p><Button variant="secondary" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setConfigOptions([...configOptions, { label: '', icon: '✨', desc: '' }])}><Plus className="w-3 h-3 mr-1" /> Add Option</Button></div>
+                        <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-widest text-text-secondary">Guest Options (App Display)</p><Button variant="secondary" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setConfigOptions([...configOptions, { label: '', icon: '✨', desc: '' }])}><Plus className="w-3 h-3 mr-1" /> Add Option</Button></div>
                         {configOptions.map((opt, i) => (
-                            <div key={i} className="space-y-3 bg-white/[0.02] p-4 rounded-xl border border-white/[0.04]">
+                            <div key={i} className="space-y-3 bg-surface-light p-4 rounded-xl border border-border">
                                 <div className="flex gap-3">
                                     <div className="w-16"><Input label="Emoji" value={opt.icon} onChange={e => { const next = [...configOptions]; next[i].icon = e.target.value; setConfigOptions(next); }} /></div>
                                     <div className="flex-1"><Input label="Label" placeholder="e.g. Full Clean" value={opt.label} onChange={e => { const next = [...configOptions]; next[i].label = e.target.value; setConfigOptions(next); }} /></div>

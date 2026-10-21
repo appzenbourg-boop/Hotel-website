@@ -281,16 +281,16 @@ export default function SalarySlipPage() {
                 {/* Header */}
                 <div className="flex justify-between items-start mb-12 pb-8" style={{ borderBottom: '3px solid #6366f1' }}>
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white">
+                        <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-text-primary">
                             <Building2 className="w-10 h-10" />
                         </div>
                         <div>
                             <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">{payroll.staff?.property?.name || 'StayIn'}</h1>
-                            <p className="text-slate-500 font-medium">{payroll.staff?.property?.address || 'Employee Pay Slip'} • {payroll.month} {payroll.year}</p>
+                            <p className="text-text-tertiary font-medium">{payroll.staff?.property?.address || 'Employee Pay Slip'} • {payroll.month} {payroll.year}</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Receipt No.</p>
+                        <p className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-1">Receipt No.</p>
                         <p className="text-xl font-mono font-bold text-slate-700">SI-PAY-{payroll.id.substring(payroll.id.length - 6).toUpperCase()}</p>
                         {payroll.status === 'PAID' && (
                             <div className="flex items-center justify-end gap-1 mt-2 text-emerald-600">
@@ -306,30 +306,30 @@ export default function SalarySlipPage() {
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 border-b border-indigo-100 pb-1">Employee Information</h3>
                         <div className="grid grid-cols-2 gap-y-3">
-                            <span className="text-xs font-bold text-slate-400">Name</span>
+                            <span className="text-xs font-bold text-text-secondary">Name</span>
                             <span className="text-xs font-bold text-slate-800">{staffName}</span>
-                            <span className="text-xs font-bold text-slate-400">Employee ID</span>
+                            <span className="text-xs font-bold text-text-secondary">Employee ID</span>
                             <span className="text-xs font-bold text-slate-800">{payroll.staff?.employeeId || 'N/A'}</span>
-                            <span className="text-xs font-bold text-slate-400">Designation</span>
+                            <span className="text-xs font-bold text-text-secondary">Designation</span>
                             <span className="text-xs font-bold text-slate-800">{payroll.staff?.designation || 'N/A'}</span>
-                            <span className="text-xs font-bold text-slate-400">Department</span>
+                            <span className="text-xs font-bold text-text-secondary">Department</span>
                             <span className="text-xs font-bold text-slate-800">{payroll.staff?.department || 'N/A'}</span>
                         </div>
                     </div>
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 border-b border-indigo-100 pb-1">Payment Summary</h3>
                         <div className="grid grid-cols-2 gap-y-3">
-                            <span className="text-xs font-bold text-slate-400">Pay Period</span>
+                            <span className="text-xs font-bold text-text-secondary">Pay Period</span>
                             <span className="text-xs font-bold text-slate-800">{payroll.month} {payroll.year}</span>
-                            <span className="text-xs font-bold text-slate-400">Payment Status</span>
+                            <span className="text-xs font-bold text-text-secondary">Payment Status</span>
                             <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded w-fit ${payroll.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                 {payroll.status}
                             </span>
-                            <span className="text-xs font-bold text-slate-400">Issue Date</span>
+                            <span className="text-xs font-bold text-text-secondary">Issue Date</span>
                             <span className="text-xs font-bold text-slate-800">{format(new Date(payroll.updatedAt), 'dd MMM yyyy')}</span>
                             {payroll.paidAt && (
                                 <>
-                                    <span className="text-xs font-bold text-slate-400">Paid On</span>
+                                    <span className="text-xs font-bold text-text-secondary">Paid On</span>
                                     <span className="text-xs font-bold text-emerald-600">{format(new Date(payroll.paidAt), 'dd MMM yyyy')}</span>
                                 </>
                             )}
@@ -338,13 +338,13 @@ export default function SalarySlipPage() {
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500 border-b border-indigo-100 pb-1">Disbursement Details</h3>
                         <div className="grid grid-cols-2 gap-y-3">
-                            <span className="text-xs font-bold text-slate-400">Bank Name</span>
+                            <span className="text-xs font-bold text-text-secondary">Bank Name</span>
                             <span className="text-xs font-bold text-slate-800">{payroll.bankDetails?.bankName || payroll.staff?.bankName || 'N/A'}</span>
-                            <span className="text-xs font-bold text-slate-400">A/C Number</span>
+                            <span className="text-xs font-bold text-text-secondary">A/C Number</span>
                             <span className="text-xs font-bold text-slate-800 font-mono">{payroll.bankDetails?.accountNumber || payroll.staff?.accountNumber || 'N/A'}</span>
-                            <span className="text-xs font-bold text-slate-400">IFSC Code</span>
+                            <span className="text-xs font-bold text-text-secondary">IFSC Code</span>
                             <span className="text-xs font-bold text-slate-800 font-mono">{payroll.bankDetails?.ifscCode || payroll.staff?.ifscCode || 'N/A'}</span>
-                            <span className="text-xs font-bold text-slate-400">Transaction ID</span>
+                            <span className="text-xs font-bold text-text-secondary">Transaction ID</span>
                             <span className="text-xs font-bold text-indigo-600 font-mono truncate" title={payroll.transactionId || 'N/A'}>
                                 {payroll.transactionId || 'N/A'}
                             </span>
@@ -356,7 +356,7 @@ export default function SalarySlipPage() {
                 <div className="border border-slate-100 rounded-xl overflow-hidden mb-12">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-indigo-600 text-white">
+                            <tr className="bg-indigo-600 text-text-primary">
                                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest">Earnings Description</th>
                                 <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-right">Amount</th>
                             </tr>
@@ -383,8 +383,8 @@ export default function SalarySlipPage() {
                                 <td className="px-6 py-4 text-sm font-mono font-bold text-red-500 text-right">-{formatCurrency(payroll.deductions || 0)}</td>
                             </tr>
                             <tr className="bg-indigo-600">
-                                <td className="px-6 py-5 text-base font-black text-white uppercase tracking-tight">Net Payable Amount</td>
-                                <td className="px-6 py-5 text-2xl font-mono font-black text-white text-right">{formatCurrency(payroll.netSalary)}</td>
+                                <td className="px-6 py-5 text-base font-black text-text-primary uppercase tracking-tight">Net Payable Amount</td>
+                                <td className="px-6 py-5 text-2xl font-mono font-black text-text-primary text-right">{formatCurrency(payroll.netSalary)}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -393,11 +393,11 @@ export default function SalarySlipPage() {
                 {/* Footer */}
                 <div className="flex justify-between items-end border-t border-slate-100 pt-10">
                     <div className="space-y-1">
-                        <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400">Employer Signature</p>
+                        <p className="text-[8px] font-black uppercase tracking-[0.3em] text-text-secondary">Employer Signature</p>
                         <div className="w-48 h-12 border-b-2 border-slate-200 bg-slate-50/50 rounded-t-lg" />
                         <p className="text-xs font-bold text-slate-600">StayIn HR Department</p>
                     </div>
-                    <div className="text-right text-slate-400 space-y-1">
+                    <div className="text-right text-text-secondary space-y-1">
                         <p className="text-[10px] font-bold">This is a system-generated document.</p>
                         <p className="text-[10px] font-bold">No physical signature required.</p>
                         <p className="text-[10px] font-bold">Generated: {format(new Date(), 'dd MMM yyyy')}</p>
@@ -418,7 +418,7 @@ export default function SalarySlipPage() {
                     }
                     /* Ensure no background clipping on print */
                     .bg-indigo-600 { background-color: #4f46e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .text-white { color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .text-text-primary { color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 }
             `}</style>
         </div>

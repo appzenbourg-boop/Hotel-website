@@ -6,27 +6,27 @@ const prisma = new PrismaClient()
 async function main() {
     try {
         const hashedPassword = await bcrypt.hash('password123', 10)
-        const testEmail = 'hotel@test.com'
+        const testEmail = 'owner@zenbourg.com'
         
-        let user = await prisma.user.findUnique({
-            where: { email: testEmail }
+        let user = await prisma.user.upsert({
+            where: { email: testEmail },
+            update: {
+                password: hashedPassword,
+                role: 'HOTEL_ADMIN',
+                status: 'ACTIVE'
+            },
+            create: {
+                name: 'Hotel Owner',
+                email: testEmail,
+                phone: '5556667777',
+                password: hashedPassword,
+                role: 'HOTEL_ADMIN',
+                status: 'ACTIVE',
+            },
         })
+        console.log('Upserted user')
 
-        if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    name: 'Test Hotel Admin',
-                    email: testEmail,
-                    phone: '1112223333',
-                    password: hashedPassword,
-                    role: 'HOTEL_ADMIN',
-                    status: 'ACTIVE',
-                },
-            })
-            console.log('Created user')
-        }
-
-        const propName = 'Test Hotel Standard'
+        const propName = 'Zenbourg Grand Resort'
         let property = await prisma.property.findFirst({
             where: { name: propName }
         })
@@ -35,11 +35,11 @@ async function main() {
             property = await prisma.property.create({
                 data: {
                     name: propName,
-                    address: '123 Standard Way',
-                    phone: '1112223333',
+                    address: '100 Resort Blvd',
+                    phone: '5556667777',
                     email: testEmail,
                     ownerIds: [user.id],
-                    plan: 'STANDARD',
+                    plan: 'ENTERPRISE',
                 }
             })
             
@@ -48,9 +48,15 @@ async function main() {
                 data: { ownedPropertyIds: [property.id] } as any
             })
             console.log('Created property')
+        } else {
+             // Ensure user is owner of the property
+             await prisma.user.update({
+                where: { id: user.id },
+                data: { ownedPropertyIds: [property.id] } as any
+            })
         }
 
-        console.log('Test user ready: hotel@test.com / password123 / STANDARD plan')
+        console.log('Test user ready: owner@zenbourg.com / password123 / HOTEL_ADMIN / ENTERPRISE plan')
     } catch (e) {
         console.error(e)
     } finally {

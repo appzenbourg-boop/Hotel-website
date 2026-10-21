@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { performAutoAssignment } from '@/lib/service-utils'
 import { unauthorized, forbidden, badRequest, notFound, serverError } from '@/lib/api-response'
+import { invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json()
-        const { bookingId, action, paymentMethod, paidAmount, paymentNotes } = body
+        const { bookingId, action, paymentMethod, paidAmount, paymentNotes, posCharges, extraCharges, extraDiscount, guestGstNumber } = body
 
         if (!bookingId || !action) return badRequest('bookingId and action are required')
         if (!['CHECK_IN', 'CHECK_OUT', 'CANCEL', 'NO_SHOW'].includes(action)) {
@@ -60,15 +61,39 @@ export async function POST(request: NextRequest) {
             if (paymentMethod) {
                 updateData.paymentMethod = paymentMethod
             }
-            const finalTotal = existing.finalAmount ?? existing.totalAmount ?? 0
-            const newPaidAmount = paidAmount !== undefined ? parseFloat(paidAmount) : finalTotal
+
+            const pC = posCharges ? parseFloat(posCharges) : 0
+            const eC = extraCharges ? parseFloat(extraCharges) : 0
+            const eD = extraDiscount ? parseFloat(extraDiscount) : 0
+            
+            if (pC > 0 || eC > 0 || eD > 0) {
+                updateData.extraAddonsAmount = (existing.extraAddonsAmount || 0) + pC + eC
+                updateData.discountAmount = (existing.discountAmount || 0) + eD
+                const oldFinal = existing.finalAmount ?? existing.totalAmount ?? 0
+                updateData.finalAmount = Math.max(0, oldFinal + pC + eC - eD)
+                updateData.totalAmount = (existing.totalAmount || 0) + pC + eC
+            }
+
+            const currentFinalTotal = updateData.finalAmount !== undefined ? updateData.finalAmount : (existing.finalAmount ?? existing.totalAmount ?? 0)
+            const newPaidAmount = paidAmount !== undefined ? parseFloat(paidAmount) : currentFinalTotal
             updateData.paidAmount = newPaidAmount
-            updateData.paymentStatus = newPaidAmount >= finalTotal ? 'PAID' : newPaidAmount > 0 ? 'PARTIAL' : existing.paymentStatus
+            updateData.paymentStatus = newPaidAmount >= currentFinalTotal ? 'PAID' : newPaidAmount > 0 ? 'PARTIAL' : existing.paymentStatus
 
             if (paymentNotes && paymentNotes.trim() !== '') {
                 const notePrefix = paymentMethod === 'CORPORATE_CLEARANCE' ? '[Corporate Clearance]' : `[${paymentMethod || 'Payment'}]`
                 const fullNote = `${notePrefix} ${paymentNotes.trim()}`
                 updateData.notes = existing.notes ? `${existing.notes} | ${fullNote}` : fullNote
+            }
+
+            if (guestGstNumber !== undefined) {
+                const formattedGst = typeof guestGstNumber === 'string' ? guestGstNumber.trim().toUpperCase() : ''
+                updateData.guestGstNumber = formattedGst || null
+                if (formattedGst && existing.guestId) {
+                    await prisma.guest.update({
+                        where: { id: existing.guestId },
+                        data: { gstNumber: formattedGst }
+                    }).catch(() => {})
+                }
             }
         }
 
@@ -119,6 +144,8 @@ export async function POST(request: NextRequest) {
 
             performAutoAssignment(existing.propertyId, 0).catch(() => {})
         }
+
+        await invalidateRoomAndDashboardCaches(existing.propertyId)
 
         return NextResponse.json({ success: true, data: booking })
     } catch (error) {

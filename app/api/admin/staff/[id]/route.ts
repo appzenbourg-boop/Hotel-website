@@ -79,7 +79,7 @@ export async function PATCH(
         const body = await request.json()
         const { 
             name, email, phone, designation, department, 
-            baseSalary, dateOfJoining, employeeId,
+            baseSalary, allowance, dateOfJoining, employeeId,
             emergencyContactName, emergencyContactPhone, address,
             contractType, workShift, managerName, status,
             annualLeaveBalance, sickLeaveBalance, casualLeaveBalance,
@@ -110,12 +110,13 @@ export async function PATCH(
                     ...(hashedPassword && { password: hashedPassword })
                 }
             }),
-            prisma.staff.update({
+            (prisma.staff as any).update({
                 where: { id: params.id },
                 data: {
                     ...(designation && { designation }),
                     ...(department && { department }),
-                    ...(baseSalary && { baseSalary: parseFloat(baseSalary) }),
+                    ...(baseSalary !== undefined && { baseSalary: parseFloat(baseSalary) }),
+                    ...(allowance !== undefined && { allowance: parseFloat(allowance) }),
                     ...(dateOfJoining && { dateOfJoining: new Date(dateOfJoining) }),
                     ...(employeeId && { employeeId }),
                     ...(emergencyContactName && { emergencyContactName }),

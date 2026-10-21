@@ -10,6 +10,8 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import Avatar from '@/components/common/Avatar'
+import ImageLightboxModal, { LightboxImage } from '@/components/common/ImageLightboxModal'
+import { Maximize2, Eye, ZoomIn } from 'lucide-react'
 
 // ---- helpers ----
 function getInitials(name: string) {
@@ -18,12 +20,12 @@ function getInitials(name: string) {
 
 function getAvatarColor(name: string) {
     const colors = [
-        { bg: 'bg-[#4A9EFF]', text: 'text-white' },
-        { bg: 'bg-[#1db954]', text: 'text-white' },
-        { bg: 'bg-[#805ad5]', text: 'text-white' },
+        { bg: 'bg-[#4A9EFF]', text: 'text-text-primary' },
+        { bg: 'bg-surface', text: 'text-text-primary' },
+        { bg: 'bg-[#805ad5]', text: 'text-text-primary' },
         { bg: 'bg-[#d4aa00]', text: 'text-black' },
-        { bg: 'bg-[#e53e3e]', text: 'text-white' },
-        { bg: 'bg-[#ed8936]', text: 'text-white' },
+        { bg: 'bg-[#e53e3e]', text: 'text-text-primary' },
+        { bg: 'bg-[#ed8936]', text: 'text-text-primary' },
     ]
     return colors[name.charCodeAt(0) % colors.length]
 }
@@ -39,12 +41,12 @@ const SOURCE_LABELS: Record<string, string> = {
     OTHER: 'Other' }
 
 const CHECKIN_STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
-    PENDING:    { label: 'Pending',   color: 'text-gray-400',  dot: 'bg-gray-500' },
+    PENDING:    { label: 'Pending',   color: 'text-text-secondary',  dot: 'bg-gray-500' },
     LINK_SENT:  { label: 'Sent',      color: 'text-[#4A9EFF]', dot: 'bg-[#4A9EFF]' },
     LINK_OPENED:{ label: 'Opened',    color: 'text-[#d4aa00]', dot: 'bg-[#d4aa00]' },
-    COMPLETED:  { label: 'Completed', color: 'text-[#1db954]', dot: 'bg-[#1db954]' },
-    VERIFIED:   { label: 'Verified',  color: 'text-[#1db954]', dot: 'bg-[#1db954]' },
-    NO_BOOKING: { label: 'No Booking',color: 'text-gray-500',  dot: 'bg-gray-600' } }
+    COMPLETED:  { label: 'Awaiting Review', color: 'text-[#ed8936]', dot: 'bg-[#ed8936]' },
+    VERIFIED:   { label: 'Verified',  color: 'text-[#1db954]', dot: 'bg-surface' },
+    NO_BOOKING: { label: 'No Booking',color: 'text-text-tertiary',  dot: 'bg-gray-600' } }
 
 export default function CheckInManagerPage() {
     const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all')
@@ -58,6 +60,7 @@ export default function CheckInManagerPage() {
     const [isSending, setIsSending] = useState(false)
     const [successMsg, setSuccessMsg] = useState<string | null>(null)
     const [uploading, setUploading] = useState<'front' | 'back' | null>(null)
+    const [lightboxState, setLightboxState] = useState<{ isOpen: boolean; initialIndex: number }>({ isOpen: false, initialIndex: 0 })
     const frontRef = useRef<HTMLInputElement>(null)
     const backRef = useRef<HTMLInputElement>(null)
 
@@ -82,12 +85,7 @@ export default function CheckInManagerPage() {
         }
     }, [filter])
 
-    // Auto-select first guest if none is active
-    useEffect(() => {
-        if (bookings.length > 0 && !activeGuest) {
-            setActiveGuest(bookings[0])
-        }
-    }, [bookings, activeGuest])
+    // Auto-select removed to allow the panel to be closed and stay hidden until a guest is explicitly clicked
 
 
     useEffect(() => { 
@@ -250,11 +248,11 @@ export default function CheckInManagerPage() {
     }
 
     return (
-        <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-[#101922] overflow-hidden">
+        <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-surface overflow-hidden">
 
             {/* ===== BREADCRUMB ===== */}
             <div className="shrink-0 flex items-center gap-2 px-5 pt-4 pb-1">
-                <span className="text-[12px] text-gray-500">Operations</span>
+                <span className="text-[12px] text-text-tertiary">Operations</span>
                 <ChevronRight className="w-3 h-3 text-gray-600" />
                 <span className="text-[12px] text-[#4A9EFF]">Front Desk</span>
             </div>
@@ -262,13 +260,13 @@ export default function CheckInManagerPage() {
             {/* ===== STAT CARDS ===== */}
             <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-4 px-5 py-3">
                 {/* Expected Today */}
-                <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5 relative overflow-hidden">
+                <div className="bg-surface border border-border rounded-xl p-5 relative overflow-hidden">
                     <div className="absolute right-4 top-4 opacity-10">
                         <Plane className="w-10 h-10 text-[#4A9EFF]" />
                     </div>
-                    <p className="text-[11px] text-gray-500 font-medium mb-2">Expected Today</p>
-                    <p className="text-4xl font-bold text-white">{stats.expected}</p>
-                    <p className="text-[11px] text-gray-500 mt-1">Today&apos;s arrivals</p>
+                    <p className="text-[11px] text-text-tertiary font-medium mb-2">Expected Today</p>
+                    <p className="text-4xl font-bold text-text-primary">{stats.expected}</p>
+                    <p className="text-[11px] text-text-tertiary mt-1">Today&apos;s arrivals</p>
                     <div className="mt-3 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                         <div
                             className="h-full bg-[#4A9EFF] rounded-full"
@@ -278,12 +276,12 @@ export default function CheckInManagerPage() {
                 </div>
 
                 {/* Completed Online */}
-                <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5 relative overflow-hidden">
+                <div className="bg-surface border border-border rounded-xl p-5 relative overflow-hidden">
                     <div className="absolute right-4 top-4 opacity-10">
                         <CheckCheck className="w-10 h-10 text-[#1db954]" />
                     </div>
-                    <p className="text-[11px] text-gray-500 font-medium mb-2">Currently In-House</p>
-                    <p className="text-4xl font-bold text-white">{stats.completed}</p>
+                    <p className="text-[11px] text-text-tertiary font-medium mb-2">Currently In-House</p>
+                    <p className="text-4xl font-bold text-text-primary">{stats.completed}</p>
                     <p className={cn(
                         "text-[11px] mt-1 flex items-center gap-1",
                         stats.monthlyChange >= 0 ? "text-[#1db954]" : "text-[#e53e3e]"
@@ -293,19 +291,19 @@ export default function CheckInManagerPage() {
                     </p>
                     <div className="mt-3 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                         <div 
-                            className="h-full bg-[#1db954] rounded-full transition-all duration-1000" 
+                            className="h-full bg-surface rounded-full transition-all duration-1000" 
                             style={{ width: stats.monthlyAverage > 0 ? `${(stats.completed / stats.monthlyAverage) * 100}%` : '75%' }} 
                         />
                     </div>
                 </div>
 
                 {/* Pending Verification */}
-                <div className="bg-[#233648] border border-white/[0.07] rounded-xl p-5 relative overflow-hidden">
+                <div className="bg-surface border border-border rounded-xl p-5 relative overflow-hidden">
                     <div className="absolute right-4 top-4 opacity-10">
                         <FileCheck className="w-10 h-10 text-[#d4aa00]" />
                     </div>
-                    <p className="text-[11px] text-gray-500 font-medium mb-2">Pending Verification</p>
-                    <p className="text-4xl font-bold text-white">{stats.verificationPending}</p>
+                    <p className="text-[11px] text-text-tertiary font-medium mb-2">Pending Verification</p>
+                    <p className="text-4xl font-bold text-text-primary">{stats.verificationPending}</p>
                     <p className="text-[11px] text-[#d4aa00] mt-1">Requires attention</p>
                     <div className="mt-3 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                         <div className="h-full bg-[#d4aa00] rounded-full"
@@ -319,18 +317,18 @@ export default function CheckInManagerPage() {
             <div className="flex-1 flex flex-col lg:flex-row gap-4 px-5 pb-5 overflow-hidden min-h-0">
 
                 {/* LEFT — Guest List */}
-                <div className="flex-1 flex flex-col bg-[#233648] border border-white/[0.07] rounded-xl overflow-hidden min-w-0">
+                <div className="flex-1 flex flex-col bg-surface border border-border rounded-xl overflow-hidden min-w-0">
 
                     {/* Tabs + actions */}
                     <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-0">
-                        <div className="flex bg-[#182433] rounded-lg p-0.5">
+                        <div className="flex bg-surface rounded-lg p-0.5">
                             {(['all', 'pending', 'completed'] as const).map(tab => (
                                 <button
                                     key={tab}
                                     onClick={() => setFilter(tab)}
                                     className={cn(
                                         'px-4 py-1.5 text-[12px] font-medium rounded-md capitalize transition-all',
-                                        filter === tab ? 'bg-white text-black' : 'text-gray-400 hover:text-white'
+                                        filter === tab ? 'bg-white text-black' : 'text-text-secondary hover:text-text-primary'
                                     )}
                                 >
                                     {tab === 'all' ? 'All Guests' : tab === 'pending' ? 'Pending Check-in' : 'Checked In'}
@@ -340,18 +338,18 @@ export default function CheckInManagerPage() {
 
                         <div className="flex items-center gap-2">
                             {selected.size > 0 && (
-                                <span className="text-[12px] text-gray-400 font-medium">{selected.size} Selected</span>
+                                <span className="text-[12px] text-text-secondary font-medium">{selected.size} Selected</span>
                             )}
                             <button
                                 onClick={() => handleWhatsApp()}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-[#25D366] text-[11px] font-semibold rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface/10 hover:bg-surface/20 border border-[#25D366]/30 text-[#25D366] text-[11px] font-semibold rounded-lg transition-colors"
                             >
                                 <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
                             </button>
                             <button
                                 onClick={() => handleSendLink()}
                                 disabled={isSending}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4A9EFF] hover:bg-surface text-text-primary text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50"
                             >
                                 <Send className="w-3.5 h-3.5" />
                                 {isSending ? 'Sending...' : 'Send Link'}
@@ -361,13 +359,13 @@ export default function CheckInManagerPage() {
                                 className="p-1.5 hover:bg-white/[0.06] rounded-lg transition-colors"
                                 title="Refresh"
                             >
-                                <RefreshCw className="w-3.5 h-3.5 text-gray-500" />
+                                <RefreshCw className="w-3.5 h-3.5 text-text-tertiary" />
                             </button>
                         </div>
                     </div>
 
                     {/* Table header */}
-                    <div className="shrink-0 grid grid-cols-[2rem_1fr_1fr_1fr_1fr] gap-3 px-4 py-2.5 border-b border-white/[0.06] mt-3">
+                    <div className="shrink-0 grid grid-cols-[2rem_1fr_1fr_1fr_1fr] gap-3 px-4 py-2.5 border-b border-border mt-3">
                         <div className="flex items-center">
                             <input
                                 type="checkbox"
@@ -376,10 +374,10 @@ export default function CheckInManagerPage() {
                                 className="w-3.5 h-3.5 accent-[#4A9EFF] cursor-pointer"
                             />
                         </div>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Guest & Res ID</span>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Arrival</span>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Channel</span>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Link Status</span>
+                        <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Guest & Res ID</span>
+                        <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Arrival</span>
+                        <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Channel</span>
+                        <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Link Status</span>
                     </div>
 
                     {/* Table rows */}
@@ -391,7 +389,7 @@ export default function CheckInManagerPage() {
                         ) : filtered.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-40 gap-2">
                                 <User className="w-8 h-8 text-gray-600" />
-                                <p className="text-[12px] text-gray-500">No guests found</p>
+                                <p className="text-[12px] text-text-tertiary">No guests found</p>
                             </div>
                         ) : (
                             filtered.map(booking => {
@@ -405,7 +403,7 @@ export default function CheckInManagerPage() {
                                         key={booking.id}
                                         onClick={() => setActiveGuest(booking)}
                                         className={cn(
-                                            'grid grid-cols-[2rem_1fr_1fr_1fr_1fr] gap-3 px-4 py-3.5 border-b border-white/[0.04] cursor-pointer transition-colors hover:bg-white/[0.03]',
+                                            'grid grid-cols-[2rem_1fr_1fr_1fr_1fr] gap-3 px-4 py-3.5 border-b border-border cursor-pointer transition-colors hover:bg-surface-light',
                                             isActive && 'bg-[#4A9EFF]/5 border-l-2 border-l-[#4A9EFF]'
                                         )}
                                     >
@@ -423,21 +421,21 @@ export default function CheckInManagerPage() {
                                         <div className="flex items-center gap-2.5 min-w-0">
                                             <Avatar name={booking.guestName} size="sm" />
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-white truncate">{booking.guestName}</p>
-                                                <p className="text-[10px] text-gray-500">{booking.resId}</p>
+                                                <p className="text-[13px] font-semibold text-text-primary truncate">{booking.guestName}</p>
+                                                <p className="text-[10px] text-text-tertiary">{booking.resId}</p>
                                             </div>
                                         </div>
 
                                         {/* Arrival */}
                                         <div className="flex flex-col justify-center">
-                                            <p className="text-[12px] text-white">
+                                            <p className="text-[12px] text-text-primary">
                                                 {formatArrival(booking)}
                                             </p>
                                         </div>
 
                                         {/* Channel */}
                                         <div className="flex items-center">
-                                            <span className="px-2 py-1 bg-[#182433] text-[11px] text-gray-300 rounded-md font-medium border border-white/[0.06]">
+                                            <span className="px-2 py-1 bg-surface text-[11px] text-text-secondary rounded-md font-medium border border-border">
                                                 {SOURCE_LABELS[booking.source] || booking.source}
                                             </span>
                                         </div>
@@ -468,15 +466,15 @@ export default function CheckInManagerPage() {
                 {/* RIGHT — Verification Panel */}
                 <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-3">
                     {activeGuest ? (
-                        <div className="flex-1 bg-[#233648] border border-white/[0.07] rounded-xl flex flex-col overflow-hidden">
+                        <div className="flex-1 bg-surface border border-border rounded-xl flex flex-col overflow-hidden">
                             {/* Panel header */}
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
-                                <h3 className="text-[13px] font-semibold text-white">Verification Needed</h3>
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+                                <h3 className="text-[13px] font-semibold text-text-primary">Verification Needed</h3>
                                 <button
                                     onClick={() => setActiveGuest(null)}
                                     className="p-1 hover:bg-white/[0.06] rounded-lg transition-colors"
                                 >
-                                    <X className="w-4 h-4 text-gray-500" />
+                                    <X className="w-4 h-4 text-text-tertiary" />
                                 </button>
                             </div>
 
@@ -485,12 +483,12 @@ export default function CheckInManagerPage() {
                                 <div className="flex items-center gap-3">
                                     <Avatar name={activeGuest.guestName} size="lg" />
                                     <div>
-                                        <p className="text-[15px] font-bold text-white">{activeGuest.guestName}</p>
+                                        <p className="text-[15px] font-bold text-text-primary">{activeGuest.guestName}</p>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className="px-2 py-0.5 bg-[#182433] text-[11px] text-gray-300 rounded-md border border-white/[0.06]">
+                                            <span className="px-2 py-0.5 bg-surface text-[11px] text-text-secondary rounded-md border border-border">
                                                 {activeGuest.roomType || 'Standard Room'}
                                             </span>
-                                            <span className="text-[11px] text-gray-500">
+                                            <span className="text-[11px] text-text-tertiary">
                                                 {SOURCE_LABELS[activeGuest.source] || activeGuest.source}
                                             </span>
                                         </div>
@@ -499,28 +497,28 @@ export default function CheckInManagerPage() {
 
                                 {/* Booking details */}
                                 <div className="grid grid-cols-2 gap-2">
-                                    <div className="p-3 bg-[#182433] rounded-lg">
-                                        <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Room</p>
-                                        <p className="text-[13px] font-semibold text-white">{activeGuest.roomNumber}</p>
+                                    <div className="p-3 bg-surface rounded-lg">
+                                        <p className="text-[9px] text-text-tertiary uppercase font-bold mb-1">Room</p>
+                                        <p className="text-[13px] font-semibold text-text-primary">{activeGuest.roomNumber}</p>
                                     </div>
-                                    <div className="p-3 bg-[#182433] rounded-lg">
-                                        <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Res ID</p>
-                                        <p className="text-[13px] font-semibold text-white">{activeGuest.resId}</p>
+                                    <div className="p-3 bg-surface rounded-lg">
+                                        <p className="text-[9px] text-text-tertiary uppercase font-bold mb-1">Res ID</p>
+                                        <p className="text-[13px] font-semibold text-text-primary">{activeGuest.resId}</p>
                                     </div>
-                                    <div className="p-3 bg-[#182433] rounded-lg">
-                                        <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Check-in</p>
-                                        <p className="text-[12px] font-medium text-white">{format(new Date(activeGuest.checkIn), 'dd MMM yyyy')}</p>
+                                    <div className="p-3 bg-surface rounded-lg">
+                                        <p className="text-[9px] text-text-tertiary uppercase font-bold mb-1">Check-in</p>
+                                        <p className="text-[12px] font-medium text-text-primary">{format(new Date(activeGuest.checkIn), 'dd MMM yyyy')}</p>
                                     </div>
-                                    <div className="p-3 bg-[#182433] rounded-lg">
-                                        <p className="text-[9px] text-gray-500 uppercase font-bold mb-1">Check-out</p>
-                                        <p className="text-[12px] font-medium text-white">{format(new Date(activeGuest.checkOut), 'dd MMM yyyy')}</p>
+                                    <div className="p-3 bg-surface rounded-lg">
+                                        <p className="text-[9px] text-text-tertiary uppercase font-bold mb-1">Check-out</p>
+                                        <p className="text-[12px] font-medium text-text-primary">{format(new Date(activeGuest.checkOut), 'dd MMM yyyy')}</p>
                                     </div>
                                 </div>
 
                                 {/* ID Document — CLICKABLE UPLOAD */}
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="text-[12px] font-semibold text-white">Passport / ID Upload</p>
+                                        <p className="text-[12px] font-semibold text-text-primary">Passport / ID Upload</p>
                                         {(activeGuest.idDocumentFront || activeGuest.idDocumentBack) ? (
                                             <span className="flex items-center gap-1 text-[10px] text-[#1db954] font-medium">
                                                 <CheckCircle2 className="w-3 h-3" /> Uploaded
@@ -534,26 +532,58 @@ export default function CheckInManagerPage() {
 
                                     {/* Front Doc */}
                                     <div
-                                        onClick={() => frontRef.current?.click()}
-                                        className="w-full h-36 bg-[#182433] rounded-xl flex items-center justify-center overflow-hidden border border-white/[0.06] hover:border-[#4A9EFF]/40 cursor-pointer transition-colors group relative mb-2"
+                                        onClick={() => {
+                                            if (activeGuest.idDocumentFront) {
+                                                setLightboxState({ isOpen: true, initialIndex: 0 })
+                                            } else {
+                                                frontRef.current?.click()
+                                            }
+                                        }}
+                                        className="w-full h-40 bg-surface rounded-xl flex items-center justify-center overflow-hidden border border-border hover:border-[#4A9EFF]/60 cursor-pointer transition-all group relative mb-2 shadow-sm"
                                     >
                                         {uploading === 'front' ? (
                                             <div className="flex flex-col items-center gap-2">
                                                 <Loader2 className="w-5 h-5 text-[#4A9EFF] animate-spin" />
-                                                <span className="text-[10px] text-gray-400">Uploading...</span>
+                                                <span className="text-[10px] text-text-secondary">Uploading...</span>
                                             </div>
                                         ) : activeGuest.idDocumentFront ? (
                                             <>
-                                                <img src={activeGuest.idDocumentFront} alt="ID Front" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                                                    <Upload className="w-5 h-5 text-white" />
-                                                    <span className="text-[10px] text-white">Replace Front</span>
+                                                <img src={activeGuest.idDocumentFront} alt="ID Front" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                {/* Top-right View Large badge */}
+                                                <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20 flex items-center gap-1.5 text-[10px] font-bold text-white shadow-xl pointer-events-none">
+                                                    <Maximize2 className="w-3 h-3 text-[#4A9EFF]" />
+                                                    <span>View Large</span>
+                                                </div>
+                                                {/* Hover actions overlay */}
+                                                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setLightboxState({ isOpen: true, initialIndex: 0 })
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-3 py-2 bg-[#4A9EFF] hover:bg-[#3d8ce6] text-white text-xs font-bold rounded-xl shadow-lg transition-transform active:scale-95"
+                                                    >
+                                                        <Maximize2 className="w-3.5 h-3.5" />
+                                                        <span>View Large</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            frontRef.current?.click()
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl border border-white/20 backdrop-blur-md shadow-lg transition-transform active:scale-95"
+                                                    >
+                                                        <Upload className="w-3.5 h-3.5" />
+                                                        <span>Replace</span>
+                                                    </button>
                                                 </div>
                                             </>
                                         ) : (
                                             <div className="flex flex-col items-center gap-2 text-center px-4">
                                                 <Upload className="w-6 h-6 text-gray-600 group-hover:text-[#4A9EFF] transition-colors" />
-                                                <p className="text-[11px] text-gray-500 group-hover:text-gray-300 transition-colors">Upload ID Front</p>
+                                                <p className="text-[11px] text-text-tertiary group-hover:text-text-secondary transition-colors font-medium">Upload ID Front</p>
                                                 <p className="text-[9px] text-gray-600">Click to upload passport / Aadhaar / License</p>
                                             </div>
                                         )}
@@ -563,26 +593,64 @@ export default function CheckInManagerPage() {
 
                                     {/* Back Doc */}
                                     <div
-                                        onClick={() => backRef.current?.click()}
-                                        className="w-full h-24 bg-[#182433] rounded-xl flex items-center justify-center overflow-hidden border border-white/[0.06] hover:border-[#4A9EFF]/40 cursor-pointer transition-colors group relative"
+                                        onClick={() => {
+                                            if (activeGuest.idDocumentBack) {
+                                                setLightboxState({
+                                                    isOpen: true,
+                                                    initialIndex: activeGuest.idDocumentFront ? 1 : 0
+                                                })
+                                            } else {
+                                                backRef.current?.click()
+                                            }
+                                        }}
+                                        className="w-full h-28 bg-surface rounded-xl flex items-center justify-center overflow-hidden border border-border hover:border-[#4A9EFF]/60 cursor-pointer transition-all group relative shadow-sm"
                                     >
                                         {uploading === 'back' ? (
                                             <div className="flex flex-col items-center gap-2">
-                                                <Loader2 className="w-4 h-4 text-[#4A9EFF] animate-spin" />
-                                                <span className="text-[10px] text-gray-400">Uploading...</span>
+                                                <Loader2 className="w-5 h-5 text-[#4A9EFF] animate-spin" />
+                                                <span className="text-[10px] text-text-secondary">Uploading...</span>
                                             </div>
                                         ) : activeGuest.idDocumentBack ? (
                                             <>
-                                                <img src={activeGuest.idDocumentBack} alt="ID Back" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                                                    <Upload className="w-4 h-4 text-white" />
-                                                    <span className="text-[10px] text-white">Replace Back</span>
+                                                <img src={activeGuest.idDocumentBack} alt="ID Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                {/* Top-right View Large badge */}
+                                                <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-white/20 flex items-center gap-1.5 text-[10px] font-bold text-white shadow-xl pointer-events-none">
+                                                    <Maximize2 className="w-3 h-3 text-[#4A9EFF]" />
+                                                    <span>View Large</span>
+                                                </div>
+                                                {/* Hover actions overlay */}
+                                                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setLightboxState({
+                                                                isOpen: true,
+                                                                initialIndex: activeGuest.idDocumentFront ? 1 : 0
+                                                            })
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-3 py-2 bg-[#4A9EFF] hover:bg-[#3d8ce6] text-white text-xs font-bold rounded-xl shadow-lg transition-transform active:scale-95"
+                                                    >
+                                                        <Maximize2 className="w-3.5 h-3.5" />
+                                                        <span>View Large</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            backRef.current?.click()
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-bold rounded-xl border border-white/20 backdrop-blur-md shadow-lg transition-transform active:scale-95"
+                                                    >
+                                                        <Upload className="w-3.5 h-3.5" />
+                                                        <span>Replace</span>
+                                                    </button>
                                                 </div>
                                             </>
                                         ) : (
                                             <div className="flex items-center gap-2 text-center px-4">
                                                 <Upload className="w-4 h-4 text-gray-600 group-hover:text-[#4A9EFF] transition-colors" />
-                                                <span className="text-[11px] text-gray-500 group-hover:text-gray-300 transition-colors">Upload ID Back (optional)</span>
+                                                <span className="text-[11px] text-text-tertiary group-hover:text-text-secondary transition-colors font-medium">Upload ID Back (optional)</span>
                                             </div>
                                         )}
                                     </div>
@@ -594,7 +662,7 @@ export default function CheckInManagerPage() {
                                         activeGuest.checkInStatus !== 'VERIFIED' && (
                                             <button
                                                 onClick={handleMarkVerified}
-                                                className="mt-3 w-full flex items-center justify-center gap-2 py-2 bg-[#1db954]/10 hover:bg-[#1db954]/20 text-[#1db954] text-[11px] font-semibold rounded-lg border border-[#1db954]/20 transition-colors"
+                                                className="mt-3 w-full flex items-center justify-center gap-2 py-2 bg-surface/10 hover:bg-surface/20 text-[#1db954] text-[11px] font-semibold rounded-lg border border-[#1db954]/20 transition-colors"
                                             >
                                                 <FileCheck className="w-3.5 h-3.5" /> Mark as Verified
                                             </button>
@@ -606,7 +674,7 @@ export default function CheckInManagerPage() {
                                     )}
 
                                     {activeGuest.idType && (
-                                        <p className="text-[10px] text-gray-500 mt-1 ml-1">
+                                        <p className="text-[10px] text-text-tertiary mt-1 ml-1">
                                             {activeGuest.idType} · {activeGuest.idNumber || '—'}
                                         </p>
                                     )}
@@ -614,8 +682,8 @@ export default function CheckInManagerPage() {
 
                                 {/* Digital Signature placeholder */}
                                 <div>
-                                    <p className="text-[12px] font-semibold text-white mb-2">Digital Signature</p>
-                                    <div className="w-full h-20 bg-[#182433] rounded-xl flex items-center justify-center border border-white/[0.06] overflow-hidden">
+                                    <p className="text-[12px] font-semibold text-text-primary mb-2">Digital Signature</p>
+                                    <div className="w-full h-20 bg-surface rounded-xl flex items-center justify-center border border-border overflow-hidden">
                                         {activeGuest.checkInStatus === 'COMPLETED' || activeGuest.checkInStatus === 'VERIFIED' ? (
                                             <div className="flex items-center gap-2 text-[#1db954]">
                                                 <CheckCircle2 className="w-5 h-5" />
@@ -629,24 +697,24 @@ export default function CheckInManagerPage() {
 
                                 {/* Guest contact */}
                                 {activeGuest.guestPhone && (
-                                    <div className="flex items-center justify-between p-3 bg-[#182433] rounded-lg">
+                                    <div className="flex items-center justify-between p-3 bg-surface rounded-lg">
                                         <div className="flex-1">
-                                            <p className="text-[9px] text-gray-500 uppercase font-bold mb-0.5">Contact</p>
-                                            <p className="text-[12px] text-white truncate mr-2">{activeGuest.guestPhone}</p>
+                                            <p className="text-[9px] text-text-tertiary uppercase font-bold mb-0.5">Contact</p>
+                                            <p className="text-[12px] text-text-primary truncate mr-2">{activeGuest.guestPhone}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => handleWhatsApp([activeGuest.id])}
-                                                className="p-1.5 hover:bg-[#25D366]/10 text-[#25D366] rounded-lg border border-white/[0.05] transition-colors"
+                                                className="p-1.5 hover:bg-surface/10 text-[#25D366] rounded-lg border border-border transition-colors"
                                                 title="Send WhatsApp"
                                             >
                                                 <MessageSquare className="w-3.5 h-3.5" />
                                             </button>
                                             <button
                                                 onClick={() => handleSendLink([activeGuest.id])}
-                                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#4A9EFF]/10 hover:bg-[#4A9EFF]/20 text-[#4A9EFF] text-[11px] font-medium rounded-lg border border-[#4A9EFF]/20 transition-colors"
+                                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface/10 hover:bg-surface/20 text-text-secondary text-[11px] font-medium rounded-lg border border-border transition-colors"
                                             >
-                                                <Send className="w-3 h-3" /> Link
+                                                <Send className="w-3 h-3" /> Mark Sent
                                             </button>
                                         </div>
                                     </div>
@@ -654,18 +722,18 @@ export default function CheckInManagerPage() {
                             </div>
 
                             {/* Action buttons */}
-                            <div className="shrink-0 p-4 border-t border-white/[0.06] space-y-2">
+                            <div className="shrink-0 p-4 border-t border-border space-y-2">
                                 {activeGuest.status === 'RESERVED' ? (
                                     <button
                                         disabled={isApproving}
                                         onClick={handleApprove}
-                                        className="w-full flex items-center justify-center gap-2 py-3 bg-[#1db954] hover:bg-[#17a349] text-white text-[13px] font-bold rounded-xl transition-colors disabled:opacity-50"
+                                        className="w-full flex items-center justify-center gap-2 py-3 bg-surface hover:bg-surface text-text-primary text-[13px] font-bold rounded-xl transition-colors disabled:opacity-50"
                                     >
                                         <CheckCircle2 className="w-4 h-4" />
                                         {isApproving ? 'Approving...' : 'Approve Check-in'}
                                     </button>
                                 ) : (
-                                    <div className="w-full flex items-center justify-center gap-2 py-3 bg-[#1db954]/10 text-[#1db954] text-[13px] font-bold rounded-xl border border-[#1db954]/20">
+                                    <div className="w-full flex items-center justify-center gap-2 py-3 bg-surface/10 text-[#1db954] text-[13px] font-bold rounded-xl border border-[#1db954]/20">
                                         <CheckCircle2 className="w-4 h-4" />
                                         Already Checked In
                                     </div>
@@ -675,7 +743,7 @@ export default function CheckInManagerPage() {
                                     <button
                                         onClick={() => handleSendLink([activeGuest.id])}
                                         disabled={isSending}
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 text-[12px] font-medium rounded-xl border border-white/[0.06] transition-colors"
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-surface-light hover:bg-white/[0.08] text-text-secondary text-[12px] font-medium rounded-xl border border-border transition-colors"
                                     >
                                         <Send className="w-3.5 h-3.5" />
                                         {isSending ? 'Sending...' : 'Send Verification Link'}
@@ -684,11 +752,11 @@ export default function CheckInManagerPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 bg-[#233648] border border-white/[0.07] rounded-xl flex flex-col items-center justify-center gap-3 p-8">
-                            <div className="w-12 h-12 rounded-full bg-[#182433] flex items-center justify-center">
+                        <div className="flex-1 bg-surface border border-border rounded-xl flex flex-col items-center justify-center gap-3 p-8">
+                            <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center">
                                 <User className="w-6 h-6 text-gray-600" />
                             </div>
-                            <p className="text-[13px] font-medium text-gray-400 text-center">
+                            <p className="text-[13px] font-medium text-text-secondary text-center">
                                 Select a guest from the list to view their verification details
                             </p>
                         </div>
@@ -696,17 +764,37 @@ export default function CheckInManagerPage() {
                 </div>
             </div>
 
+            {/* ===== LARGE PHOTO LIGHTBOX MODAL ===== */}
+            {activeGuest && (
+                <ImageLightboxModal
+                    isOpen={lightboxState.isOpen}
+                    onClose={() => setLightboxState({ isOpen: false, initialIndex: 0 })}
+                    images={[
+                        activeGuest.idDocumentFront ? { url: activeGuest.idDocumentFront, label: 'Front Document' } : null,
+                        activeGuest.idDocumentBack ? { url: activeGuest.idDocumentBack, label: 'Back Document' } : null,
+                    ].filter(Boolean) as LightboxImage[]}
+                    initialIndex={lightboxState.initialIndex}
+                    title={activeGuest.idType ? `${activeGuest.idType} Verification` : 'Identity Document'}
+                    subtitle={`Guest: ${activeGuest.guestName} • Res ID: #${activeGuest.resId}`}
+                    onReplace={(idx) => {
+                        setLightboxState({ isOpen: false, initialIndex: 0 })
+                        if (idx === 0 && activeGuest.idDocumentFront) frontRef.current?.click()
+                        else backRef.current?.click()
+                    }}
+                />
+            )}
+
             {/* ===== SUCCESS TOAST STRIP ===== */}
             {successMsg && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-3.5 bg-[#233648] border border-[#1db954]/30 rounded-2xl shadow-2xl z-50 animate-fade-in max-w-md">
-                    <div className="w-8 h-8 rounded-full bg-[#1db954]/10 flex items-center justify-center shrink-0">
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-3.5 bg-surface border border-[#1db954]/30 rounded-2xl shadow-2xl z-50 animate-fade-in max-w-md">
+                    <div className="w-8 h-8 rounded-full bg-surface/10 flex items-center justify-center shrink-0">
                         <CheckCircle2 className="w-4 h-4 text-[#1db954]" />
                     </div>
                     <div>
-                        <p className="text-[13px] font-bold text-white">Check-in Completed</p>
-                        <p className="text-[11px] text-gray-400">{successMsg}</p>
+                        <p className="text-[13px] font-bold text-text-primary">Check-in Completed</p>
+                        <p className="text-[11px] text-text-secondary">{successMsg}</p>
                     </div>
-                    <button onClick={() => setSuccessMsg(null)} className="ml-2 text-gray-500 hover:text-white">
+                    <button onClick={() => setSuccessMsg(null)} className="ml-2 text-text-tertiary hover:text-text-primary">
                         <X className="w-4 h-4" />
                     </button>
                 </div>

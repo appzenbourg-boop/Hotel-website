@@ -109,13 +109,10 @@ export default function ProcurementReportsPage() {
   const isLoadingData = isPOLoading || isVendorLoading
 
   return (
-    <div className="min-h-screen bg-[#0F172A] pb-24 font-sans text-gray-200 -mx-6 md:-mx-8 -my-6 md:-my-8 p-8 overflow-y-auto">
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-6">
-        <div>
-
-          <h1 className="text-5xl font-black text-white leading-tight">Procurement Reports</h1>
-          <p className="text-gray-400 text-sm mt-3 max-w-md">Extract, analyze, and review transaction ledgers and partner metrics loaded dynamically from stay databases.</p>
-        </div>
+    <div className="min-h-screen bg-background pb-24 font-sans text-text-primary -mx-6 md:-mx-8 -my-6 md:-my-8 p-8 overflow-y-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-text-primary">Procurement Reports</h1>
+        <p className="text-text-secondary text-sm mt-1">Export transaction ledgers and vendor metrics.</p>
       </div>
 
       {isLoadingData ? (
@@ -123,61 +120,61 @@ export default function ProcurementReportsPage() {
           <Loader2 className="w-8 h-8 text-[#3B82F6] animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl">
           
           {/* Spending Analytics */}
-          <div className="bg-[#1E293B] border border-white/5 rounded-3xl p-8 shadow-xl flex flex-col justify-between h-64">
+          <div className="bg-surface-light border border-border rounded-xl p-6 flex flex-col justify-between h-52">
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-black text-white tracking-tight">Spending Analytics</h2>
-                <BarChart3 className="w-5 h-5 text-[#3B82F6]" />
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-text-primary">Spending Analytics</h2>
+                <BarChart3 className="w-5 h-5 text-text-secondary" />
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Export total transaction sheets detailing order breakdowns, product distributions, and historical expenditures compiled across active purchase orders.
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Export transaction sheets detailing order breakdowns and historical expenditures across all active purchase orders.
               </p>
             </div>
             
             <button 
               onClick={handleDownloadSpendingReport}
               disabled={isDownloadingSpend}
-              className="px-5 py-3.5 bg-white/5 hover:bg-white/10 text-white border border-white/5 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 w-full mt-4"
+              className="py-2.5 bg-white/5 hover:bg-white/10 text-text-primary border border-border rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2 w-full mt-4"
             >
               {isDownloadingSpend ? (
                 <>
-                  <Loader2 className="w-4 h-4 text-[#3B82F6] animate-spin" /> Compiling Report...
+                  <Loader2 className="w-4 h-4 text-[#3B82F6] animate-spin" /> Compiling...
                 </>
               ) : (
                 <>
-                  <FileSpreadsheet className="w-4 h-4 text-[#3B82F6]" /> Download Spending Log (CSV)
+                  <FileSpreadsheet className="w-4 h-4 text-[#3B82F6]" /> Download CSV
                 </>
               )}
             </button>
           </div>
 
           {/* Vendor Performance */}
-          <div className="bg-[#1E293B] border border-white/5 rounded-3xl p-8 shadow-xl flex flex-col justify-between h-64">
+          <div className="bg-surface-light border border-border rounded-xl p-6 flex flex-col justify-between h-52">
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-black text-white tracking-tight">Vendor Performance</h2>
-                <PieChart className="w-5 h-5 text-[#3B82F6]" />
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-bold text-text-primary">Vendor Performance</h2>
+                <PieChart className="w-5 h-5 text-text-secondary" />
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Generate reports summarizing active suppliers, total business volumes exchanged, purchase logs count, and average ratings recorded inside the directory.
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Generate reports summarizing active suppliers, total business volumes, and average ratings from the directory.
               </p>
             </div>
             
             <button 
               onClick={handleDownloadPerformanceReport}
               disabled={isDownloadingPerformance}
-              className="px-5 py-3.5 bg-[#2563EB] hover:bg-[#3B82F6] text-white font-bold rounded-2xl text-xs transition-all flex items-center justify-center gap-2 w-full shadow-lg shadow-blue-500/20 mt-4"
+              className="py-2.5 bg-[#3B82F6] hover:bg-blue-600 text-white border border-transparent rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2 w-full mt-4 disabled:opacity-50"
             >
               {isDownloadingPerformance ? (
                 <>
-                  <Loader2 className="w-4 h-4 text-white animate-spin" /> Generating Sheet...
+                  <Loader2 className="w-4 h-4 text-white animate-spin" /> Generating...
                 </>
               ) : (
                 <>
-                  <FileSpreadsheet className="w-4 h-4" /> Download Performance Log (CSV)
+                  <FileSpreadsheet className="w-4 h-4" /> Download CSV
                 </>
               )}
             </button>

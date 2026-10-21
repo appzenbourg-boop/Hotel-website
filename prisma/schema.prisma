@@ -75,6 +75,10 @@ model Guest {
   idDocumentFront String?
   idDocumentBack  String?
   address         String?
+  city            String?
+  state           String?
+  country         String?
+  pinCode         String?
   dateOfBirth     DateTime?
   gstNumber       String?   // Guest / Corporate GSTIN (e.g. 27ABCDE1234F1ZH)
 
@@ -137,6 +141,7 @@ model Property {
   logo        String?
   coverImage  String?
   images      String[]
+  chainName   String?
 
   // Operating Hours
   checkInTime  String @default("14:00")
@@ -282,11 +287,15 @@ model Booking {
 
   status BookingStatus @default(RESERVED)
   source BookingSource @default(DIRECT)
+  marketSegment String?
 
   totalAmount   Float
   paidAmount    Float         @default(0)
   paymentStatus PaymentStatus @default(PENDING)
   paymentMethod String?       // CASH, CARD, ONLINE, CORPORATE_CLEARANCE, OTHER
+  billTo        String?       // GUEST, COMPANY, TRAVEL_AGENT
+  taxExempt     Boolean       @default(false)
+  isComplimentary Boolean     @default(false)
 
   // Tax & Charges breakdown (applied at booking time from PropertySettings)
   baseAmount         Float?   // Room rate × nights (before tax)
@@ -511,6 +520,7 @@ model Staff {
 
   // Compensation
   baseSalary    Float
+  allowance     Float @default(0)
   bankName      String?
   accountNumber String?
   ifscCode      String?
@@ -1337,6 +1347,8 @@ model RoomOtaMapping {
   otaConnectionId String   @db.ObjectId
   otaRoomId       String   // e.g. Airbnb Listing ID or Listing iCal Import URL
   ratePlanCode    String?  // Optional rate plan config
+  customRate      Float?   // Custom rent/rate per channel
+  isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
 
   @@unique([roomId, otaConnectionId])
@@ -1744,15 +1756,18 @@ enum POSOrderStatus {
 }
 
 model POSTable {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  tableId    String   @unique
-  size       Int      @default(4)
-  status     String   @default("READY") // READY, CLEANING, RESERVED
-  isBooth    Boolean  @default(false)
-  propertyId String   @db.ObjectId
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  tableId         String   @unique
+  size            Int      @default(4)
+  status          String   @default("READY") // READY, CLEANING, RESERVED
+  isBooth         Boolean  @default(false)
+  propertyId      String   @db.ObjectId
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  reservationTime String?
+  reservationName String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@map("pos_tables")
 }
@@ -1775,3 +1790,130 @@ model InventoryItem {
 
   @@map("inventory_items")
 }
+
+// ========================================
+// BANQUET MANAGEMENT
+// ========================================
+
+model BanquetHall {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId  String   @db.ObjectId
+  name        String
+  capacity    Int      @default(100)
+  rentPerDay  Float    @default(0)
+  description String?
+  amenities   String[]
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events BanquetEvent[]
+
+  @@index([propertyId])
+  @@map("banquet_halls")
+}
+
+model BanquetBooking {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  propertyId String @db.ObjectId
+
+  bookingNumber String @unique // Auto-generated e.g. BQ-0057
+
+  // Booking status
+  status BanquetBookingStatus @default(ENQUIRY)
+
+  // Guest Details
+  salutation    String?  @default("Mr.")
+  firstName     String
+  lastName      String?
+  mobile        String
+  email         String?
+  address       String?
+  address2      String?
+  country       String?  @default("India")
+  nationality   String?  @default("Indian")
+  state         String?
+  city          String?
+  zipCode       String?
+  guestGstin    String?
+  aadhaarNo     String?
+  panNo         String?
+  reference     String?
+  partyName1    String?
+  contactNo1    String?
+  partyName2    String?
+  contactNo2    String?
+  eventName     String?
+  specialInstructions String?
+
+  // Payment Details
+  payMode         String  @default("Cash")  // Cash, Card, UPI, Bank Transfer
+  currency        String  @default("INR")
+  billingInstruction String @default("Direct") // Direct, Company, Travel Agent
+  marketSegment   String  @default("Walk In")
+  businessSource  String  @default("Walk-in")
+  reservationMode String  @default("Phone Call")
+  corporate       String?
+  gstin           String?
+
+  // Financials
+  totalAmount Float @default(0)
+  paidAmount  Float @default(0)
+  balanceDue  Float @default(0)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events BanquetEvent[]
+
+  @@index([propertyId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("banquet_bookings")
+}
+
+model BanquetEvent {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  bookingId  String @db.ObjectId
+  booking    BanquetBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  hallId     String?      @db.ObjectId
+  hall       BanquetHall? @relation(fields: [hallId], references: [id])
+  hallName   String       // Stored separately for flexibility
+
+  eventType  String  // Wedding, Corporate, Reception, Birthday, Conference etc.
+  eventDate  DateTime
+  startTime  String  // e.g. "13:30"
+  endTime    String  // e.g. "17:30"
+
+  menuCard       String?   // Menu package name
+  guaranteedPax  Int       @default(0)   // Confirmed adult pax
+  childPax       Int       @default(0)
+  hallOnRent     Boolean   @default(false)
+  rateType       String?   @default("Season") // Season, Weekday, Weekend, Festival
+  hallRent       Float     @default(0)
+  perPlateRate   Float     @default(0)
+  inclusive      Boolean   @default(false)
+  amount         Float     @default(0)
+  fpNumber       String?   // Function Protocol Number
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([eventDate])
+  @@map("banquet_events")
+}
+
+enum BanquetBookingStatus {
+  ENQUIRY
+  LEAD_GENERATION
+  CONFIRMED
+  WAITLIST
+  CANCELLED
+  COMPLETED
+}
+

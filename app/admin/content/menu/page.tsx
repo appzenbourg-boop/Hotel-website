@@ -178,8 +178,8 @@ export default function MenuPage() {
                         key={cat}
                         onClick={() => setSelectedCategory(cat)}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${selectedCategory === cat
-                            ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                            : 'bg-surface border border-white/10 text-text-secondary hover:bg-surface-hover'
+                            ? 'bg-primary text-text-primary shadow-lg shadow-primary/25'
+                            : 'bg-surface border border-border/50 text-text-secondary hover:bg-surface-hover'
                             }`}
                     >
                         {cat}
@@ -203,20 +203,20 @@ export default function MenuPage() {
                 
                 {/* Drawer */}
                 <div className={cn(
-                    "absolute top-0 right-0 h-full w-full max-w-lg bg-[#0d1117] border-l border-white/10 shadow-2xl transition-transform duration-500 transform flex flex-col",
+                    "absolute top-0 right-0 h-full w-full max-w-lg bg-background border-l border-border/50 shadow-2xl transition-transform duration-500 transform flex flex-col",
                     showForm ? "translate-x-0" : "translate-x-full"
                 )}>
                     {/* Header */}
-                    <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-[#161b22]">
+                    <div className="px-8 py-6 border-b border-border flex items-center justify-between bg-surface">
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">
+                            <h2 className="text-xl font-bold text-text-primary tracking-tight">
                                 {formData.id ? 'Edit Menu Item' : 'Add New Item'}
                             </h2>
                             <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1">Culinary Registry / {formData.category}</p>
                         </div>
                         <button 
                             onClick={() => setShowForm(false)}
-                            className="p-3 hover:bg-white/5 rounded-2xl text-gray-500 hover:text-white transition-all"
+                            className="p-3 hover:bg-white/5 rounded-2xl text-text-tertiary hover:text-text-primary transition-all"
                         >
                             <X className="w-6 h-6" />
                         </button>
@@ -244,31 +244,31 @@ export default function MenuPage() {
                             <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] px-1">Classification</h3>
                             <div className="grid grid-cols-1 gap-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-400 uppercase tracking-widest mb-3 ml-1">Category</label>
+                                    <label className="block text-sm font-bold text-text-secondary uppercase tracking-widest mb-3 ml-1">Category</label>
                                     <div className="relative group">
                                         <select
-                                            className="w-full bg-black/30 border border-white/10 rounded-2xl py-4 px-6 text-white font-bold outline-none focus:border-primary transition-all appearance-none cursor-pointer [color-scheme:dark]"
+                                            className="w-full bg-black/30 border border-border/50 rounded-2xl py-4 px-6 text-text-primary font-bold outline-none focus:border-primary transition-all appearance-none cursor-pointer [color-scheme:dark]"
                                             value={formData.category}
                                             onChange={e => setFormData({ ...formData, category: e.target.value })}
                                         >
                                             {categories.filter(c => c !== 'All').map(c => (
-                                                <option key={c} value={c} className="bg-[#111827]">
+                                                <option key={c} value={c} className="bg-surface">
                                                     {c}
                                                 </option>
                                             ))}
                                         </select>
-                                        <ChevronRight className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none group-hover:text-primary transition-colors rotate-90" />
+                                        <ChevronRight className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary pointer-events-none group-hover:text-primary transition-colors rotate-90" />
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 p-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl">
+                                <div className="flex items-center gap-3 p-4 bg-surface-light border border-border rounded-2xl">
                                     <input
                                         type="checkbox"
                                         checked={formData.isVeg}
                                         onChange={e => setFormData({ ...formData, isVeg: e.target.checked })}
                                         id="veg-check-drawer"
-                                        className="w-5 h-5 rounded-lg border-white/10 bg-black/40 text-primary focus:ring-0 focus:ring-offset-0"
+                                        className="w-5 h-5 rounded-lg border-border/50 bg-black/40 text-primary focus:ring-0 focus:ring-offset-0"
                                     />
-                                    <label htmlFor="veg-check-drawer" className="text-sm font-bold text-gray-300 cursor-pointer">Vegetarian Item</label>
+                                    <label htmlFor="veg-check-drawer" className="text-sm font-bold text-text-secondary cursor-pointer">Vegetarian Item</label>
                                 </div>
                             </div>
                         </div>
@@ -278,19 +278,19 @@ export default function MenuPage() {
                             <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] px-1">Visual Assets</h3>
                             <div className="grid grid-cols-3 gap-3">
                                 {formData.images.map((img, idx) => (
-                                    <div key={idx} className="relative aspect-square border border-white/10 rounded-2xl overflow-hidden group shadow-lg">
+                                    <div key={idx} className="relative aspect-square border border-border/50 rounded-2xl overflow-hidden group shadow-lg">
                                         <Image src={img} alt={`Preview ${idx}`} fill className="object-cover" unoptimized />
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <button
                                                 onClick={() => removeImage(idx)}
-                                                className="w-10 h-10 bg-rose-500 rounded-2xl flex items-center justify-center text-white shadow-xl transform scale-75 group-hover:scale-100 transition-transform"
+                                                className="w-10 h-10 bg-rose-500 rounded-2xl flex items-center justify-center text-text-primary shadow-xl transform scale-75 group-hover:scale-100 transition-transform"
                                             >
                                                 <X className="w-5 h-5" />
                                             </button>
                                         </div>
                                     </div>
                                 ))}
-                                <div className="border-2 border-dashed border-white/10 rounded-2xl aspect-square flex items-center justify-center relative overflow-hidden group hover:border-primary/50 hover:bg-primary/5 transition-all">
+                                <div className="border-2 border-dashed border-border/50 rounded-2xl aspect-square flex items-center justify-center relative overflow-hidden group hover:border-primary/50 hover:bg-primary/5 transition-all">
                                     <div className="text-center text-gray-600 group-hover:text-primary transition-colors">
                                         {imageUploading ? (
                                             <Loader2 className="w-6 h-6 animate-spin mx-auto" />
@@ -311,7 +311,7 @@ export default function MenuPage() {
                             <h3 className="text-[10px] font-black text-gray-600 uppercase tracking-[0.3em] px-1">Gastronomic Description</h3>
                             <textarea
                                 placeholder="Describe the flavors, ingredients, and presentation..."
-                                className="w-full bg-black/30 border border-white/10 rounded-2xl p-6 text-sm text-white font-medium outline-none focus:border-primary transition-all min-h-[120px] resize-none"
+                                className="w-full bg-black/30 border border-border/50 rounded-2xl p-6 text-sm text-text-primary font-medium outline-none focus:border-primary transition-all min-h-[120px] resize-none"
                                 value={formData.description}
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                             />
@@ -319,15 +319,15 @@ export default function MenuPage() {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="px-8 py-8 border-t border-white/5 bg-[#161b22] flex gap-4">
+                    <div className="px-8 py-8 border-t border-border bg-surface flex gap-4">
                         <button 
-                            className="flex-1 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-all border border-white/5"
+                            className="flex-1 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-[11px] font-bold uppercase tracking-widest text-text-secondary hover:text-text-primary transition-all border border-border"
                             onClick={() => setShowForm(false)}
                         >
                             Discard Changes
                         </button>
                         <button 
-                            className="flex-[1.5] py-4 bg-primary hover:bg-primary-hover rounded-2xl text-[11px] font-bold uppercase tracking-widest text-white transition-all shadow-xl shadow-primary/20 active:scale-95"
+                            className="flex-[1.5] py-4 bg-primary hover:bg-primary-hover rounded-2xl text-[11px] font-bold uppercase tracking-widest text-text-primary transition-all shadow-xl shadow-primary/20 active:scale-95"
                             onClick={handleSubmit}
                         >
                             {formData.id ? 'Synchronize Updates' : 'Add to Menu'}
@@ -341,7 +341,7 @@ export default function MenuPage() {
                 {loading ? (
                     // Premium Skeleton Loader
                     Array.from({ length: 8 }).map((_: any, idx: number) => (
-                        <div key={idx} className="bg-[#0D1117] rounded-3xl border border-white/[0.05] overflow-hidden flex flex-col h-full animate-pulse">
+                        <div key={idx} className="bg-background rounded-3xl border border-border overflow-hidden flex flex-col h-full animate-pulse">
                             <div className="h-44 w-full bg-white/5" />
                             <div className="p-6 flex-1 space-y-4">
                                 <div className="flex justify-between items-start">
@@ -352,7 +352,7 @@ export default function MenuPage() {
                                     <div className="h-3 w-full bg-white/5 rounded-md" />
                                     <div className="h-3 w-4/5 bg-white/5 rounded-md" />
                                 </div>
-                                <div className="pt-4 border-t border-white/[0.05] flex gap-2">
+                                <div className="pt-4 border-t border-border flex gap-2">
                                     <div className="h-10 flex-1 bg-white/5 rounded-xl" />
                                     <div className="h-10 w-11 bg-white/5 rounded-xl" />
                                 </div>
@@ -360,9 +360,9 @@ export default function MenuPage() {
                         </div>
                     ))
                 ) : paginatedItems.map(item => (
-                    <div key={item.id} className="group bg-[#0D1117] rounded-3xl border border-white/[0.05] overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] flex flex-col h-full">
+                    <div key={item.id} className="group bg-background rounded-3xl border border-border overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] flex flex-col h-full">
                         {/* Compact Image Canvas */}
-                        <div className="relative h-44 w-full overflow-hidden bg-white/[0.02]">
+                        <div className="relative h-44 w-full overflow-hidden bg-surface-light">
                             {item.images && item.images.length > 0 ? (
                                 <Image 
                                     src={item.images[0]} 
@@ -401,7 +401,7 @@ export default function MenuPage() {
                         {/* Formal Content Body with Better Highlights */}
                         <div className="p-6 flex-1 flex flex-col">
                             <div className="flex justify-between items-start gap-3 mb-3">
-                                <h3 className="font-bold text-white text-lg tracking-tight leading-tight group-hover:text-primary transition-colors">
+                                <h3 className="font-bold text-text-primary text-lg tracking-tight leading-tight group-hover:text-primary transition-colors">
                                     {item.name}
                                 </h3>
                                 <div className="text-right shrink-0">
@@ -410,15 +410,15 @@ export default function MenuPage() {
                                 </div>
                             </div>
 
-                            <p className="text-[12px] text-gray-400 leading-relaxed line-clamp-2 mb-6 flex-1 font-medium opacity-80 group-hover:opacity-100 transition-opacity">
+                            <p className="text-[12px] text-text-secondary leading-relaxed line-clamp-2 mb-6 flex-1 font-medium opacity-80 group-hover:opacity-100 transition-opacity">
                                 {item.description || "Curated for the refined digital dining experience."}
                             </p>
 
                             {/* Refined Action System */}
-                            <div className="flex items-center gap-2 pt-4 border-t border-white/[0.05]">
+                            <div className="flex items-center gap-2 pt-4 border-t border-border">
                                 <button 
                                     onClick={() => handleEdit(item)}
-                                    className="flex-1 h-11 rounded-xl bg-primary/5 border border-primary/10 hover:bg-primary hover:border-primary text-primary-light hover:text-white text-[10px] font-black uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    className="flex-1 h-11 rounded-xl bg-primary/5 border border-primary/10 hover:bg-primary hover:border-primary text-primary-light hover:text-text-primary text-[10px] font-black uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
                                     <Edit2 className="w-3.5 h-3.5" />
                                     Edit Item
@@ -442,7 +442,7 @@ export default function MenuPage() {
                     <button
                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
-                        className="w-12 h-12 rounded-2xl bg-surface border border-white/10 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-inner"
+                        className="w-12 h-12 rounded-2xl bg-surface border border-border/50 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-inner"
                     >
                         <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -455,8 +455,8 @@ export default function MenuPage() {
                                 className={cn(
                                     "w-10 h-10 rounded-xl text-xs font-black transition-all",
                                     currentPage === idx + 1 
-                                        ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                                        : "text-gray-500 hover:text-white hover:bg-white/5"
+                                        ? "bg-primary text-text-primary shadow-lg shadow-primary/20" 
+                                        : "text-text-tertiary hover:text-text-primary hover:bg-white/5"
                                 )}
                             >
                                 {idx + 1}
@@ -467,7 +467,7 @@ export default function MenuPage() {
                     <button
                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
-                        className="w-12 h-12 rounded-2xl bg-surface border border-white/10 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-inner"
+                        className="w-12 h-12 rounded-2xl bg-surface border border-border/50 flex items-center justify-center text-text-secondary hover:text-text-primary hover:bg-white/5 disabled:opacity-30 disabled:hover:bg-transparent transition-all shadow-inner"
                     >
                         <ChevronRight className="w-5 h-5" />
                     </button>

@@ -15,7 +15,15 @@ export async function GET(req: NextRequest) {
         if (authResult instanceof NextResponse) return authResult
 
         const { searchParams } = new URL(req.url)
-        const propertyId = searchParams.get('propertyId') || authResult.user.propertyId
+        let propertyId = searchParams.get('propertyId') || authResult.user.propertyId
+
+        if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: authResult.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+        }
 
         if (!propertyId || propertyId === 'ALL') {
             return NextResponse.json({ success: true, menuItems: [] })
@@ -55,15 +63,18 @@ export async function POST(req: NextRequest) {
         const body = await req.json()
         const { id, propertyId, name, description, category, price, margin, isVeg, isAvailable, image, images } = body
 
-        const targetPropertyId = propertyId || authResult.user.propertyId
+        let targetPropertyId = propertyId || authResult.user.propertyId
+
+        if (!targetPropertyId || targetPropertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: authResult.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            targetPropertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+        }
 
         if (!targetPropertyId) {
             return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
-        }
-
-        // Verify propertyId is authorized for the user
-        if (authResult.user.role !== 'SUPER_ADMIN' && authResult.user.propertyId !== targetPropertyId) {
-            return NextResponse.json({ error: 'Unauthorized for this property' }, { status: 403 })
         }
 
         const data: any = {

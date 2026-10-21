@@ -5,6 +5,7 @@ import { startOfDay, endOfDay, subDays } from 'date-fns'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { redis } from '@/lib/redis'
+import { autoHealCleaningRooms } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,7 +28,14 @@ export async function GET(req: NextRequest) {
                 whereProperty = { propertyId: queryPropertyId }
             }
         } else {
-            const propertyId = session?.user?.propertyId || (queryPropertyId && queryPropertyId !== 'ALL' ? queryPropertyId : null)
+            let propertyId = session?.user?.propertyId || (queryPropertyId && queryPropertyId !== 'ALL' ? queryPropertyId : null)
+            if (!propertyId) {
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: session?.user?.id },
+                    select: { workplaceId: true, ownedPropertyIds: true }
+                })
+                propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+            }
             if (propertyId) whereProperty = { propertyId }
         }
 
@@ -39,6 +47,9 @@ export async function GET(req: NextRequest) {
         }
 
         const today = new Date()
+
+        // Auto-heal any rooms stuck in CLEANING with completed/absent housekeeping tasks
+        await autoHealCleaningRooms(whereProperty)
 
         // Parallelize ALL queries for maximum performance
         const [

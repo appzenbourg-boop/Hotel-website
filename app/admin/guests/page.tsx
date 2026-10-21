@@ -10,7 +10,7 @@ import {
   Plus, Download, Search, CheckCircle2, Clock,
   ChevronLeft, ChevronRight, Calendar, SlidersHorizontal, AlertCircle
 } from 'lucide-react'
-import { cn, validateGSTIN } from '@/lib/utils'
+import { cn, validateGSTIN, getApiErrorMessage } from '@/lib/utils'
 import { toast } from 'sonner'
 import Avatar from '@/components/common/Avatar'
 import Modal from '@/components/ui/Modal'
@@ -23,7 +23,7 @@ function getInitials(name: string) {
   return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
 }
 const AVATAR_COLORS = [
-  'bg-[#4A9EFF]', 'bg-[#1db954]', 'bg-[#805ad5]', 'bg-[#d4aa00]', 'bg-[#e53e3e]', 'bg-[#ed8936]',
+  'bg-[#4A9EFF]', 'bg-surface', 'bg-[#805ad5]', 'bg-[#d4aa00]', 'bg-[#e53e3e]', 'bg-[#ed8936]',
 ]
 function avatarColor(name: string) {
   return AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length]
@@ -114,7 +114,7 @@ function GuestsContent() {
         setForm({ name: '', phone: '', email: '', idType: '', idNumber: '', address: '', dateOfBirth: '', gstNumber: '' })
         fetchGuests()
       } else {
-        toast.error(await res.text())
+        toast.error(await getApiErrorMessage(res, 'Failed to add guest'))
       }
     } catch { toast.error('Something went wrong') }
   }
@@ -164,12 +164,12 @@ function GuestsContent() {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Guest Management</h1>
-          <p className="text-[13px] text-gray-400 mt-0.5">Manage current, past, and future guests</p>
+          <h1 className="text-2xl font-bold text-text-primary">Guest Management</h1>
+          <p className="text-[13px] text-text-secondary mt-0.5">Manage current, past, and future guests</p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white text-[13px] font-semibold rounded-lg transition-colors shadow-lg shadow-[#4A9EFF]/20"
+          className="flex items-center gap-2 px-4 py-2 bg-[#4A9EFF] hover:bg-surface text-text-primary text-[13px] font-semibold rounded-lg transition-colors shadow-lg shadow-[#4A9EFF]/20"
         >
           <Plus className="w-4 h-4" /> Add New Guest
         </button>
@@ -179,13 +179,13 @@ function GuestsContent() {
       <div className="flex items-center gap-2 flex-wrap">
         {/* Search */}
         <div className="relative flex-1 min-w-[220px] max-w-[360px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
           <input
             type="text"
             placeholder="Search by guest name, room, or confirmation..."
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
-            className="w-full pl-9 pr-4 py-2 bg-[#233648] border border-white/[0.08] rounded-lg text-[13px] text-white placeholder:text-gray-600 focus:outline-none focus:border-[#4A9EFF]/40 transition-colors"
+            className="w-full pl-9 pr-4 py-2 bg-surface border border-border rounded-lg text-[13px] text-text-primary placeholder:text-gray-600 focus:outline-none focus:border-[#4A9EFF]/40 transition-colors"
           />
         </div>
 
@@ -193,7 +193,7 @@ function GuestsContent() {
         <select
           value={statusFilter}
           onChange={e => { setStatus(e.target.value); setPage(1) }}
-          className="px-3 py-2 bg-[#233648] border border-white/[0.08] rounded-lg text-[13px] text-gray-300 focus:outline-none focus:border-[#4A9EFF]/40 cursor-pointer"
+          className="px-3 py-2 bg-surface border border-border rounded-lg text-[13px] text-text-secondary focus:outline-none focus:border-[#4A9EFF]/40 cursor-pointer"
         >
           <option value="ALL">All Statuses</option>
           <option value="RESERVED">Reserved</option>
@@ -206,7 +206,7 @@ function GuestsContent() {
         <select
           value={sourceFilter}
           onChange={e => { setSource(e.target.value); setPage(1) }}
-          className="px-3 py-2 bg-[#233648] border border-white/[0.08] rounded-lg text-[13px] text-gray-300 focus:outline-none focus:border-[#4A9EFF]/40 cursor-pointer"
+          className="px-3 py-2 bg-surface border border-border rounded-lg text-[13px] text-text-secondary focus:outline-none focus:border-[#4A9EFF]/40 cursor-pointer"
         >
           <option value="ALL">All Sources</option>
           <option value="DIRECT">Direct</option>
@@ -222,7 +222,7 @@ function GuestsContent() {
         <select
           value={idFilter}
           onChange={e => { setIdFilter(e.target.value); setPage(1) }}
-          className="px-3 py-2 bg-[#233648] border border-white/[0.08] rounded-lg text-[13px] text-gray-300 focus:outline-none focus:border-[#4A9EFF]/40 cursor-pointer"
+          className="px-3 py-2 bg-surface border border-border rounded-lg text-[13px] text-text-secondary focus:outline-none focus:border-[#4A9EFF]/40 cursor-pointer"
         >
           <option value="ALL">ID Status: All</option>
           <option value="VERIFIED">Verified</option>
@@ -230,22 +230,22 @@ function GuestsContent() {
         </select>
 
         {/* Date range placeholder */}
-        <button className="flex items-center gap-2 px-3 py-2 bg-[#233648] border border-white/[0.08] rounded-lg text-[13px] text-gray-400 hover:text-white hover:border-white/[0.15] transition-colors">
+        <button className="flex items-center gap-2 px-3 py-2 bg-surface border border-border rounded-lg text-[13px] text-text-secondary hover:text-text-primary hover:border-border transition-colors">
           <Calendar className="w-3.5 h-3.5" /> Select Dates
         </button>
 
         <button
           onClick={handleExport}
-          className="ml-auto flex items-center gap-2 px-3 py-2 bg-[#233648] border border-white/[0.08] rounded-lg text-[13px] text-gray-400 hover:text-white hover:border-white/[0.15] transition-colors"
+          className="ml-auto flex items-center gap-2 px-3 py-2 bg-surface border border-border rounded-lg text-[13px] text-text-secondary hover:text-text-primary hover:border-border transition-colors"
         >
           <Download className="w-3.5 h-3.5" />
         </button>
       </div>
 
       {/* TABLE / CARD LIST */}
-      <div className="bg-[#233648] border border-white/[0.07] rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
         {/* Desktop Table Header */}
-        <div className="hidden md:grid md:grid-cols-[2rem_1fr_80px_120px_120px_100px_140px_140px] gap-3 px-4 py-3 border-b border-white/[0.06] bg-black/10">
+        <div className="hidden md:grid md:grid-cols-[2rem_1fr_80px_120px_120px_100px_140px_140px] gap-3 px-4 py-3 border-b border-border bg-black/10">
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -255,7 +255,7 @@ function GuestsContent() {
             />
           </div>
           {['GUEST NAME', 'ROOM', 'CHECK-IN', 'CHECK-OUT', 'PAX', 'ID STATUS', 'SOURCE'].map(h => (
-            <span key={h} className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{h}</span>
+            <span key={h} className="text-[10px] font-black text-text-secondary uppercase tracking-widest">{h}</span>
           ))}
         </div>
 
@@ -280,7 +280,7 @@ function GuestsContent() {
              <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center">
                 <Search className="w-5 h-5 text-gray-600" />
              </div>
-            <p className="text-[13px] font-bold text-gray-500 uppercase tracking-widest">No guests matching your criteria</p>
+            <p className="text-[13px] font-bold text-text-tertiary uppercase tracking-widest">No guests matching your criteria</p>
           </div>
         ) : (
           <div className="divide-y divide-white/[0.04]">
@@ -289,7 +289,7 @@ function GuestsContent() {
                 {/* Desktop Row */}
                 <Link
                   href={`/admin/guests/${guest.id}`}
-                  className="hidden md:grid md:grid-cols-[2rem_1fr_80px_120px_120px_100px_140px_140px] gap-3 px-4 py-3.5 hover:bg-white/[0.03] cursor-pointer"
+                  className="hidden md:grid md:grid-cols-[2rem_1fr_80px_120px_120px_100px_140px_140px] gap-3 px-4 py-3.5 hover:bg-surface-light cursor-pointer"
                 >
                   <div className="flex items-center" onClick={e => e.stopPropagation()}>
                     <input
@@ -302,20 +302,20 @@ function GuestsContent() {
                   <div className="flex items-center gap-3 min-w-0">
                     <Avatar name={guest.name} size="sm" className="shadow-lg shadow-[#4A9EFF]/10" />
                     <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-white truncate group-hover:text-blue-400 transition-colors">{guest.name}</p>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">+{guest.phone}</p>
+                      <p className="text-[13px] font-bold text-text-primary truncate group-hover:text-blue-400 transition-colors">{guest.name}</p>
+                      <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-tighter">+{guest.phone}</p>
                     </div>
                   </div>
-                  <p className="flex items-center text-[13px] font-black text-white">{guest.roomNumber || '—'}</p>
+                  <p className="flex items-center text-[13px] font-black text-text-primary">{guest.roomNumber || '—'}</p>
                   <div className="flex flex-col justify-center">
-                    <p className="text-[12px] font-bold text-white">{guest.checkIn ? format(new Date(guest.checkIn), 'MMM dd') : '—'}</p>
-                    <p className="text-[10px] text-gray-500 font-semibold">{guest.checkIn ? format(new Date(guest.checkIn), 'yyyy') : ''}</p>
+                    <p className="text-[12px] font-bold text-text-primary">{guest.checkIn ? format(new Date(guest.checkIn), 'MMM dd') : '—'}</p>
+                    <p className="text-[10px] text-text-tertiary font-semibold">{guest.checkIn ? format(new Date(guest.checkIn), 'yyyy') : ''}</p>
                   </div>
                   <div className="flex flex-col justify-center">
-                    <p className="text-[12px] font-bold text-white">{guest.checkOut ? format(new Date(guest.checkOut), 'MMM dd') : '—'}</p>
-                    <p className="text-[10px] text-gray-500 font-semibold">{guest.checkOut ? format(new Date(guest.checkOut), 'yyyy') : ''}</p>
+                    <p className="text-[12px] font-bold text-text-primary">{guest.checkOut ? format(new Date(guest.checkOut), 'MMM dd') : '—'}</p>
+                    <p className="text-[10px] text-text-tertiary font-semibold">{guest.checkOut ? format(new Date(guest.checkOut), 'yyyy') : ''}</p>
                   </div>
-                  <p className="flex items-center text-[11px] font-bold text-gray-300 uppercase letter-spacing-1">
+                  <p className="flex items-center text-[11px] font-bold text-text-secondary uppercase letter-spacing-1">
                     {guest.guestCount || 1} PAX
                   </p>
                   <div className="flex items-center">
@@ -330,29 +330,29 @@ function GuestsContent() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-black text-gray-400">
+                    <div className="w-6 h-6 rounded-md bg-white/5 border border-border/50 flex items-center justify-center text-[8px] font-black text-text-secondary">
                       {SOURCE_ICON[guest.source] || '?'}
                     </div>
-                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tighter">{SOURCE_LABELS[guest.source] || guest.source}</span>
+                    <span className="text-[11px] font-bold text-text-secondary uppercase tracking-tighter">{SOURCE_LABELS[guest.source] || guest.source}</span>
                   </div>
                 </Link>
 
                 {/* Mobile Card */}
                 <Link 
                   href={`/admin/guests/${guest.id}`}
-                  className="md:hidden p-4 space-y-3 active:bg-white/[0.05] transition-colors cursor-pointer relative block"
+                  className="md:hidden p-4 space-y-3 active:bg-surface-light transition-colors cursor-pointer relative block"
                 >
                    {/* Top: Avatar + Name + Room */}
                    <div className="flex items-start justify-between">
                       <div className="flex gap-3">
                          <Avatar name={guest.name} size="md" className="shadow-xl shadow-[#4A9EFF]/20" />
                          <div>
-                            <h3 className="text-[15px] font-bold text-white leading-none mb-1.5">{guest.name}</h3>
+                            <h3 className="text-[15px] font-bold text-text-primary leading-none mb-1.5">{guest.name}</h3>
                             <div className="flex items-center gap-2">
                                <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded uppercase tracking-widest border border-blue-400/20">
                                   Room {guest.roomNumber || 'N/A'}
                                </span>
-                               <span className="text-[10px] font-bold text-gray-500 tracking-tight">+{guest.phone}</span>
+                               <span className="text-[10px] font-bold text-text-tertiary tracking-tight">+{guest.phone}</span>
                             </div>
                          </div>
                       </div>
@@ -366,26 +366,26 @@ function GuestsContent() {
                    </div>
 
                    {/* Mid: Dates */}
-                   <div className="grid grid-cols-2 gap-4 bg-black/10 rounded-xl p-3 border border-white/5">
+                   <div className="grid grid-cols-2 gap-4 bg-black/10 rounded-xl p-3 border border-border">
                       <div>
-                         <p className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter mb-1">Check-in</p>
-                         <p className="text-[12px] font-bold text-white">{guest.checkIn ? format(new Date(guest.checkIn), 'MMM dd, yyyy') : '—'}</p>
+                         <p className="text-[9px] font-bold text-text-tertiary uppercase tracking-tighter mb-1">Check-in</p>
+                         <p className="text-[12px] font-bold text-text-primary">{guest.checkIn ? format(new Date(guest.checkIn), 'MMM dd, yyyy') : '—'}</p>
                       </div>
                       <div>
-                         <p className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter mb-1">Check-out</p>
-                         <p className="text-[12px] font-bold text-white">{guest.checkOut ? format(new Date(guest.checkOut), 'MMM dd, yyyy') : '—'}</p>
+                         <p className="text-[9px] font-bold text-text-tertiary uppercase tracking-tighter mb-1">Check-out</p>
+                         <p className="text-[12px] font-bold text-text-primary">{guest.checkOut ? format(new Date(guest.checkOut), 'MMM dd, yyyy') : '—'}</p>
                       </div>
                    </div>
 
                    {/* Btm: Source + PAX */}
                    <div className="flex items-center justify-between pt-1">
                       <div className="flex items-center gap-2">
-                         <div className="w-7 h-7 bg-white/5 rounded-lg flex items-center justify-center text-[10px] font-black text-gray-400 border border-white/10">
+                         <div className="w-7 h-7 bg-white/5 rounded-lg flex items-center justify-center text-[10px] font-black text-text-secondary border border-border/50">
                             {SOURCE_ICON[guest.source] || '?'}
                          </div>
-                         <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{SOURCE_LABELS[guest.source] || guest.source}</span>
+                         <span className="text-[11px] font-bold text-text-secondary uppercase tracking-widest">{SOURCE_LABELS[guest.source] || guest.source}</span>
                       </div>
-                      <span className="text-[11px] font-black text-gray-300 uppercase tracking-widest">{guest.guestCount || 1} PAX</span>
+                      <span className="text-[11px] font-black text-text-secondary uppercase tracking-widest">{guest.guestCount || 1} PAX</span>
                    </div>
                    
                    {/* Checkbox Overlay (Optional or absolute) */}
@@ -396,17 +396,17 @@ function GuestsContent() {
         )}
 
         {/* Pagination footer */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <p className="text-[12px] text-gray-500">
-            Showing <span className="font-semibold text-white">{(page - 1) * PAGE_SIZE + 1}</span> to{' '}
-            <span className="font-semibold text-white">{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{' '}
-            <span className="font-semibold text-white">{filtered.length}</span> guests
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+          <p className="text-[12px] text-text-tertiary">
+            Showing <span className="font-semibold text-text-primary">{(page - 1) * PAGE_SIZE + 1}</span> to{' '}
+            <span className="font-semibold text-text-primary">{Math.min(page * PAGE_SIZE, filtered.length)}</span> of{' '}
+            <span className="font-semibold text-text-primary">{filtered.length}</span> guests
           </p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1.5 text-[12px] font-medium text-gray-400 hover:text-white bg-[#182433] hover:bg-[#202e40] rounded-lg border border-white/[0.06] disabled:opacity-40 transition-colors"
+              className="px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary bg-surface hover:bg-surface rounded-lg border border-border disabled:opacity-40 transition-colors"
             >
               Previous
             </button>
@@ -417,8 +417,8 @@ function GuestsContent() {
                 className={cn(
                   'w-8 h-8 text-[12px] font-medium rounded-lg border transition-colors',
                   page === p
-                    ? 'bg-[#4A9EFF] text-white border-[#4A9EFF]'
-                    : 'text-gray-400 hover:text-white bg-[#182433] hover:bg-[#202e40] border-white/[0.06]'
+                    ? 'bg-[#4A9EFF] text-text-primary border-[#4A9EFF]'
+                    : 'text-text-secondary hover:text-text-primary bg-surface hover:bg-surface border-border'
                 )}
               >
                 {p}
@@ -427,7 +427,7 @@ function GuestsContent() {
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1.5 text-[12px] font-medium text-gray-400 hover:text-white bg-[#182433] hover:bg-[#202e40] rounded-lg border border-white/[0.06] disabled:opacity-40 transition-colors"
+              className="px-3 py-1.5 text-[12px] font-medium text-text-secondary hover:text-text-primary bg-surface hover:bg-surface rounded-lg border border-border disabled:opacity-40 transition-colors"
             >
               Next
             </button>
@@ -498,7 +498,7 @@ function GuestsContent() {
 export default function GuestsPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center h-64 text-gray-500 animate-pulse">Loading guests...</div>
+      <div className="flex items-center justify-center h-64 text-text-tertiary animate-pulse">Loading guests...</div>
     }>
       <GuestsContent />
     </Suspense>

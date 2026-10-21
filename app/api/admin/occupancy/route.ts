@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { unauthorized, ok, serverError } from '@/lib/api-response'
+import { autoHealCleaningRooms, invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,6 +90,15 @@ export async function GET(request: NextRequest) {
             })
         })
 
+        // Auto-heal any rooms stuck in CLEANING where housekeeping is completed or absent
+        const healedIds = await autoHealCleaningRooms(whereProperty)
+        if (healedIds.length > 0) {
+            const healedSet = new Set(healedIds)
+            rooms.forEach(r => {
+                if (healedSet.has(r.id)) r.status = 'AVAILABLE'
+            })
+        }
+
         // Map room occupancy status — 4 categories: Occupied, Ready, Service, Out of Order
         let occupiedCount = 0
         let readyCount = 0
@@ -140,3 +150,58 @@ export async function GET(request: NextRequest) {
         return serverError(error, 'OCCUPANCY_GET')
     }
 }
+
+export async function PATCH(request: NextRequest) {
+    try {
+        const session = await getServerSession(authOptions)
+        if (!session) return unauthorized()
+
+        const body = await request.json()
+        const { roomId, status, bookingId, checkOutEarly } = body
+
+        if (!roomId) {
+            return NextResponse.json({ error: 'Room ID is required' }, { status: 400 })
+        }
+
+        // If checkout requested for active booking
+        if (checkOutEarly && bookingId) {
+            await prisma.booking.update({
+                where: { id: bookingId },
+                data: {
+                    status: 'CHECKED_OUT',
+                    actualCheckOut: new Date()
+                }
+            })
+        }
+
+        // Status options: 'AVAILABLE', 'CLEANING', 'MAINTENANCE', 'BLOCKED', 'OCCUPIED'
+        if (status) {
+            const updatedRoom = await prisma.room.update({
+                where: { id: roomId },
+                data: { status }
+            })
+
+            // If room is marked AVAILABLE/Ready, complete any pending/in-progress housekeeping tasks
+            if (status === 'AVAILABLE') {
+                await prisma.serviceRequest.updateMany({
+                    where: {
+                        roomId,
+                        type: { in: ['HOUSEKEEPING', 'MAINTENANCE'] },
+                        status: { in: ['PENDING', 'IN_PROGRESS', 'ACCEPTED'] }
+                    },
+                    data: {
+                        status: 'COMPLETED',
+                        completedAt: new Date()
+                    }
+                })
+            }
+
+            await invalidateRoomAndDashboardCaches(updatedRoom.propertyId)
+        }
+
+        return ok({ success: true, message: 'Room updated successfully' })
+    } catch (error) {
+        return serverError(error, 'OCCUPANCY_PATCH')
+    }
+}
+

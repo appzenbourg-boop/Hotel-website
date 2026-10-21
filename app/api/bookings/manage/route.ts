@@ -24,12 +24,8 @@ function getUserFromToken(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const user = getUserFromToken(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const body = await request.json();
-        const { bookingId, type, newCheckOut, newRoomId } = body;
+        const { bookingId, type, newCheckOut, newRoomId, guestId } = body;
 
         if (!bookingId || !type) {
             return NextResponse.json({ error: 'Booking ID and Type are required' }, { status: 400 });
@@ -45,11 +41,23 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
         }
 
+        // Authorize: either via token or guestId matches booking
+        const isAuthorized = user || (guestId && booking.guestId === guestId);
+        if (!isAuthorized) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        let newRoomName = 'a premium room';
+        if (newRoomId) {
+            const targetRoom = await prisma.room.findUnique({ where: { id: newRoomId } });
+            if (targetRoom) newRoomName = `${targetRoom.type} (Room ${targetRoom.roomNumber})`;
+        }
+
         // Create a ServiceRequest (Concierge type) to act as the "Approval Request"
         const title = type === 'EXTEND' ? `Stay Extension Request` : `Room Upgrade Request`;
         const description = type === 'EXTEND' 
             ? `Guest wants to extend stay until ${new Date(newCheckOut).toLocaleDateString()}`
-            : `Guest wants to upgrade from ${booking.room.type} to a premium room`;
+            : `Guest wants to upgrade from ${booking.room.type} to ${newRoomName}`;
 
         const serviceRequest = await prisma.serviceRequest.create({
             data: {

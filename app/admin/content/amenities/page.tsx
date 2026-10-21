@@ -102,7 +102,7 @@ const ICON_MAP: Record<string, React.ElementType> = Object.fromEntries(
 const CATEGORIES = ['General', 'Connectivity', 'Room Comfort', 'Bathroom', 'Food & Beverage', 'Wellness', 'Transport', 'Services', 'Family']
 
 const CATEGORY_COLORS: Record<string, string> = {
-  'General':        'text-slate-400 bg-slate-400/10',
+  'General':        'text-text-secondary bg-slate-400/10',
   'Connectivity':   'text-blue-400 bg-blue-400/10',
   'Room Comfort':   'text-amber-400 bg-amber-400/10',
   'Bathroom':       'text-cyan-400 bg-cyan-400/10',
@@ -113,7 +113,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   'Family':         'text-pink-400 bg-pink-400/10' }
 
 const ICON_BG: Record<string, string> = {
-  'General':        'bg-slate-500/15 text-slate-300',
+  'General':        'bg-slate-500/15 text-text-secondary',
   'Connectivity':   'bg-blue-500/15 text-blue-300',
   'Room Comfort':   'bg-amber-500/15 text-amber-300',
   'Bathroom':       'bg-cyan-500/15 text-cyan-300',
@@ -316,7 +316,7 @@ export default function AmenitiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Amenities</h1>
+          <h1 className="text-2xl font-bold text-text-primary">Amenities</h1>
           <p className="text-text-secondary mt-0.5 text-sm">Manage hotel features and services</p>
         </div>
         <Button variant="primary" leftIcon={<Plus className="w-4 h-4" />} onClick={openAdd}>
@@ -328,7 +328,7 @@ export default function AmenitiesPage() {
       {showForm && (
         <div className="bg-surface border border-border rounded-2xl p-6 space-y-5">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-white">
+            <h3 className="text-base font-semibold text-text-primary">
               {editingId ? 'Edit Amenity' : 'Add New Amenity'}
             </h3>
             <button onClick={() => { setShowForm(false); setEditingId(null) }} className="p-1.5 hover:bg-surface-light rounded-lg transition-colors">
@@ -343,7 +343,7 @@ export default function AmenitiesPage() {
               <input
                 value={formData.name}
                 onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                className="w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                className="w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                 placeholder="e.g. Free WiFi, Swimming Pool"
               />
             </div>
@@ -354,7 +354,7 @@ export default function AmenitiesPage() {
               <select
                 value={formData.category}
                 onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
-                className="w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer"
+                className="w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer"
               >
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -366,7 +366,7 @@ export default function AmenitiesPage() {
               <input
                 value={formData.description}
                 onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
-                className="w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                className="w-full bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                 placeholder="Brief description of this amenity"
               />
             </div>
@@ -378,7 +378,7 @@ export default function AmenitiesPage() {
               <label className="text-xs font-semibold text-text-secondary">Icon</label>
               <div className="flex items-center gap-2 text-xs text-text-secondary">
                 <SelectedIcon className="w-4 h-4 text-primary" />
-                <span className="text-white font-medium">{selectedIconOption?.label ?? formData.icon}</span>
+                <span className="text-text-primary font-medium">{selectedIconOption?.label ?? formData.icon}</span>
               </div>
             </div>
 
@@ -388,12 +388,12 @@ export default function AmenitiesPage() {
                 value={iconSearch}
                 onChange={e => setIconSearch(e.target.value)}
                 placeholder="Search icons..."
-                className="flex-1 bg-surface-light border border-border rounded-xl px-3 py-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none"
+                className="flex-1 bg-surface-light border border-border rounded-xl px-3 py-2 text-xs text-text-primary focus:ring-1 focus:ring-primary outline-none"
               />
               <select
                 value={iconCategoryFilter}
                 onChange={e => setIconCategoryFilter(e.target.value)}
-                className="bg-surface-light border border-border rounded-xl px-3 py-2 text-xs text-white focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer"
+                className="bg-surface-light border border-border rounded-xl px-3 py-2 text-xs text-text-primary focus:ring-1 focus:ring-primary outline-none appearance-none cursor-pointer"
               >
                 {iconCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -413,7 +413,7 @@ export default function AmenitiesPage() {
                       'flex flex-col items-center gap-1 p-2 rounded-xl border transition-all',
                       isSelected
                         ? 'bg-primary/20 border-primary text-primary'
-                        : 'bg-surface-light border-border text-text-secondary hover:border-primary/40 hover:text-white'
+                        : 'bg-surface-light border-border text-text-secondary hover:border-primary/40 hover:text-text-primary'
                     )}
                   >
                     <Ic className="w-4 h-4" />
@@ -431,7 +431,7 @@ export default function AmenitiesPage() {
           <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-sm font-semibold text-white">Service Options</h4>
+                <h4 className="text-sm font-semibold text-text-primary">Service Options</h4>
                 <p className="text-[10px] text-text-secondary uppercase tracking-widest mt-0.5">Add sub-services or variations (e.g. types of massage or laundry)</p>
               </div>
               <Button 
@@ -449,7 +449,7 @@ export default function AmenitiesPage() {
               {formData.options.map((opt: any, idx: number) => (
                 <div key={opt.id || idx} className="flex gap-3 items-end animate-in fade-in slide-in-from-left-2 duration-200">
                   <div className="flex-1 space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Option Name</label>
+                    <label className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest ml-1">Option Name</label>
                     <input
                       value={opt.label}
                       onChange={e => {
@@ -457,12 +457,12 @@ export default function AmenitiesPage() {
                         newOpts[idx].label = e.target.value
                         setFormData(p => ({ ...p, options: newOpts }))
                       }}
-                      className="w-full bg-surface-light border border-border rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                      className="w-full bg-surface-light border border-border rounded-xl px-4 py-2 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                       placeholder="e.g. Full Body Massage"
                     />
                   </div>
                   <div className="w-32 space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Price (₹)</label>
+                    <label className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest ml-1">Price (₹)</label>
                     <input
                       type="number"
                       value={opt.price}
@@ -471,7 +471,7 @@ export default function AmenitiesPage() {
                         newOpts[idx].price = Number(e.target.value)
                         setFormData(p => ({ ...p, options: newOpts }))
                       }}
-                      className="w-full bg-surface-light border border-border rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                      className="w-full bg-surface-light border border-border rounded-xl px-4 py-2 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                       placeholder="0"
                     />
                   </div>
@@ -549,7 +549,7 @@ export default function AmenitiesPage() {
                 </div>
 
                 {/* Name */}
-                <h3 className="font-semibold text-white text-sm leading-tight mb-1 pr-12">{amenity.name}</h3>
+                <h3 className="font-semibold text-text-primary text-sm leading-tight mb-1 pr-12">{amenity.name}</h3>
 
                 {/* Category badge */}
                 <span className={cn('text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full', catColor)}>
@@ -571,7 +571,7 @@ export default function AmenitiesPage() {
       {/* ── DASHBOARD SERVICES SECTION ── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
              <Smartphone className="w-5 h-5 text-blue-400" />
              Dashboard Quick Actions
           </h2>
@@ -583,40 +583,40 @@ export default function AmenitiesPage() {
       </div>
 
       {showServiceForm && (
-        <div className="bg-[#182433] border border-white/[0.1] rounded-2xl p-6 mb-8 space-y-5 animate-in slide-in-from-top-4 duration-300">
+        <div className="bg-surface border border-border rounded-2xl p-6 mb-8 space-y-5 animate-in slide-in-from-top-4 duration-300">
            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-white">
+              <h3 className="text-base font-semibold text-text-primary">
                 {editingId ? 'Edit Quick Action' : 'Add New Quick Action'}
               </h3>
-              <button onClick={() => setShowServiceForm(false)} className="p-1.5 hover:bg-white/[0.05] rounded-lg transition-colors">
-                <X className="w-4 h-4 text-gray-500" />
+              <button onClick={() => setShowServiceForm(false)} className="p-1.5 hover:bg-surface-light rounded-lg transition-colors">
+                <X className="w-4 h-4 text-text-tertiary" />
               </button>
            </div>
 
            <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Display Name</label>
+                      <label className="text-xs font-bold text-text-tertiary uppercase tracking-wider block mb-2">Display Name</label>
                       <input 
                         value={serviceFormData.name} 
                         onChange={e => setServiceFormData(p => ({ ...p, name: e.target.value }))}
-                        className="w-full bg-[#0d141d] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                        className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                         placeholder="e.g. Open Door"
                       />
                   </div>
                   <div>
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">App Route</label>
+                      <label className="text-xs font-bold text-text-tertiary uppercase tracking-wider block mb-2">App Route</label>
                       <input 
                         value={serviceFormData.route} 
                         onChange={e => setServiceFormData(p => ({ ...p, route: e.target.value }))}
-                        className="w-full bg-[#0d141d] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                        className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                         placeholder="e.g. /(services)/door"
                       />
                   </div>
               </div>
 
               <div>
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Choose Service Icon</label>
+                  <label className="text-xs font-bold text-text-tertiary uppercase tracking-wider block mb-2">Choose Service Icon</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {DASHBOARD_ICON_OPTIONS.map(opt => (
                         <button
@@ -627,12 +627,12 @@ export default function AmenitiesPage() {
                             "flex flex-col items-center justify-center gap-3 px-4 py-5 rounded-2xl border text-sm font-semibold transition-all group",
                             serviceFormData.iconName === opt.iconName 
                               ? "bg-blue-500/20 border-blue-500 text-blue-400" 
-                              : "bg-[#0d141d] border-white/[0.06] text-gray-500 hover:text-white"
+                              : "bg-surface border-border text-text-tertiary hover:text-text-primary"
                           )}
                         >
                           <div className={cn(
                             "p-2.5 rounded-xl transition-all",
-                            serviceFormData.iconName === opt.iconName ? "bg-blue-500 text-white" : "bg-white/[0.03] group-hover:bg-white/[0.08]"
+                            serviceFormData.iconName === opt.iconName ? "bg-blue-500 text-white" : "bg-surface-light group-hover:bg-surface-light"
                           )}>
                              <opt.Icon className="w-5 h-5" />
                           </div>
@@ -643,11 +643,11 @@ export default function AmenitiesPage() {
               </div>
 
               {/* Dynamic Options for Dashboard Services */}
-              <div className="space-y-4 pt-4 border-t border-white/[0.08]">
+              <div className="space-y-4 pt-4 border-t border-border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-semibold text-white">Service Options</h4>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-0.5">Add specific items or treatments for this quick action</p>
+                    <h4 className="text-sm font-semibold text-text-primary">Service Options</h4>
+                    <p className="text-[10px] text-text-tertiary uppercase tracking-widest mt-0.5">Add specific items or treatments for this quick action</p>
                   </div>
                   <Button 
                     type="button"
@@ -664,7 +664,7 @@ export default function AmenitiesPage() {
                   {serviceFormData.options.map((opt: any, idx: number) => (
                     <div key={opt.id || idx} className="flex gap-3 items-end animate-in fade-in slide-in-from-left-2 duration-200">
                       <div className="flex-1 space-y-1.5">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Option Name</label>
+                        <label className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest ml-1">Option Name</label>
                         <input
                           value={opt.label}
                           onChange={e => {
@@ -672,12 +672,12 @@ export default function AmenitiesPage() {
                             newOpts[idx].label = e.target.value
                             setServiceFormData(p => ({ ...p, options: newOpts }))
                           }}
-                          className="w-full bg-[#0d141d] border border-white/[0.08] rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                          className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                           placeholder="e.g. Full Body Massage"
                         />
                       </div>
                       <div className="w-32 space-y-1.5">
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Price (₹)</label>
+                        <label className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest ml-1">Price (₹)</label>
                         <input
                           type="number"
                           value={opt.price}
@@ -686,7 +686,7 @@ export default function AmenitiesPage() {
                             newOpts[idx].price = Number(e.target.value)
                             setServiceFormData(p => ({ ...p, options: newOpts }))
                           }}
-                          className="w-full bg-[#0d141d] border border-white/[0.08] rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary outline-none"
+                          className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm text-text-primary focus:ring-1 focus:ring-primary outline-none"
                           placeholder="0"
                         />
                       </div>
@@ -700,8 +700,8 @@ export default function AmenitiesPage() {
                     </div>
                   ))}
                   {serviceFormData.options.length === 0 && (
-                    <div className="text-center py-6 bg-white/[0.02] border border-dashed border-white/[0.08] rounded-2xl">
-                       <p className="text-[11px] text-gray-500 uppercase tracking-widest">No custom options added yet</p>
+                    <div className="text-center py-6 bg-surface-light border border-dashed border-border rounded-2xl">
+                       <p className="text-[11px] text-text-tertiary uppercase tracking-widest">No custom options added yet</p>
                     </div>
                   )}
                 </div>
@@ -724,26 +724,26 @@ export default function AmenitiesPage() {
           ))}
         </div>
       ) : dashboardServices.length === 0 ? (
-        <div className="py-12 text-center border border-dashed border-white/[0.08] rounded-2xl bg-white/[0.01]">
+        <div className="py-12 text-center border border-dashed border-border rounded-2xl bg-surface-light">
           <LayoutGrid className="w-10 h-10 text-gray-700 mx-auto mb-3 opacity-40" />
-          <p className="text-gray-500 text-sm">No quick actions configured for the mobile app.</p>
+          <p className="text-text-tertiary text-sm">No quick actions configured for the mobile app.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {dashboardServices.map(service => {
             const IconComponent = DASHBOARD_ICON_OPTIONS.find(o => o.iconName === service.iconName)?.Icon || Smartphone;
             return (
-              <div key={service.id} className="group relative bg-[#182433] border border-white/[0.08] rounded-2xl p-5 text-center hover:border-blue-500/40 transition-all hover:-translate-y-1">
+              <div key={service.id} className="group relative bg-surface border border-border rounded-2xl p-5 text-center hover:border-blue-500/40 transition-all hover:-translate-y-1">
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <button onClick={() => openEditService(service)} className="p-1.5 bg-[#0d141d] rounded-lg text-gray-500 hover:text-white"><Edit2 className="w-3 h-3" /></button>
-                     <button onClick={() => handleServiceDelete(service.id)} className="p-1.5 bg-[#0d141d] rounded-lg text-gray-500 hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
+                     <button onClick={() => openEditService(service)} className="p-1.5 bg-background rounded-lg text-text-tertiary hover:text-text-primary"><Edit2 className="w-3 h-3" /></button>
+                     <button onClick={() => handleServiceDelete(service.id)} className="p-1.5 bg-background rounded-lg text-text-tertiary hover:text-red-400"><Trash2 className="w-3 h-3" /></button>
                   </div>
 
                   <div className="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-3 shadow-xl">
                      <IconComponent className="w-7 h-7 text-blue-400" />
                   </div>
-                  <h4 className="text-sm font-bold text-white mb-0.5">{service.name}</h4>
-                  <p className="text-[10px] text-gray-500 truncate px-2 mb-1">{service.route}</p>
+                  <h4 className="text-sm font-bold text-text-primary mb-0.5">{service.name}</h4>
+                  <p className="text-[10px] text-text-tertiary truncate px-2 mb-1">{service.route}</p>
                   {service.options && Array.isArray(service.options) && service.options.length > 0 && (
                     <div className="mt-2">
                       <span className="text-[9px] font-bold bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full uppercase tracking-wider">

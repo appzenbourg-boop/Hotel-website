@@ -9,7 +9,15 @@ export async function GET(req: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const propertyId = (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
+    const { searchParams } = new URL(req.url)
+    const urlPropertyId = searchParams.get('propertyId')
+    let propertyId = (session.user as any)?.propertyId
+    if (session.user.role === 'SUPER_ADMIN') {
+      if (urlPropertyId && urlPropertyId !== 'ALL') propertyId = urlPropertyId
+    } else {
+      if (!propertyId && urlPropertyId && urlPropertyId !== 'ALL') propertyId = urlPropertyId
+    }
+    if (!propertyId) return NextResponse.json([])
 
     let tables = await prisma.pOSTable.findMany({
       where: { propertyId },
@@ -52,10 +60,19 @@ export async function POST(req: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const propertyId = (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
-
     const body = await req.json()
     const { tableId, size, status, isBooth } = body
+
+    let propertyId = (session.user as any)?.propertyId
+    if (session.user.role === 'SUPER_ADMIN') {
+      if (body.propertyId && body.propertyId !== 'ALL') propertyId = body.propertyId
+    } else {
+      if (!propertyId && body.propertyId && body.propertyId !== 'ALL') propertyId = body.propertyId
+    }
+
+    if (!propertyId) {
+      return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
+    }
 
     if (!tableId) {
       return NextResponse.json({ error: 'Table ID is required' }, { status: 400 })
@@ -94,19 +111,25 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json()
-    const { id, status, size, isBooth } = body
+    const { id, status, size, isBooth, reservationTime, reservationName } = body
 
     if (!id) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
+    const dataToUpdate: any = {}
+    if (status) dataToUpdate.status = status
+    if (size !== undefined) dataToUpdate.size = parseInt(size)
+    if (isBooth !== undefined) dataToUpdate.isBooth = !!isBooth
+    if (reservationTime !== undefined) dataToUpdate.reservationTime = reservationTime
+    if (reservationName !== undefined) dataToUpdate.reservationName = reservationName
+
+    // If status is no longer RESERVED, maybe we want to clear out reservation info?
+    // User can manually clear it or we can auto-clear it. We'll allow the frontend to pass null to clear it.
+
     const table = await prisma.pOSTable.update({
       where: { id },
-      data: {
-        status: status || undefined,
-        size: size !== undefined ? parseInt(size) : undefined,
-        isBooth: isBooth !== undefined ? !!isBooth : undefined
-      }
+      data: dataToUpdate
     })
 
     return NextResponse.json(table)

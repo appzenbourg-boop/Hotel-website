@@ -57,7 +57,7 @@ export default function AdminRegisterPage() {
             price: '₹9,999',
             originalPrice: '₹15,000',
             icon: Building2,
-            color: 'text-slate-400',
+            color: 'text-text-secondary',
             bg: 'bg-slate-500/10',
             border: 'border-slate-500/20',
             features: ['Core PMS & Reservations', 'Front Desk Terminal', 'Digital Check-in & Check-out', 'Up to 30 rooms']
@@ -250,7 +250,7 @@ export default function AdminRegisterPage() {
             {/* Left Side - Image/Branding (Same as Login) */}
             <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-primary-hover relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/5 opacity-50" />
-                <div className="relative z-10 flex flex-col justify-center p-12 text-white">
+                <div className="relative z-10 flex flex-col justify-center p-12 text-text-primary">
                     <div className="flex items-center gap-3 mb-8">
                         <Building2 className="w-10 h-10" />
                         <span className="text-3xl font-bold">Zenbourg</span>
@@ -258,7 +258,7 @@ export default function AdminRegisterPage() {
                     <h1 className="text-4xl font-bold mb-4">
                         Join the future of hospitality.
                     </h1>
-                    <p className="text-lg text-white/90 mb-8">
+                    <p className="text-lg text-text-primary/90 mb-8">
                         Create your hotel account today and start streamlining your operations.
                     </p>
                     <div className="space-y-4">
@@ -266,14 +266,14 @@ export default function AdminRegisterPage() {
                             <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">✓</div>
                             <div>
                                 <h3 className="font-semibold">Instant Setup</h3>
-                                <p className="text-sm text-white/80">Get your property running in minutes</p>
+                                <p className="text-sm text-text-primary/80">Get your property running in minutes</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">✓</div>
                             <div>
                                 <h3 className="font-semibold">Full Control</h3>
-                                <p className="text-sm text-white/80">Manage staff, rooms, and guests</p>
+                                <p className="text-sm text-text-primary/80">Manage staff, rooms, and guests</p>
                             </div>
                         </div>
                     </div>
@@ -410,8 +410,8 @@ export default function AdminRegisterPage() {
                                         className={cn(
                                             "relative p-4 rounded-2xl border transition-all cursor-pointer group",
                                             formData.plan === plan.id 
-                                                ? `bg-[#233648] ${plan.border} ring-2 ring-primary/40` 
-                                                : "bg-surface-light border-border hover:border-white/20"
+                                                ? `bg-surface ${plan.border} ring-2 ring-primary/40` 
+                                                : "bg-surface-light border-border hover:border-border"
                                         )}
                                     >
                                         <div className="flex items-center justify-between">
@@ -420,23 +420,23 @@ export default function AdminRegisterPage() {
                                                     <plan.icon className={cn("w-5 h-5", plan.color)} />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-semibold text-white text-[14px]">{plan.name}</h4>
+                                                    <h4 className="font-semibold text-text-primary text-[14px]">{plan.name}</h4>
                                                     <p className="text-[11px] text-text-tertiary">
-                                                        {plan.originalPrice && <span className="line-through decoration-2 decoration-white/40 text-white/50 font-bold mr-1.5">{plan.originalPrice}</span>}
-                                                        <span className="font-medium text-white/90">{plan.price}</span>/month
+                                                        {plan.originalPrice && <span className="line-through decoration-2 decoration-white/40 text-text-primary/50 font-bold mr-1.5">{plan.originalPrice}</span>}
+                                                        <span className="font-medium text-text-primary/90">{plan.price}</span>/month
                                                     </p>
                                                 </div>
                                             </div>
                                             {formData.plan === plan.id && (
                                                 <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                                    <CheckCircle2 className="w-3 h-3 text-white" />
+                                                    <CheckCircle2 className="w-3 h-3 text-text-primary" />
                                                 </div>
                                             )}
                                         </div>
                                         {formData.plan === plan.id && (
                                             <div className="mt-3 flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
                                                 {plan.features.map((f, idx) => (
-                                                    <span key={idx} className="px-2 py-0.5 bg-white/5 rounded-md text-[9px] font-medium text-text-tertiary border border-white/5">
+                                                    <span key={idx} className="px-2 py-0.5 bg-white/5 rounded-md text-[9px] font-medium text-text-tertiary border border-border">
                                                         {f}
                                                     </span>
                                                 ))}
@@ -448,7 +448,7 @@ export default function AdminRegisterPage() {
                         </div>
 
                         {/* Free Trial & UPI Autopay configuration */}
-                        <div className="bg-[#1a2633] p-4 rounded-2xl border border-white/[0.06] space-y-3.5 mt-4">
+                        <div className="bg-surface p-4 rounded-2xl border border-border space-y-3.5 mt-4">
                             <label className="flex items-start gap-3 cursor-pointer">
                                 <input
                                     type="checkbox"
@@ -457,7 +457,7 @@ export default function AdminRegisterPage() {
                                     className="w-4 h-4 rounded text-primary focus:ring-primary border-border bg-surface-light accent-primary mt-1"
                                 />
                                 <div className="flex-1">
-                                    <span className="text-sm font-semibold text-white block leading-tight">Activate 14-Day Free Trial</span>
+                                    <span className="text-sm font-semibold text-text-primary block leading-tight">Activate 14-Day Free Trial</span>
                                     <span className="text-[11px] text-text-secondary block mt-1 leading-normal">
                                         Activate your chosen plan with a 14-day free trial. Input your UPI ID below to configure automatic autopay deductions after the trial. No immediate charge is made.
                                     </span>
@@ -465,7 +465,7 @@ export default function AdminRegisterPage() {
                             </label>
 
                             {formData.trialPeriod && (
-                                <div className="animate-in fade-in slide-in-from-top-1 duration-150 pt-2 border-t border-white/[0.06]">
+                                <div className="animate-in fade-in slide-in-from-top-1 duration-150 pt-2 border-t border-border">
                                     <Input
                                         label="UPI ID for Auto-Pay (After 14 Days)"
                                         placeholder="e.g. owner@upi or 9876543210@paytm"

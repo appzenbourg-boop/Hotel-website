@@ -1,13 +1,61 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/db'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth/options'
 
 export async function POST(req: Request) {
   try {
-    const propertyId = '6a7c467e80ab868749620999' // Valid MongoDB ObjectId hex string
+    const session = await getServerSession(authOptions)
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-    // Clear existing
-    await prisma.pOSOrderItem.deleteMany({})
-    await prisma.pOSOrder.deleteMany({})
+    const { searchParams } = new URL(req.url)
+    let bodyPropertyId: string | null = null
+    try {
+      const body = await req.json()
+      bodyPropertyId = body?.propertyId
+    } catch {}
+
+    const urlPropertyId = searchParams.get('propertyId') || bodyPropertyId
+    let propertyId = (session.user as any)?.propertyId
+    if (session.user.role === 'SUPER_ADMIN') {
+      if (urlPropertyId && urlPropertyId !== 'ALL') propertyId = urlPropertyId
+    }
+
+    if (!propertyId || propertyId === 'ALL') {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { workplaceId: true, ownedPropertyIds: true }
+      })
+      propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+      if (!propertyId) {
+        const fallbackProp = await prisma.property.findFirst({
+          where: { ownerIds: { has: session.user.id } },
+          select: { id: true }
+        })
+        if (fallbackProp) propertyId = fallbackProp.id
+      }
+    }
+
+    if (!propertyId) {
+      return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
+    }
+
+    // Clear existing for this property only
+    const existingOrders = await prisma.pOSOrder.findMany({
+      where: { propertyId },
+      select: { id: true }
+    })
+    const orderIds = existingOrders.map(o => o.id)
+    if (orderIds.length > 0) {
+      await prisma.pOSOrderItem.deleteMany({
+        where: { posOrderId: { in: orderIds } }
+      })
+      await prisma.pOSOrder.deleteMany({
+        where: { propertyId }
+      })
+    }
 
     // Order 1 (T-14)
     const order1 = await prisma.pOSOrder.create({

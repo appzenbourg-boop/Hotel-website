@@ -47,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className={cn(inter.variable, outfit.variable, cormorant.variable, inter.className)}>
         {/* Razorpay Checkout SDK — must be loaded globally before any payment */}
         <Script

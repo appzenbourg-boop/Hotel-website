@@ -19,33 +19,69 @@ export async function POST(request: Request) {
 
         // Get the booking's propertyId so we can link the guest to the right hotel
         let bookingPropertyId: string | null = null
-        if (bookingId) {
-            const booking = await prisma.booking.findUnique({
-                where: { id: bookingId },
-                include: { guest: true }
-            })
-            if (booking) {
-                guestId = booking.guestId
-                bookingPropertyId = booking.propertyId
+        let validBooking = false
+
+        if (bookingId && bookingId !== 'null' && bookingId !== 'undefined') {
+            try {
+                const booking = await prisma.booking.findUnique({
+                    where: { id: bookingId },
+                    include: { guest: true }
+                })
+                if (booking) {
+                    guestId = booking.guestId
+                    bookingPropertyId = booking.propertyId
+                    validBooking = true
+                } else {
+                    // If no booking found, the ID might actually be a guestId (e.g. a walk-in guest without an active booking)
+                    const directGuest = await prisma.guest.findUnique({
+                        where: { id: bookingId }
+                    })
+                    if (directGuest) {
+                        guestId = directGuest.id
+                    }
+                }
+            } catch (e) {
+                console.warn('Invalid ID format or not found:', bookingId)
             }
         }
 
         // Robust resolution strategy:
-        // 1. Try to find a guest by phone first (to avoid P2002 unique constraint conflicts)
-        let resolvedGuest = await prisma.guest.findUnique({ where: { phone: cleanPhone } })
-
-        // 2. If not found by phone, but we have a guestId from the booking, try to find them by ID
-        if (!resolvedGuest && guestId) {
+        // 1. If we have a guestId (from booking or direct URL parameter), that is the absolute source of truth
+        let resolvedGuest = null
+        if (guestId) {
             resolvedGuest = await prisma.guest.findUnique({ where: { id: guestId } })
+        }
+
+        // 2. If we STILL don't have a guest, try to find them by phone
+        if (!resolvedGuest) {
+            resolvedGuest = await prisma.guest.findUnique({ where: { phone: cleanPhone } })
+        }
+
+        // 3. Let's see if they have an active booking if they just walked in (no valid booking from URL)
+        if (!validBooking && resolvedGuest) {
+            const activeBooking = await prisma.booking.findFirst({
+                where: { guestId: resolvedGuest.id, status: 'RESERVED' },
+                orderBy: { createdAt: 'desc' }
+            })
+            if (activeBooking) {
+                bookingId = activeBooking.id
+                bookingPropertyId = activeBooking.propertyId
+                guestId = resolvedGuest.id
+                validBooking = true
+            }
         }
 
         let guest
         if (resolvedGuest) {
+            // Prevent unique constraint errors if cleanPhone belongs to another legacy duplicate guest
+            const phoneOwner = await prisma.guest.findUnique({ where: { phone: cleanPhone } })
+            const phoneToUpdate = (phoneOwner && phoneOwner.id !== resolvedGuest.id) ? undefined : cleanPhone
+
             guest = await prisma.guest.update({
                 where: { id: resolvedGuest.id },
                 data: {
                     name,
-                    phone: cleanPhone,
+                    ...(phoneToUpdate && { phone: phoneToUpdate }),
                     idDocumentFront: idProof,
                     checkInStatus: 'COMPLETED',
                     checkInCompletedAt: new Date(),
@@ -70,7 +106,7 @@ export async function POST(request: Request) {
 
         // 3. Critically: Ensure the booking points to this resolved guest
         // This handles cases where the booking was originally linked to a guest with a different phone
-        if (bookingId) {
+        if (validBooking && bookingId) {
             await prisma.booking.update({
                 where: { id: bookingId },
                 data: {

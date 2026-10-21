@@ -18,15 +18,80 @@ export function cn(...classes: (string | number | boolean | undefined | null | R
 }
 
 /**
- * Format currency in INR
+ * Format currency in INR with auto-compacting and overflow protection for extreme numbers.
+ * Examples:
+ * - 50000 -> ₹50,000
+ * - 1500000 -> ₹15,00,000
+ * - 12500000 -> ₹1.25 Cr
+ * - 29298836316380180 -> ₹2.93e+16
  */
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | string, options?: { compact?: boolean; autoCompactThreshold?: number }): string {
+  const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount)
+  if (isNaN(num) || num === null || num === undefined) return '₹0'
+
+  const abs = Math.abs(num)
+  const isNegative = num < 0
+  const prefix = isNegative ? '-₹' : '₹'
+
+  // Huge numbers (>= 10,000 Crores)
+  if (abs >= 100_000_000_000) {
+    if (abs >= 10_000_000_000_000) {
+      return `${prefix}${num.toExponential(2)}`
+    }
+    const cr = abs / 10_000_000
+    return `${prefix}${cr.toLocaleString('en-IN', { maximumFractionDigits: 1 })} Cr`
+  }
+
+  // Auto-compact in Crores (>= 1 Crore)
+  const threshold = options?.autoCompactThreshold ?? 10_000_000
+  if (options?.compact || abs >= threshold) {
+    if (abs >= 10_000_000) {
+      const cr = abs / 10_000_000
+      return `${prefix}${cr.toLocaleString('en-IN', { maximumFractionDigits: 2 })} Cr`
+    }
+    if (options?.compact && abs >= 100_000) {
+      const l = abs / 100_000
+      return `${prefix}${l.toLocaleString('en-IN', { maximumFractionDigits: 2 })} L`
+    }
+  }
+
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(num)
+}
+
+/**
+ * Concise and safe INR string representation that never breaks UI components.
+ * Formats:
+ * - < 1 Lakh: ₹50,000
+ * - 1 Lakh - 99 Lakhs: ₹1,50,000 (or ₹1.5 L if compactLakhs)
+ * - 1 Crore+: ₹X.XX Cr
+ * - Extreme numbers: ₹X.XXe+16
+ */
+export function formatSafeINR(amount: number | string | null | undefined, options?: { compactLakhs?: boolean }): string {
+  if (amount === null || amount === undefined || amount === '') return '₹0'
+  const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount)
+  if (isNaN(num)) return '₹0'
+
+  const abs = Math.abs(num)
+  const prefix = num < 0 ? '-₹' : '₹'
+
+  if (abs >= 10_000_000_000_000) {
+    return `${prefix}${num.toExponential(2)}`
+  }
+  if (abs >= 10_000_000) {
+    const cr = abs / 10_000_000
+    return `${prefix}${cr.toLocaleString('en-IN', { maximumFractionDigits: 2 })} Cr`
+  }
+  if (options?.compactLakhs && abs >= 100_000) {
+    const l = abs / 100_000
+    return `${prefix}${l.toLocaleString('en-IN', { maximumFractionDigits: 2 })} L`
+  }
+
+  return `${prefix}${num.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 }
 
 /**
@@ -329,4 +394,38 @@ export function debounce<T extends (...args: any[]) => any>(
  */
 export function generateId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36)
+}
+
+/**
+ * Safely extract human-readable error message from API response
+ */
+export async function getApiErrorMessage(res: Response, fallback = 'Something went wrong'): Promise<string> {
+  try {
+    const text = await res.text()
+    if (!text) return fallback
+    try {
+      const json = JSON.parse(text)
+      return json?.error || json?.message || json?.details || fallback
+    } catch {
+      return text
+    }
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Safely format error message from any string or error object
+ */
+export function formatErrorMessage(err: any, fallback = 'Something went wrong'): string {
+  if (!err) return fallback
+  if (typeof err === 'string') {
+    try {
+      const parsed = JSON.parse(err)
+      return parsed?.error || parsed?.message || parsed?.details || err
+    } catch {
+      return err
+    }
+  }
+  return err.error || err.message || fallback
 }

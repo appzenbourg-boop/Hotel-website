@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { requireAuth } from '@/lib/auth/middleware'
+import { normalizePropertyFeatures } from '@/lib/master-features'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,9 +32,27 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ success: true, properties })
         }
 
-        const propertyId = searchParams.get('propertyId') || authResult.user.propertyId
+        let propertyId = searchParams.get('propertyId') || authResult.user.propertyId
 
         if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: authResult.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+            if (!propertyId) {
+                const firstProp = await prisma.property.findFirst({
+                    where: authResult.user.role === 'SUPER_ADMIN' ? undefined : { ownerIds: { has: authResult.user.id } }
+                })
+                if (firstProp) propertyId = firstProp.id
+            }
+            if (!propertyId && authResult.user.role === 'SUPER_ADMIN') {
+                const anyProp = await prisma.property.findFirst()
+                if (anyProp) propertyId = anyProp.id
+            }
+        }
+
+        if (!propertyId) {
             return NextResponse.json({ success: true, property: null })
         }
 
@@ -45,7 +64,20 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Property not found' }, { status: 404 })
         }
 
-        return NextResponse.json({ success: true, property })
+        const propertySettings = await (prisma as any).propertySettings.findUnique({
+            where: { propertyId }
+        })
+
+        const normalizedFeatures = normalizePropertyFeatures(property.features, property.plan)
+
+        return NextResponse.json({ 
+            success: true, 
+            property: {
+                ...property,
+                gstNumber: propertySettings?.gstNumber || null,
+                features: normalizedFeatures
+            } 
+        })
 
     } catch (error: any) {
         return NextResponse.json({ error: 'Internal Error' }, { status: 500 })

@@ -1,0 +1,15 @@
+'use client'
+import React from 'react'
+import { ShoppingBag } from 'lucide-react'
+
+export default function InventoryReportPage() {
+    return (
+        <div className="p-8 font-sans bg-background min-h-screen text-text-primary flex items-center justify-center">
+            <div className="text-center space-y-4">
+                <ShoppingBag className="w-16 h-16 text-[#4A9EFF] mx-auto opacity-50" />
+                <h1 className="text-2xl font-bold">Inventory & Stock Report</h1>
+                <p className="text-text-secondary">This dedicated report module is coming soon. Use the Dynamic Builder for custom data.</p>
+            </div>
+        </div>
+    )
+}

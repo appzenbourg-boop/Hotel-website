@@ -26,6 +26,13 @@ export async function GET(req: NextRequest) {
             if (queryPropertyId && queryPropertyId !== 'ALL') propertyId = queryPropertyId
         } else {
             propertyId = session.user.propertyId ?? null
+            if (!propertyId || propertyId === 'ALL') {
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: session.user.id },
+                    select: { workplaceId: true, ownedPropertyIds: true }
+                })
+                propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+            }
         }
 
         const cacheKey = `guests_list:${propertyId || 'ALL'}:${status || 'ALL'}:${search || 'none'}:${page}:${limit}`
@@ -142,7 +149,7 @@ export async function POST(req: NextRequest) {
         if (!session) return unauthorized()
 
         const body = await req.json()
-        const { name, email, phone, idType, idNumber, address, dateOfBirth, gstNumber } = body
+        const { name, email, phone, idType, idNumber, address, dateOfBirth, gstNumber, city, state, country, pinCode } = body
 
         if (!name || !phone) return badRequest('Name and phone are required')
 
@@ -152,9 +159,17 @@ export async function POST(req: NextRequest) {
         }
 
         // Resolve property — this is who "owns" this guest
-        const propertyId = session.user.role === 'SUPER_ADMIN'
+        let propertyId = session.user.role === 'SUPER_ADMIN'
             ? (body.propertyId ?? session.user.propertyId)
             : session.user.propertyId
+
+        if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+        }
 
         const cleanGst = gstNumber ? gstNumber.trim().toUpperCase() : null
 
@@ -166,6 +181,10 @@ export async function POST(req: NextRequest) {
                 idType: idType ?? undefined,
                 idNumber: idNumber ?? undefined,
                 address: address ?? undefined,
+                city: city ?? undefined,
+                state: state ?? undefined,
+                country: country ?? undefined,
+                pinCode: pinCode ?? undefined,
                 gstNumber: cleanGst ?? undefined,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
                 ...(propertyId ? { createdByPropertyId: propertyId } : {}),
@@ -177,6 +196,10 @@ export async function POST(req: NextRequest) {
                 idType: idType ?? null,
                 idNumber: idNumber ?? null,
                 address: address ?? null,
+                city: city ?? null,
+                state: state ?? null,
+                country: country ?? null,
+                pinCode: pinCode ?? null,
                 gstNumber: cleanGst,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
                 checkInStatus: 'PENDING',

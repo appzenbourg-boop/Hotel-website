@@ -68,7 +68,7 @@ export default function PoliciesPage() {
                             <h3 className="font-bold text-lg text-text-primary">{title}</h3>
                         </div>
                         <textarea
-                            className="w-full min-h-[150px] bg-black/20 border border-white/10 rounded-xl p-4 text-sm text-text-primary focus:ring-2 focus:ring-primary/50 outline-none leading-relaxed resize-y"
+                            className="w-full min-h-[150px] bg-black/20 border border-border/50 rounded-xl p-4 text-sm text-text-primary focus:ring-2 focus:ring-primary/50 outline-none leading-relaxed resize-y"
                             placeholder={placeholder}
                             value={(policies as any)[key]}
                             onChange={e => setPolicies({ ...policies, [key]: e.target.value })}

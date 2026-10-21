@@ -6,6 +6,7 @@ export interface PDFBookingData {
     guestName: string
     guestEmail: string
     guestPhone?: string
+    guestGstNumber?: string
     roomType: string
     roomNumber?: string
     checkIn: string
@@ -218,8 +219,8 @@ export async function generateBookingPDFVoucher(
     doc.setFont('Helvetica', 'bold')
     doc.setFontSize(8)
     doc.text('PRIMARY GUEST', 20, gridY + 32)
-    doc.text('EMAIL ADDRESS', 80, gridY + 32)
-    doc.text('PHONE NUMBER', 140, gridY + 32)
+    doc.text(booking.guestGstNumber ? 'GUEST / CO. GSTIN' : 'EMAIL ADDRESS', 80, gridY + 32)
+    doc.text(booking.guestGstNumber ? 'PHONE / CONTACT' : 'PHONE NUMBER', 140, gridY + 32)
 
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])
     doc.setFont('Helvetica', 'bold')
@@ -228,8 +229,15 @@ export async function generateBookingPDFVoucher(
 
     doc.setFont('Helvetica', 'normal')
     doc.setFontSize(9.5)
-    doc.text(booking.guestEmail || 'N/A', 80, gridY + 40)
-    doc.text(booking.guestPhone || 'N/A', 140, gridY + 40)
+    if (booking.guestGstNumber) {
+        doc.setFont('Helvetica', 'bold')
+        doc.text(booking.guestGstNumber, 80, gridY + 40)
+        doc.setFont('Helvetica', 'normal')
+        doc.text(booking.guestPhone || booking.guestEmail || 'N/A', 140, gridY + 40)
+    } else {
+        doc.text(booking.guestEmail || 'N/A', 80, gridY + 40)
+        doc.text(booking.guestPhone || 'N/A', 140, gridY + 40)
+    }
 
     // Special Requests Section
     let requestOffset = 0

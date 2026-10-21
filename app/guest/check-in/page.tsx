@@ -6,7 +6,8 @@ import {
     User, Phone, Camera, CheckCircle2, 
     ArrowRight, ArrowLeft, Loader2, ShieldCheck, Building2, MapPin
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
+import { cn, getApiErrorMessage } from '@/lib/utils'
 
 function GuestCheckInContent() {
     const searchParams = useSearchParams()
@@ -40,7 +41,7 @@ function GuestCheckInContent() {
         const file = e.target.files?.[0]
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
-                alert('File is too large. Max 5MB allowed.')
+                toast.error('File is too large. Max 5MB allowed.')
                 return
             }
             setFileUploading(true)
@@ -50,7 +51,7 @@ function GuestCheckInContent() {
                 setFormData(prev => ({ ...prev, idProof: result.url }))
             } catch (error) {
                 console.error('[GUEST_ID_UPLOAD_ERROR]', error)
-                alert('Failed to upload ID. Please try again.')
+                toast.error('Failed to upload ID. Please try again.')
             } finally {
                 setFileUploading(false)
             }
@@ -70,10 +71,17 @@ function GuestCheckInContent() {
             if (res.ok) {
                 const data = await res.json()
                 setBookingRef(data.bookingRef)
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('zenbourg_guest_id', data.guestId)
+                }
                 setStep(3)
+            } else {
+                const err = await getApiErrorMessage(res, 'Check-in failed')
+                toast.error(err)
             }
         } catch (error) {
             console.error(error)
+            toast.error('Check-in failed. Please try again later.')
         } finally {
             setLoading(false)
         }
@@ -175,7 +183,7 @@ function GuestCheckInContent() {
                                 <button
                                     onClick={() => {
                                         if (formData.name && formData.phone.length >= 10) setStep(2)
-                                        else alert('Please enter your full name and 10-digit mobile number.')
+                                        else toast.error('Please enter your full name and 10-digit mobile number.')
                                     }}
                                     className="w-full bg-[#4A9EFF] hover:bg-[#3A8EEF] text-white py-5 rounded-2xl font-bold tracking-tight text-lg shadow-xl shadow-[#4A9EFF]/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98] group"
                                 >

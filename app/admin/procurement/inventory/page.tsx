@@ -7,6 +7,7 @@ import {
   Plus, Search, Filter, ArrowUpRight, TrendingUp,
   AlertTriangle, CheckCircle, Package, ArrowRight, Download, HelpCircle, X, Trash2, ChevronDown, Clock, ClipboardList
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
@@ -29,7 +30,7 @@ export default function InventoryDashboard() {
   }, [])
 
   // Fetch dynamic inventory items, vendors list, and stats
-  const { data: inventoryData, isLoading: isInventoryLoading, mutate: mutateInventory } = useSWR('/api/admin/pos/inventory', fetcher)
+  const { data: inventoryData, isLoading: isInventoryLoading, mutate: mutateInventory } = useSWR(buildContextUrl('/api/admin/pos/inventory'), fetcher)
 
   const inventoryList = inventoryData?.items || []
   const vendorsList = inventoryData?.vendors || []
@@ -93,10 +94,10 @@ export default function InventoryDashboard() {
           setEditImage(data.url)
         }
       } else {
-        alert('Failed to upload image')
+        toast.error('Failed to upload image')
       }
     } catch (err) {
-      alert('Upload failed')
+      toast.error('Upload failed')
     } finally {
       setIsUploading(false)
     }
@@ -337,7 +338,7 @@ export default function InventoryDashboard() {
       case 'SENT': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
       case 'RECEIVED': return 'bg-green-500/10 text-green-400 border-green-500/20'
       case 'CANCELLED': return 'bg-red-500/10 text-red-400 border-red-500/20'
-      default: return 'bg-white/5 text-gray-400 border-white/5'
+      default: return 'bg-white/5 text-text-secondary border-border'
     }
   }
 
@@ -348,28 +349,27 @@ export default function InventoryDashboard() {
 
   if (isInventoryLoading && !inventoryData) {
     return (
-      <div className="flex h-full min-h-[calc(100vh-100px)] bg-[#0F172A] items-center justify-center text-white -mx-6 md:-mx-8 -my-6 md:-my-8 p-8">
+      <div className="flex h-full min-h-[calc(100vh-100px)] bg-background items-center justify-center text-text-primary -mx-6 md:-mx-8 -my-6 md:-my-8 p-8">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-[#3B82F6] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-gray-400 font-medium">Loading inventory...</p>
+          <p className="text-sm text-text-secondary font-medium">Loading inventory...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] pb-24 font-sans text-gray-200 -mx-6 md:-mx-8 -my-6 md:-my-8 p-8 overflow-y-auto">
+    <div className="min-h-screen bg-background pb-24 font-sans text-text-primary -mx-6 md:-mx-8 -my-6 md:-my-8 p-8 overflow-y-auto">
       
       {/* Top Header */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-6">
         <div>
-
-          <h1 className="text-5xl font-black text-white leading-tight">Inventory<br/><span className="text-[#3B82F6]">State of Zenbourg</span></h1>
+          <h1 className="text-3xl font-bold text-text-primary leading-tight">Inventory<br/><span className="text-blue-500 text-2xl font-semibold">State of Zenbourg</span></h1>
         </div>
         
         <div className="text-right">
-          <div className="text-3xl font-black tracking-tight text-white">{timeStr}</div>
-          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Local Hotel Time</div>
+          <div className="text-2xl font-bold text-text-primary">{timeStr}</div>
+          <div className="text-xs text-text-tertiary font-medium uppercase mt-1">Local Hotel Time</div>
         </div>
       </div>
 
@@ -377,42 +377,54 @@ export default function InventoryDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         
         {/* Widget 1 */}
-        <div className="bg-[#1E293B] rounded-3xl p-6 border border-white/5 flex flex-col justify-between">
+        <div className="bg-surface rounded-3xl p-6 border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
           <div>
-            <div className="text-[10px] font-black tracking-[0.15em] uppercase text-gray-500 mb-2">Total Stock Value</div>
-            <div className="text-xl font-bold text-white">{formatCurrency(stats.totalStockValue)}</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-2">Total Stock Value</div>
+            <div className="text-2xl font-black text-text-primary tracking-tight">{formatCurrency(stats.totalStockValue)}</div>
           </div>
-          <div className="text-[10px] font-bold text-gray-400 mt-4">
+          <div className="text-xs font-semibold text-text-secondary mt-4">
             Valuation based on current stock levels
           </div>
         </div>
 
         {/* Widget 2 */}
-        <div className="bg-[#1E293B] rounded-3xl p-6 border border-white/5 flex flex-col justify-between">
+        <div className="bg-surface rounded-3xl p-6 border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
           <div>
-            <div className="text-[10px] font-black tracking-[0.15em] uppercase text-gray-500 mb-2">Items Below Par</div>
-            <div className="text-xl font-bold text-white">{stats.criticalCount} <span className="text-xs font-bold text-red-400 ml-1">CRITICAL</span></div>
+            <div className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-2">Items Below Par</div>
+            <div className="text-2xl font-black text-text-primary flex items-center gap-2">
+              <span>{stats.criticalCount}</span>
+              {stats.criticalCount > 0 ? (
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  CRITICAL
+                </span>
+              ) : (
+                <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  OPTIMAL
+                </span>
+              )}
+            </div>
           </div>
-          <div className="text-[10px] font-bold text-gray-400 mt-4">Needs immediate reorder</div>
+          <div className="text-xs font-semibold text-text-secondary mt-4">Needs immediate reorder</div>
         </div>
 
         {/* Widget 3 */}
-        <div className="bg-[#1E293B] rounded-3xl p-6 border border-white/5 flex flex-col justify-between">
+        <div className="bg-surface rounded-3xl p-6 border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
           <div>
-            <div className="text-[10px] font-black tracking-[0.15em] uppercase text-gray-500 mb-2">Pending Orders</div>
-            <div className="text-xl font-bold text-white">{stats.pendingOrdersCount.toString().padStart(2, '0')}</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-2">Pending Orders</div>
+            <div className="text-2xl font-black text-text-primary tracking-tight">{stats.pendingOrdersCount.toString().padStart(2, '0')}</div>
           </div>
-          <div className="text-[10px] font-bold text-gray-400 mt-4">Expected delivery within 48h</div>
+          <div className="text-xs font-semibold text-text-secondary mt-4">Expected delivery within 48h</div>
         </div>
 
         {/* Widget 4 */}
-        <div className="bg-[#1E293B] rounded-3xl p-6 border border-white/5 flex flex-col justify-between">
+        <div className="bg-surface rounded-3xl p-6 border border-border flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
           <div>
-            <div className="text-[10px] font-black tracking-[0.15em] uppercase text-gray-500 mb-2">Active Vendors</div>
-            <div className="text-xl font-bold text-white">{stats.activeVendorsCount}</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-2">Active Vendors</div>
+            <div className="text-2xl font-black text-text-primary tracking-tight">{stats.activeVendorsCount}</div>
           </div>
-          <div className="text-[10px] font-bold text-blue-400 mt-4 flex items-center gap-1">
-            <CheckCircle className="w-3.5 h-3.5" /> VERIFIED PARTNERS
+          <div className="text-xs font-bold text-blue-600 dark:text-blue-400 mt-4 flex items-center gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span className="tracking-wide text-[11px] uppercase">VERIFIED PARTNERS</span>
           </div>
         </div>
 
@@ -422,24 +434,24 @@ export default function InventoryDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
         
         {/* Stock Distribution CSS Chart */}
-        <div className="lg:col-span-2 bg-[#1E293B] rounded-3xl p-8 border border-white/5 flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-surface rounded-3xl p-8 border border-border flex flex-col justify-between">
           <div>
-            <h2 className="text-xl font-black text-white tracking-tight mb-2">Stock Distribution</h2>
-            <p className="text-xs text-gray-400 mb-8 font-medium">Consumption trends across primary concierge verticals over the last 30 operational days.</p>
+            <h2 className="text-xl font-bold text-text-primary mb-2">Stock Distribution</h2>
+            <p className="text-sm text-text-secondary mb-8">Consumption trends across primary concierge verticals over the last 30 operational days.</p>
           </div>
           
           <div className="space-y-6 pt-2">
             {[
-              { label: 'HOUSEKEEPING', val: distStats['HOUSEKEEPING'], color: 'bg-[#3B82F6]' },
+              { label: 'HOUSEKEEPING', val: distStats['HOUSEKEEPING'], color: 'bg-blue-600 dark:bg-[#4A9EFF]' },
               { label: 'F&B', val: distStats['F&B'], color: 'bg-indigo-500' },
               { label: 'MAINTENANCE', val: distStats['MAINTENANCE'], color: 'bg-emerald-500' }
             ].map(vertical => (
               <div key={vertical.label} className="space-y-2">
-                <div className="flex justify-between text-[10px] font-black tracking-widest text-gray-400">
+                <div className="flex justify-between text-xs font-semibold text-text-secondary">
                   <span>{vertical.label}</span>
                   <span>{vertical.val}% STOCK LEVEL</span>
                 </div>
-                <div className="w-full bg-white/5 rounded-full h-3">
+                <div className="w-full bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/5 rounded-full h-3">
                   <div className={cn("h-3 rounded-full shadow-lg transition-all duration-1000", vertical.color)} style={{ width: `${vertical.val}%` }}></div>
                 </div>
               </div>
@@ -448,19 +460,19 @@ export default function InventoryDashboard() {
         </div>
 
         {/* AI smart reorder assistance */}
-        <div className="bg-[#2563EB] text-white rounded-3xl p-8 flex flex-col justify-between shadow-xl shadow-blue-600/10 relative overflow-hidden group">
+        <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-8 flex flex-col justify-between shadow-xl shadow-slate-900/15 relative overflow-hidden group border border-slate-800">
           <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Package className="w-32 h-32 transform rotate-12" />
+            <Package className="w-32 h-32 transform rotate-12 text-white" />
           </div>
           <div className="relative z-10">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-6">
-              <Package className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-6 border border-white/15">
+              <Package className="w-5 h-5 text-blue-400" />
             </div>
-            <h2 className="text-2xl font-black mb-4 tracking-tight leading-tight">Smart Reorder Assistance</h2>
-            <p className="text-sm text-blue-100 font-semibold leading-relaxed mb-8">
+            <h2 className="text-xl font-black text-white mb-3">Smart Reorder Assistance</h2>
+            <p className="text-sm text-slate-300 leading-relaxed mb-8">
               {lowItems.length > 0 ? (
                 <>
-                  Immediate procurement of <span className="font-bold text-white underline">{Math.max(100, lowItems[0].reorderPoint * 2 - lowItems[0].stockLevel)} {lowItems[0].unit} {lowItems[0].name}</span> is suggested to restock par levels.
+                  Immediate procurement of <span className="font-bold text-white underline decoration-blue-400 underline-offset-2">{Math.max(100, lowItems[0].reorderPoint * 2 - lowItems[0].stockLevel)} {lowItems[0].unit} {lowItems[0].name}</span> is suggested to restock par levels.
                 </>
               ) : (
                 <>All items are currently well-stocked. No immediate reordering required.</>
@@ -469,36 +481,36 @@ export default function InventoryDashboard() {
           </div>
           <button 
             onClick={openOrderModal}
-            className="w-full py-4 bg-white text-[#0F172A] hover:bg-gray-100 font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-sm flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-blue-600/30 active:scale-95 flex items-center justify-center gap-2"
           >
-            Generate Orders <ArrowRight className="w-4 h-4" />
+            Generate Orders <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
 
       </div>
 
       {/* Row 3: Master Inventory Table */}
-      <div className="bg-[#1E293B] border border-white/5 rounded-3xl p-8 overflow-hidden shadow-xl mb-10">
+      <div className="bg-surface border border-border rounded-3xl p-8 overflow-hidden shadow-xl mb-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-black text-white tracking-tight">Master Inventory</h2>
+            <h2 className="text-xl font-bold text-text-primary">Master Inventory</h2>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="bg-[#2563EB] hover:bg-[#3B82F6] text-white px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all flex items-center gap-1 shadow-sm"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1 shadow-sm transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Item
+              <Plus className="w-4 h-4" /> Add Item
             </button>
           </div>
           
           <div className="flex flex-wrap items-center gap-4">
             <div className="relative w-64">
-              <Search className="w-4 h-4 text-gray-500 absolute left-4.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-text-tertiary absolute left-4.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search inventory..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full bg-[#0F172A] border border-white/5 rounded-2xl py-3 pl-11 pr-4 text-xs outline-none text-white focus:border-[#3B82F6] hover:border-white/10 transition-all placeholder-gray-500"
+                className="w-full bg-background border border-border rounded-2xl py-3 pl-11 pr-4 text-xs outline-none text-text-primary focus:border-[#3B82F6] hover:border-border/50 transition-all placeholder-gray-500"
               />
             </div>
 
@@ -506,21 +518,20 @@ export default function InventoryDashboard() {
               <select
                 value={activeCategory}
                 onChange={e => setActiveCategory(e.target.value)}
-                className="appearance-none bg-[#0F172A] border border-white/5 hover:border-white/10 rounded-2xl py-3 pl-5 pr-10 text-xs font-bold text-gray-400 outline-none cursor-pointer focus:border-[#3B82F6] transition-colors"
+                className="bg-background border border-border hover:border-border/50 rounded-2xl py-3 px-5 text-xs font-bold text-text-secondary outline-none cursor-pointer focus:border-[#3B82F6] transition-colors"
               >
                 <option value="ALL">ALL CATEGORIES</option>
                 <option value="Housekeeping">HOUSEKEEPING</option>
                 <option value="Food & Beverage">F&B</option>
                 <option value="Maintenance">MAINTENANCE</option>
               </select>
-              <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
 
             <button 
               onClick={handleExportCSV}
-              className="px-5 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2"
+              className="px-5 py-3 bg-white/5 hover:bg-white/10 text-text-primary border border-border rounded-2xl text-xs font-bold transition-all flex items-center gap-2"
             >
-              <Download className="w-4 h-4 text-gray-400" /> Export Report
+              <Download className="w-4 h-4 text-text-secondary" /> Export Report
             </button>
           </div>
         </div>
@@ -529,7 +540,7 @@ export default function InventoryDashboard() {
           {filteredInventory.length > 0 ? (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                <tr className="border-b border-border text-[10px] font-black uppercase tracking-widest text-text-tertiary">
                   <th className="py-4 px-2">Item Details</th>
                   <th className="py-4 px-4">Category</th>
                   <th className="py-4 px-4">Stock Level</th>
@@ -546,31 +557,31 @@ export default function InventoryDashboard() {
                     <tr 
                       key={item.id} 
                       onClick={() => handleRowClick(item)}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                      className="border-b border-border hover:bg-slate-50/80 dark:hover:bg-white/5 transition-colors cursor-pointer"
                     >
                       <td className="py-5 px-2 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/5 overflow-hidden flex-shrink-0 relative">
+                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-white/5 border border-border overflow-hidden flex-shrink-0 relative">
                           {item.image ? (
                             <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-80" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-[#1A2634]"><Package className="w-5 h-5 text-gray-500" /></div>
+                            <div className="w-full h-full flex items-center justify-center bg-surface-light"><Package className="w-5 h-5 text-text-tertiary" /></div>
                           )}
                         </div>
                         <div>
-                          <div className="font-bold text-white text-sm">{item.name}</div>
-                          <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">SKU: {item.sku}</div>
+                          <div className="font-bold text-text-primary text-sm">{item.name}</div>
+                          <div className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider mt-0.5">SKU: {item.sku}</div>
                         </div>
                       </td>
-                      <td className="py-5 px-4 text-xs font-semibold text-gray-400">
+                      <td className="py-5 px-4 text-xs font-semibold text-text-secondary">
                         {item.category}
                       </td>
-                      <td className={cn("py-5 px-4 font-black text-sm", isLow ? "text-red-400" : "text-white")}>
-                        {item.stockLevel} <span className="text-[10px] text-gray-500 font-medium lowercase">{item.unit}</span>
+                      <td className={cn("py-5 px-4 font-black text-sm", isLow ? "text-red-400" : "text-text-primary")}>
+                        {item.stockLevel} <span className="text-[10px] text-text-tertiary font-medium lowercase">{item.unit}</span>
                       </td>
-                      <td className="py-5 px-4 text-xs font-bold text-gray-400">
+                      <td className="py-5 px-4 text-xs font-bold text-text-secondary">
                         {item.reorderPoint}
                       </td>
-                      <td className="py-5 px-4 text-xs font-black text-white">
+                      <td className="py-5 px-4 text-xs font-black text-text-primary">
                         {formatCurrency(itemValue)}
                       </td>
                       <td className="py-5 px-4">
@@ -587,9 +598,9 @@ export default function InventoryDashboard() {
               </tbody>
             </table>
           ) : (
-            <div className="text-center py-12 border border-white/5 border-dashed rounded-3xl bg-white/[0.01]">
+            <div className="text-center py-12 border border-border border-dashed rounded-3xl bg-surface-light">
               <Package className="w-12 h-12 text-gray-600 mx-auto mb-3 opacity-30" />
-              <p className="text-sm text-gray-500 font-medium">No inventory items registered yet.</p>
+              <p className="text-sm text-text-tertiary font-medium">No inventory items registered yet.</p>
             </div>
           )}
         </div>
@@ -599,10 +610,10 @@ export default function InventoryDashboard() {
       {/* EDIT INVENTORY MODAL */}
       {isEditModalOpen && selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-[#1E293B] border border-white/5 rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
+          <div className="bg-surface border border-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
             <button 
               onClick={() => setIsEditModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
+              className="absolute top-6 right-6 text-text-secondary hover:text-text-primary transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -610,7 +621,7 @@ export default function InventoryDashboard() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-2xl font-black leading-none">Edit Inventory Item</h3>
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1.5 block">SKU: {selectedItem.sku}</span>
+                <span className="text-xs font-bold text-text-tertiary uppercase tracking-widest mt-1.5 block">SKU: {selectedItem.sku}</span>
               </div>
               <button 
                 onClick={handleDeleteItem}
@@ -623,36 +634,36 @@ export default function InventoryDashboard() {
 
             <form onSubmit={handleSaveEdit} className="space-y-5">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Item Name</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Item Name</label>
                 <input
                   type="text"
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                  className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Stock Level</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Stock Level</label>
                   <input
                     type="number"
                     min={0}
                     value={editStockLevel}
                     onChange={e => setEditStockLevel(parseInt(e.target.value) || 0)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Reorder Point</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Reorder Point</label>
                   <input
                     type="number"
                     min={0}
                     value={editReorderPoint}
                     onChange={e => setEditReorderPoint(parseInt(e.target.value) || 0)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                     required
                   />
                 </div>
@@ -660,11 +671,11 @@ export default function InventoryDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Category</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Category</label>
                   <select
                     value={editCategory}
                     onChange={e => setEditCategory(e.target.value)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                   >
                     <option value="Housekeeping">Housekeeping</option>
                     <option value="Food & Beverage">Food & Beverage</option>
@@ -672,34 +683,34 @@ export default function InventoryDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Unit</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Unit</label>
                   <input
                     type="text"
                     value={editUnit}
                     onChange={e => setEditUnit(e.target.value)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Total Value of Complete Stock (₹)</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Total Value of Complete Stock (₹)</label>
                 <input
                   type="number"
                   min={0}
                   step="0.01"
                   value={editTotalValue}
                   onChange={e => setEditTotalValue(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                  className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Item Image</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Item Image</label>
                 <div className="flex gap-4 items-center">
-                  <div className="w-20 h-20 bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden flex items-center justify-center relative shrink-0">
+                  <div className="w-20 h-20 bg-background border border-border rounded-2xl overflow-hidden flex items-center justify-center relative shrink-0">
                     {editImage ? (
                       <img src={editImage} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -711,9 +722,9 @@ export default function InventoryDashboard() {
                       </div>
                     )}
                   </div>
-                  <label className="flex-1 flex flex-col items-center justify-center border border-dashed border-white/10 hover:border-[#3B82F6] rounded-2xl p-4 cursor-pointer transition-colors bg-[#0F172A]/50">
-                    <span className="text-xs font-bold text-gray-300">Change Image</span>
-                    <span className="text-[10px] text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+                  <label className="flex-1 flex flex-col items-center justify-center border border-dashed border-border/50 hover:border-[#3B82F6] rounded-2xl p-4 cursor-pointer transition-colors bg-background/50">
+                    <span className="text-xs font-bold text-text-secondary">Change Image</span>
+                    <span className="text-[10px] text-text-tertiary mt-1">PNG, JPG up to 5MB</span>
                     <input 
                       type="file" 
                       accept="image/*"
@@ -726,7 +737,7 @@ export default function InventoryDashboard() {
 
               <button
                 type="submit"
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#3B82F6] text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-blue-500/30 active:scale-95"
               >
                 Save Changes
               </button>
@@ -738,10 +749,10 @@ export default function InventoryDashboard() {
       {/* ADD INVENTORY MODAL */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-[#1E293B] border border-white/5 rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
+          <div className="bg-surface border border-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
             <button 
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
+              className="absolute top-6 right-6 text-text-secondary hover:text-text-primary transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -756,49 +767,49 @@ export default function InventoryDashboard() {
 
             <form onSubmit={handleAddItem} className="space-y-5">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Item Name</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Item Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Lavender Hand Soap"
                   value={addName}
                   onChange={e => setAddName(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                  className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">SKU Code</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">SKU Code</label>
                 <input
                   type="text"
                   placeholder="e.g. ZNB-AMN-101"
                   value={addSku}
                   onChange={e => setAddSku(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                  className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Stock Level</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Stock Level</label>
                   <input
                     type="number"
                     min={0}
                     value={addStockLevel}
                     onChange={e => setAddStockLevel(parseInt(e.target.value) || 0)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Reorder Point</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Reorder Point</label>
                   <input
                     type="number"
                     min={0}
                     value={addReorderPoint}
                     onChange={e => setAddReorderPoint(parseInt(e.target.value) || 0)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                     required
                   />
                 </div>
@@ -806,11 +817,11 @@ export default function InventoryDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Category</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Category</label>
                   <select
                     value={addCategory}
                     onChange={e => setAddCategory(e.target.value)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                   >
                     <option value="Housekeeping">Housekeeping</option>
                     <option value="Food & Beverage">Food & Beverage</option>
@@ -818,19 +829,19 @@ export default function InventoryDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Unit</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Unit</label>
                   <input
                     type="text"
                     value={addUnit}
                     onChange={e => setAddUnit(e.target.value)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Total Value of Complete Stock (₹)</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Total Value of Complete Stock (₹)</label>
                 <input
                   type="number"
                   min={0}
@@ -838,15 +849,15 @@ export default function InventoryDashboard() {
                   placeholder="e.g. 50000"
                   value={addTotalValue}
                   onChange={e => setAddTotalValue(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                  className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Item Image</label>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Item Image</label>
                 <div className="flex gap-4 items-center">
-                  <div className="w-20 h-20 bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden flex items-center justify-center relative shrink-0">
+                  <div className="w-20 h-20 bg-background border border-border rounded-2xl overflow-hidden flex items-center justify-center relative shrink-0">
                     {addImage ? (
                       <img src={addImage} alt="Preview" className="w-full h-full object-cover" />
                     ) : (
@@ -858,9 +869,9 @@ export default function InventoryDashboard() {
                       </div>
                     )}
                   </div>
-                  <label className="flex-1 flex flex-col items-center justify-center border border-dashed border-white/10 hover:border-[#3B82F6] rounded-2xl p-4 cursor-pointer transition-colors bg-[#0F172A]/50">
-                    <span className="text-xs font-bold text-gray-300">Upload Image</span>
-                    <span className="text-[10px] text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+                  <label className="flex-1 flex flex-col items-center justify-center border border-dashed border-border/50 hover:border-[#3B82F6] rounded-2xl p-4 cursor-pointer transition-colors bg-background/50">
+                    <span className="text-xs font-bold text-text-secondary">Upload Image</span>
+                    <span className="text-[10px] text-text-tertiary mt-1">PNG, JPG up to 5MB</span>
                     <input 
                       type="file" 
                       accept="image/*"
@@ -873,7 +884,7 @@ export default function InventoryDashboard() {
 
               <button
                 type="submit"
-                className="w-full py-4 bg-[#2563EB] hover:bg-[#3B82F6] text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-blue-500/20"
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-blue-500/30 active:scale-95"
               >
                 Create Item
               </button>
@@ -885,10 +896,10 @@ export default function InventoryDashboard() {
       {/* GENERATE PURCHASE ORDER MODAL */}
       {isOrderModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-          <div className="bg-[#1E293B] border border-white/5 rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
+          <div className="bg-surface border border-border rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
             <button 
               onClick={() => setIsOrderModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors"
+              className="absolute top-6 right-6 text-text-secondary hover:text-text-primary transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -904,7 +915,7 @@ export default function InventoryDashboard() {
             {inventoryList.length > 0 ? (
               <form onSubmit={handlePlaceOrder} className="space-y-5">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Select Item to Restock</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Select Item to Restock</label>
                   <div className="relative">
                     <select
                       value={orderItemId}
@@ -919,7 +930,7 @@ export default function InventoryDashboard() {
                           if (catVendor) setOrderVendorId(catVendor.id)
                         }
                       }}
-                      className="w-full appearance-none bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors cursor-pointer pr-10"
+                      className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors cursor-pointer"
                     >
                       {inventoryList.map((item: any) => (
                         <option key={item.id} value={item.id}>
@@ -927,17 +938,16 @@ export default function InventoryDashboard() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="w-4 h-4 text-gray-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Assign Supplier Vendor</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Assign Supplier Vendor</label>
                   <div className="relative">
                     <select
                       value={orderVendorId}
                       onChange={e => setOrderVendorId(e.target.value)}
-                      className="w-full appearance-none bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors cursor-pointer pr-10"
+                      className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors cursor-pointer"
                     >
                       {vendorsList.map((vendor: any) => (
                         <option key={vendor.id} value={vendor.id}>
@@ -945,18 +955,17 @@ export default function InventoryDashboard() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="w-4 h-4 text-gray-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Quantity to Order</label>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-text-secondary mb-2">Quantity to Order</label>
                   <input
                     type="number"
                     min={1}
                     value={orderQuantity}
                     onChange={e => setOrderQuantity(parseInt(e.target.value) || 0)}
-                    className="w-full bg-[#0F172A] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white outline-none focus:border-[#3B82F6] transition-colors"
+                    className="w-full bg-background border border-border rounded-2xl px-5 py-4 text-sm text-text-primary outline-none focus:border-[#3B82F6] transition-colors"
                     required
                   />
                 </div>
@@ -964,13 +973,13 @@ export default function InventoryDashboard() {
                 <button
                   type="submit"
                   disabled={isGenerating}
-                  className="w-full py-4 bg-[#2563EB] hover:bg-[#3B82F6] text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-lg shadow-blue-500/30 active:scale-95 disabled:opacity-50"
                 >
                   {isGenerating ? 'Acquiring...' : 'Confirm Purchase Order'}
                 </button>
               </form>
             ) : (
-              <div className="text-center py-6 text-xs text-gray-500">
+              <div className="text-center py-6 text-xs text-text-tertiary">
                 You must register at least one inventory item first.
               </div>
             )}

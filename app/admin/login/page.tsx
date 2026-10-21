@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
       {/* Left Side - Image/Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-primary-hover relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-tr from-black/10 via-transparent to-white/5 opacity-50" />
-        <div className="relative z-10 flex flex-col justify-center p-12 text-white">
+        <div className="relative z-10 flex flex-col justify-center p-12 text-text-primary">
           <div className="flex items-center gap-3 mb-8">
             <Building2 className="w-10 h-10" />
             <span className="text-3xl font-bold">Zenbourg</span>
@@ -65,7 +65,7 @@ export default function AdminLoginPage() {
           <h1 className="text-4xl font-bold mb-4">
             Orchestrate excellence.
           </h1>
-          <p className="text-lg text-white/90 mb-8">
+          <p className="text-lg text-text-primary/90 mb-8">
             The all-in-one platform to manage receptions, staff, and guests seamlessly
             from one centralized command center.
           </p>
@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Real-time Operations</h3>
-                <p className="text-sm text-white/80">Track everything in real-time</p>
+                <p className="text-sm text-text-primary/80">Track everything in real-time</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -85,7 +85,7 @@ export default function AdminLoginPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Staff Performance</h3>
-                <p className="text-sm text-white/80">SLA tracking & incentives</p>
+                <p className="text-sm text-text-primary/80">SLA tracking & incentives</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
               </div>
               <div>
                 <h3 className="font-semibold">Guest Experience</h3>
-                <p className="text-sm text-white/80">Online check-in & services</p>
+                <p className="text-sm text-text-primary/80">Online check-in & services</p>
               </div>
             </div>
           </div>

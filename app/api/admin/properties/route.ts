@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
+import { hash } from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,31 +14,81 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
-        const { name, address, phone, email, description, latitude, longitude, trialPeriod, upiId } = body
+        const {
+            name, address, phone, email, description, latitude, longitude,
+            chainName, plan, features, trialPeriod, upiId,
+            ownerName, ownerEmail, ownerPhone, ownerPassword
+        } = body
 
         if (!name || !address || !phone || !email) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+            return NextResponse.json({ error: 'Missing required property fields (name, address, phone, email)' }, { status: 400 })
         }
 
         const planExpiresAt = trialPeriod ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null
 
+        // 1. Create Property
         const property = await prisma.property.create({
             data: {
-                name,
-                address,
-                phone,
-                email,
-                description,
+                name: name.trim(),
+                chainName: chainName ? chainName.trim() : null,
+                address: address.trim(),
+                phone: phone.trim(),
+                email: email.trim().toLowerCase(),
+                description: description?.trim() || null,
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null,
                 checkInTime: '14:00',
                 checkOutTime: '11:00',
-                plan: 'BASE',
+                plan: plan || 'BASE',
+                features: Array.isArray(features) && features.length > 0 ? features : ['bookings', 'checkin', 'rooms', 'guests', 'settings'],
                 planExpiresAt: planExpiresAt,
+                isTrialActive: !!trialPeriod,
             }
         })
 
-        // Create default property settings with UPI ID for auto-deduction
+        // 2. Provision Hotel Owner Account if details provided
+        let createdOwnerId: string | null = null
+        if (ownerEmail && ownerPassword) {
+            const cleanEmail = ownerEmail.trim().toLowerCase()
+            const existingUser = await prisma.user.findFirst({
+                where: { email: cleanEmail }
+            })
+
+            if (existingUser) {
+                // Link existing user as owner
+                await prisma.property.update({
+                    where: { id: property.id },
+                    data: {
+                        ownerIds: { push: existingUser.id }
+                    }
+                })
+                createdOwnerId = existingUser.id
+            } else {
+                const hashedPassword = await hash(ownerPassword, 12)
+                const newOwner = await prisma.user.create({
+                    data: {
+                        name: ownerName?.trim() || `${name} Owner`,
+                        email: cleanEmail,
+                        phone: ownerPhone?.trim() || phone.trim(),
+                        password: hashedPassword,
+                        role: 'HOTEL_ADMIN',
+                        status: 'ACTIVE',
+                        workplaceId: property.id,
+                        ownedPropertyIds: [property.id]
+                    }
+                })
+
+                await prisma.property.update({
+                    where: { id: property.id },
+                    data: {
+                        ownerIds: [newOwner.id]
+                    }
+                })
+                createdOwnerId = newOwner.id
+            }
+        }
+
+        // 3. Create default property settings with UPI ID
         await prisma.propertySettings.create({
             data: {
                 propertyId: property.id,
@@ -54,7 +105,7 @@ export async function POST(request: Request) {
             }
         })
 
-        // Auto-seed default dashboard services
+        // 4. Auto-seed default dashboard services
         await prisma.dashboardService.createMany({
             data: [
                 { name: 'Open Door', iconName: 'key-outline', route: '/(services)/door', order: 0, propertyId: property.id },
@@ -66,24 +117,64 @@ export async function POST(request: Request) {
             ]
         })
 
-        return NextResponse.json(property, { status: 201 })
-    } catch (error) {
+        // Fetch refreshed property with relations
+        const fullProperty = await prisma.property.findUnique({
+            where: { id: property.id },
+            include: {
+                owners: {
+                    select: { id: true, name: true, email: true, phone: true, role: true, status: true }
+                }
+            }
+        })
+
+        return NextResponse.json({ success: true, property: fullProperty }, { status: 201 })
+    } catch (error: any) {
         console.error('Error creating property:', error)
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+        return NextResponse.json({ error: error.message || 'Failed to onboard property' }, { status: 500 })
     }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
         const session = await getServerSession(authOptions)
         if (!session || session.user.role !== 'SUPER_ADMIN') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
+        const { searchParams } = new URL(req.url)
+        const chain = searchParams.get('chain')
+        const search = searchParams.get('search')?.trim().toLowerCase()
+
+        const where: any = {}
+        if (chain && chain !== 'ALL') {
+            where.chainName = chain === 'INDEPENDENT' ? null : chain
+        }
+
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+                { address: { contains: search, mode: 'insensitive' } },
+                { chainName: { contains: search, mode: 'insensitive' } },
+            ]
+        }
+
         const properties = await prisma.property.findMany({
-            select: { id: true, name: true, plan: true },
+            where,
+            include: {
+                owners: {
+                    select: { id: true, name: true, email: true, phone: true, role: true, status: true }
+                },
+                staff: {
+                    select: { id: true, designation: true }
+                },
+                _count: {
+                    select: { rooms: true, staff: true, bookings: true }
+                }
+            },
             orderBy: { createdAt: 'desc' },
         })
+
         return NextResponse.json(properties)
     } catch (error) {
         console.error('Error fetching properties:', error)

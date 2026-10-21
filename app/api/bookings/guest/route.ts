@@ -12,6 +12,14 @@ export async function GET(request: Request) {
             return NextResponse.json({ success: false, error: 'Guest ID required' }, { status: 400 })
         }
 
+        const guest = await prisma.guest.findUnique({
+            where: { id: guestId }
+        })
+
+        if (!guest) {
+            return NextResponse.json({ success: false, error: 'Guest not found' }, { status: 404 })
+        }
+
         const bookings = await prisma.booking.findMany({
             where: { guestId },
             include: {
@@ -24,7 +32,7 @@ export async function GET(request: Request) {
             orderBy: { createdAt: 'desc' }
         })
 
-        return NextResponse.json({ success: true, bookings })
+        return NextResponse.json({ success: true, guest, bookings })
     } catch (error) {
         console.error('[GUEST_BOOKINGS_GET]', error)
         return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })

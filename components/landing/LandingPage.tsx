@@ -1007,10 +1007,6 @@ export default function LandingPage() {
           
           {/* Hero Content Left */}
           <div className="lg:col-span-5 space-y-8 text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] animate-pulse" />
-              <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-[#3B82F6]">All-in-One Hotel Management System</span>
-            </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-bold tracking-tight leading-[1.08] text-white font-outfit">
               Run Your Hotel. <br />
@@ -2966,9 +2962,6 @@ export default function LandingPage() {
                     <span key={i} className="animate-pulse">★</span>
                   ))}
                 </div>
-                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#3B82F6] bg-[#3B82F6]/10 px-2.5 py-1 rounded-full border border-[#3B82F6]/20">
-                  Partner Success
-                </span>
               </div>
 
               {/* Breathtaking Sliding Quote with AnimatePresence */}
@@ -3092,10 +3085,6 @@ export default function LandingPage() {
               
               {/* Content */}
               <div className="lg:col-span-7 space-y-6 text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#3B82F6]/10 border border-[#3B82F6]/20">
-                  
-                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#3B82F6]">Direct commission loops</span>
-                </div>
 
                 <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-[1.08] font-outfit text-white uppercase">
                   Take Complete Control <br />
@@ -3186,18 +3175,18 @@ export default function LandingPage() {
                       input.value = '';
                     }
                   }}
-                  className="flex max-w-xs rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] focus-within:border-amber-400/30 focus-within:shadow-[0_0_15px_rgba(212,175,55,0.05)] transition-all duration-300"
+                  className="flex max-w-xs rounded-xl border border-white/20 bg-white/[0.02] focus-within:border-amber-400/50 focus-within:shadow-[0_0_15px_rgba(212,175,55,0.05)] transition-all duration-300"
                 >
                   <input 
                     name="email"
                     type="email" 
                     placeholder="Enter email address" 
                     required
-                    className="w-full px-4 py-2.5 bg-transparent text-xs text-white placeholder-white/20 focus:outline-none"
+                    className="w-full px-4 py-2.5 bg-transparent rounded-l-xl text-xs text-white placeholder-white/40 focus:outline-none"
                   />
                   <button 
                     type="submit"
-                    className="px-4 bg-white/5 border-l border-white/[0.06] text-white text-[10px] font-black uppercase tracking-wider hover:bg-white/10 hover:text-amber-400 transition-all cursor-pointer"
+                    className="px-4 bg-white/10 border-l border-white/20 rounded-r-xl text-white text-[10px] font-black uppercase tracking-wider hover:bg-white/20 hover:text-amber-400 transition-all cursor-pointer"
                   >
                     Join
                   </button>

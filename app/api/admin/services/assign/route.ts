@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { redis } from '@/lib/redis'
+import { reconcileRoomStatus, invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
 export const dynamic = 'force-dynamic'
 
@@ -146,6 +147,14 @@ export async function POST(request: Request) {
                 console.error('Failed to create staff notification:', noteErr)
             }
         }
+
+        // Update room status if task is completed or changed for a room
+        if (updated.roomId) {
+            await reconcileRoomStatus(updated.roomId)
+        }
+
+        // Invalidate Room and Dashboard Caches
+        await invalidateRoomAndDashboardCaches(updated.propertyId)
 
         // NEW: Invalidate Staff Cache
         if (updated.assignedToId && updated.assignedTo?.userId) {

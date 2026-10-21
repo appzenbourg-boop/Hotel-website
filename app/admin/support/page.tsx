@@ -23,7 +23,7 @@ const ROLE_COLOR: Record<string, string> = {
     HOTEL_ADMIN: 'text-blue-400 bg-blue-400/10',
     MANAGER: 'text-amber-400 bg-amber-400/10',
     RECEPTIONIST: 'text-emerald-400 bg-emerald-400/10',
-    STAFF: 'text-slate-400 bg-slate-400/10' }
+    STAFF: 'text-text-secondary bg-slate-400/10' }
 
 export default function SupportPage() {
     return (
@@ -192,12 +192,12 @@ function SupportPageInner() {
                 <button
                     onClick={() => setTab('TICKETS')}
                     className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                        tab === 'TICKETS' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-white'
+                        tab === 'TICKETS' ? 'bg-primary text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
                     )}
                 >
                     <MessageSquare className="w-4 h-4" /> Guest Tickets
                     {tickets.filter(t => t.status === 'OPEN').length > 0 && (
-                        <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        <span className="w-5 h-5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                             {tickets.filter(t => t.status === 'OPEN').length}
                         </span>
                     )}
@@ -205,12 +205,12 @@ function SupportPageInner() {
                 <button
                     onClick={() => setTab('MESSAGES')}
                     className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                        tab === 'MESSAGES' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-white'
+                        tab === 'MESSAGES' ? 'bg-primary text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
                     )}
                 >
                     <Users className="w-4 h-4" /> Team Messages
                     {contacts.reduce((s: number, c: any) => s + (c.unreadCount || 0), 0) > 0 && (
-                        <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        <span className="w-5 h-5 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                             {contacts.reduce((s: number, c: any) => s + (c.unreadCount || 0), 0)}
                         </span>
                     )}
@@ -224,7 +224,7 @@ function SupportPageInner() {
                     <div className={cn('w-full md:w-[320px] border-r border-border flex flex-col shrink-0', selectedTicket && 'hidden md:flex')}>
                         <div className="p-4 border-b border-border space-y-3">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-sm font-semibold text-white">Guest Tickets</h2>
+                                <h2 className="text-sm font-semibold text-text-primary">Guest Tickets</h2>
                                 <button onClick={fetchTickets} className="p-1.5 hover:bg-surface-light rounded-lg transition-colors">
                                     <RefreshCw className="w-3.5 h-3.5 text-text-tertiary" />
                                 </button>
@@ -233,7 +233,7 @@ function SupportPageInner() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
                                 <input value={ticketSearch} onChange={e => setTicketSearch(e.target.value)}
                                     placeholder="Search tickets..."
-                                    className="w-full pl-9 pr-4 py-2 bg-surface-light border border-border rounded-xl text-sm text-white placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
+                                    className="w-full pl-9 pr-4 py-2 bg-surface-light border border-border rounded-xl text-sm text-text-primary placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto divide-y divide-border">
@@ -251,7 +251,7 @@ function SupportPageInner() {
                                         <span className="text-[10px] font-bold text-primary uppercase">{ticket.type}</span>
                                         <span className="text-[10px] text-text-tertiary">{format(new Date(ticket.createdAt), 'MMM d')}</span>
                                     </div>
-                                    <p className="text-sm font-semibold text-white truncate">{ticket.subject}</p>
+                                    <p className="text-sm font-semibold text-text-primary truncate">{ticket.subject}</p>
                                     <div className="flex items-center gap-1.5 mt-1">
                                         {getStatusIcon(ticket.status)}
                                         <span className="text-xs text-text-secondary">{ticket.guest?.name || 'Guest'}</span>
@@ -268,7 +268,7 @@ function SupportPageInner() {
                                 <div className="w-14 h-14 bg-surface-light rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border">
                                     <MessageSquare className="w-7 h-7 text-text-tertiary" />
                                 </div>
-                                <h3 className="text-base font-semibold text-white mb-1">Select a ticket</h3>
+                                <h3 className="text-base font-semibold text-text-primary mb-1">Select a ticket</h3>
                                 <p className="text-text-secondary text-sm">Choose a guest query to respond</p>
                             </div>
                         ) : (
@@ -279,7 +279,7 @@ function SupportPageInner() {
                                             <ArrowLeft className="w-4 h-4" />
                                         </button>
                                         <div>
-                                            <p className="text-sm font-semibold text-white">{selectedTicket.subject}</p>
+                                            <p className="text-sm font-semibold text-text-primary">{selectedTicket.subject}</p>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className="text-[10px] text-text-secondary flex items-center gap-1">
                                                     <User className="w-3 h-3" />{selectedTicket.guest?.name}
@@ -306,7 +306,7 @@ function SupportPageInner() {
                                         return (
                                             <div key={msg.id} className={cn('flex flex-col max-w-[75%]', isGuest ? 'items-start' : 'items-end ml-auto')}>
                                                 <div className={cn('px-4 py-2.5 rounded-2xl text-sm',
-                                                    isGuest ? 'bg-surface-light border border-border rounded-tl-none text-white' : 'bg-primary text-white rounded-tr-none'
+                                                    isGuest ? 'bg-surface-light border border-border rounded-tl-none text-text-primary' : 'bg-primary text-text-primary rounded-tr-none'
                                                 )}>
                                                     {msg.content}
                                                 </div>
@@ -321,9 +321,9 @@ function SupportPageInner() {
                                     <form onSubmit={sendTicketReply} className="flex gap-2">
                                         <input value={ticketMsg} onChange={e => setTicketMsg(e.target.value)}
                                             placeholder="Type your reply..."
-                                            className="flex-1 bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
+                                            className="flex-1 bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
                                         <button type="submit" disabled={!ticketMsg.trim() || sendingTicket}
-                                            className="p-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl transition-all">
+                                            className="p-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-text-primary rounded-xl transition-all">
                                             {sendingTicket ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                         </button>
                                     </form>
@@ -340,12 +340,12 @@ function SupportPageInner() {
                     {/* Contacts sidebar */}
                     <div className={cn('w-full md:w-[280px] border-r border-border flex flex-col shrink-0', selectedContact && 'hidden md:flex')}>
                         <div className="p-4 border-b border-border space-y-3">
-                            <h2 className="text-sm font-semibold text-white">Team</h2>
+                            <h2 className="text-sm font-semibold text-text-primary">Team</h2>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
                                 <input value={contactSearch} onChange={e => setContactSearch(e.target.value)}
                                     placeholder="Search staff..."
-                                    className="w-full pl-9 pr-4 py-2 bg-surface-light border border-border rounded-xl text-sm text-white placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
+                                    className="w-full pl-9 pr-4 py-2 bg-surface-light border border-border rounded-xl text-sm text-text-primary placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto divide-y divide-border">
@@ -365,15 +365,15 @@ function SupportPageInner() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-sm font-semibold text-white truncate">{contact.name}</p>
+                                            <p className="text-sm font-semibold text-text-primary truncate">{contact.name}</p>
                                             {contact.unreadCount > 0 && (
-                                                <span className="w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center shrink-0">
+                                                <span className="w-5 h-5 bg-primary text-text-primary text-[10px] font-bold rounded-full flex items-center justify-center shrink-0">
                                                     {contact.unreadCount}
                                                 </span>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-full', ROLE_COLOR[contact.role] ?? 'text-slate-400 bg-slate-400/10')}>
+                                            <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-full', ROLE_COLOR[contact.role] ?? 'text-text-secondary bg-slate-400/10')}>
                                                 {ROLE_LABEL[contact.role] ?? contact.role}
                                             </span>
                                         </div>
@@ -395,7 +395,7 @@ function SupportPageInner() {
                                 <div className="w-14 h-14 bg-surface-light rounded-2xl flex items-center justify-center mx-auto mb-4 border border-border">
                                     <Users className="w-7 h-7 text-text-tertiary" />
                                 </div>
-                                <h3 className="text-base font-semibold text-white mb-1">Message your team</h3>
+                                <h3 className="text-base font-semibold text-text-primary mb-1">Message your team</h3>
                                 <p className="text-text-secondary text-sm">Select a staff member or admin to start a conversation</p>
                             </div>
                         ) : (
@@ -409,8 +409,8 @@ function SupportPageInner() {
                                         {selectedContact.name.charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="text-sm font-semibold text-white">{selectedContact.name}</p>
-                                        <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-full', ROLE_COLOR[selectedContact.role] ?? 'text-slate-400 bg-slate-400/10')}>
+                                        <p className="text-sm font-semibold text-text-primary">{selectedContact.name}</p>
+                                        <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded-full', ROLE_COLOR[selectedContact.role] ?? 'text-text-secondary bg-slate-400/10')}>
                                             {ROLE_LABEL[selectedContact.role] ?? selectedContact.role}
                                         </span>
                                     </div>
@@ -427,7 +427,7 @@ function SupportPageInner() {
                                         return (
                                             <div key={msg.id} className={cn('flex flex-col max-w-[75%]', isMe ? 'items-end ml-auto' : 'items-start')}>
                                                 <div className={cn('px-4 py-2.5 rounded-2xl text-sm',
-                                                    isMe ? 'bg-primary text-white rounded-tr-none' : 'bg-surface-light border border-border text-white rounded-tl-none'
+                                                    isMe ? 'bg-primary text-text-primary rounded-tr-none' : 'bg-surface-light border border-border text-text-primary rounded-tl-none'
                                                 )}>
                                                     {msg.content}
                                                 </div>
@@ -445,9 +445,9 @@ function SupportPageInner() {
                                     <form onSubmit={sendMessage} className="flex gap-2">
                                         <input value={msgText} onChange={e => setMsgText(e.target.value)}
                                             placeholder={`Message ${selectedContact.name}...`}
-                                            className="flex-1 bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
+                                            className="flex-1 bg-surface-light border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:ring-1 focus:ring-primary outline-none" />
                                         <button type="submit" disabled={!msgText.trim() || sendingMsg}
-                                            className="p-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-xl transition-all">
+                                            className="p-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 text-text-primary rounded-xl transition-all">
                                             {sendingMsg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                         </button>
                                     </form>

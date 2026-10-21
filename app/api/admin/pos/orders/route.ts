@@ -10,7 +10,29 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    const propertyId = (session.user as any)?.propertyId
+    const { searchParams } = new URL(req.url)
+    const urlPropertyId = searchParams.get('propertyId')
+    let propertyId = (session.user as any)?.propertyId
+    if (session.user.role === 'SUPER_ADMIN') {
+      if (urlPropertyId && urlPropertyId !== 'ALL') propertyId = urlPropertyId
+    } else {
+      if (!propertyId && urlPropertyId && urlPropertyId !== 'ALL') propertyId = urlPropertyId
+    }
+
+    if (!propertyId || propertyId === 'ALL') {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { workplaceId: true, ownedPropertyIds: true }
+      })
+      propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+      if (!propertyId) {
+        const fallbackProp = await prisma.property.findFirst({
+          where: { ownerIds: { has: session.user.id } },
+          select: { id: true }
+        })
+        if (fallbackProp) propertyId = fallbackProp.id
+      }
+    }
 
     const orders = await prisma.pOSOrder.findMany({
       where: propertyId ? { propertyId } : {},
@@ -35,10 +57,35 @@ export async function POST(req: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const propertyId = (session.user as any)?.propertyId || '6a7c467e80ab868749620999'
-
+    
     const body = await req.json()
     const { table, guestName, serverName, status, tags, kitchenNotes, items, subtotal, tax, total } = body
+
+    let propertyId = (session.user as any)?.propertyId
+    if (session.user.role === 'SUPER_ADMIN') {
+      if (body.propertyId && body.propertyId !== 'ALL') propertyId = body.propertyId
+    } else {
+      if (!propertyId && body.propertyId && body.propertyId !== 'ALL') propertyId = body.propertyId
+    }
+
+    if (!propertyId || propertyId === 'ALL') {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { workplaceId: true, ownedPropertyIds: true }
+      })
+      propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+      if (!propertyId) {
+        const fallbackProp = await prisma.property.findFirst({
+          where: { ownerIds: { has: session.user.id } },
+          select: { id: true }
+        })
+        if (fallbackProp) propertyId = fallbackProp.id
+      }
+    }
+
+    if (!propertyId) {
+      return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
+    }
 
     const orderNumber = '#' + Math.floor(1000 + Math.random() * 9000)
 

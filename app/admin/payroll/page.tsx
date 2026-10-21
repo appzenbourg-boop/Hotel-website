@@ -198,7 +198,7 @@ export default function PayrollPage() {
                         type="month"
                         value={month}
                         onChange={(e) => setMonth(e.target.value)}
-                        className="bg-surface border border-white/10 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                        className="bg-surface border border-border/50 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
                     />
                     <Button variant="primary" onClick={handleRunPayroll} leftIcon={<IndianRupee className="w-4 h-4" />}>
                         Run Payroll
@@ -233,17 +233,17 @@ export default function PayrollPage() {
                         Computed for this cycle
                     </div>
                 </Card>
-                <Card className="p-5 border-white/[0.05]">
+                <Card className="p-5 border-border">
                     <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider">Payments Made</p>
                     <p className="text-2xl font-bold text-emerald-500 mt-1">{stats.paidCount}</p>
                     <p className="text-[10px] text-text-tertiary mt-1 font-medium ">Total disbursements</p>
                 </Card>
-                <Card className="p-5 border-white/[0.05]">
+                <Card className="p-5 border-border">
                     <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider">Pending Payments</p>
                     <p className="text-2xl font-bold text-warning mt-1">{stats.pendingCount}</p>
                     <p className="text-[10px] text-text-tertiary mt-1 font-medium ">Requires action</p>
                 </Card>
-                <Card className="p-5 border-white/[0.05]">
+                <Card className="p-5 border-border">
                     <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider">Avg. Salary</p>
                     <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(stats.avgSalary)}</p>
                     <p className="text-[10px] text-text-tertiary mt-1 font-medium ">Median monthly scale</p>
@@ -251,15 +251,15 @@ export default function PayrollPage() {
             </div>
 
             {/* Main Payroll List */}
-            <Card className="bg-surface border-white/[0.08]">
-                <div className="p-4 border-b border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <Card className="bg-surface border-border">
+                <div className="p-4 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                         <input
                             placeholder="Search employee or position..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary transition-all"
+                            className="w-full pl-10 pr-4 py-2 bg-surface-light border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary transition-all"
                         />
                     </div>
                     <div className="flex items-center gap-3">
@@ -275,7 +275,7 @@ export default function PayrollPage() {
                         />
                         <Button
                             variant="secondary"
-                            className="bg-white/[0.05] border-white/[0.08] hover:bg-white/[0.1] h-9"
+                            className="bg-surface-light border-border hover:bg-white/[0.1] h-9"
                             leftIcon={<Download className="w-4 h-4" />}
                             onClick={handleExport}
                         >
@@ -287,7 +287,7 @@ export default function PayrollPage() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="border-b border-white/[0.04] bg-white/[0.02]">
+                            <tr className="border-b border-border bg-surface-light">
                                 <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Employee</th>
                                 <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest text-center">Base Salary</th>
                                 <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest text-center">Adjustments</th>
@@ -311,7 +311,7 @@ export default function PayrollPage() {
                                 </tr>
                             ) : (
                                 filteredPayroll.map(p => (
-                                    <tr key={p.id} className="group hover:bg-white/[0.02] transition-colors">
+                                    <tr key={p.id} className="group hover:bg-surface-light transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <Avatar name={p.staff?.name || '?'} size="sm" />
@@ -401,19 +401,19 @@ export default function PayrollPage() {
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="flex justify-between py-2 border-b border-white/5">
+                                    <div className="flex justify-between py-2 border-b border-border">
                                         <span className="text-sm text-text-secondary">Employee Name</span>
                                         <span className="text-sm font-bold text-text-primary">{selectedPayroll.staff.name}</span>
                                     </div>
-                                    <div className="flex justify-between py-2 border-b border-white/5">
+                                    <div className="flex justify-between py-2 border-b border-border">
                                         <span className="text-sm text-text-secondary">Basic Salary</span>
                                         <span className="text-sm font-mono text-text-primary">{formatCurrency(selectedPayroll.baseSalary)}</span>
                                     </div>
-                                    <div className="flex justify-between py-2 border-b border-white/5">
+                                    <div className="flex justify-between py-2 border-b border-border">
                                         <span className="text-sm text-text-secondary">Performance Bonus</span>
                                         <span className="text-sm font-mono text-emerald-400">+{formatCurrency(selectedPayroll.incentives || 0)}</span>
                                     </div>
-                                    <div className="flex justify-between py-2 border-b border-white/5">
+                                    <div className="flex justify-between py-2 border-b border-border">
                                         <span className="text-sm text-text-secondary">Deductions (Taxes/Leaves)</span>
                                         <span className="text-sm font-mono text-rose-400">-{formatCurrency(selectedPayroll.deductions || 0)}</span>
                                     </div>
@@ -467,9 +467,9 @@ export default function PayrollPage() {
                 {payingPayroll && (
                     <div className="space-y-6 pt-4 text-left">
                         <div className="bg-surface-light border border-border rounded-2xl p-5 space-y-4">
-                            <div className="flex justify-between items-center pb-3 border-b border-white/5">
+                            <div className="flex justify-between items-center pb-3 border-b border-border">
                                 <div>
-                                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Employee Information</h4>
+                                    <h4 className="text-sm font-bold text-text-primary uppercase tracking-wider">Employee Information</h4>
                                     <p className="text-xs text-text-secondary mt-0.5">ID: {payingPayroll.staff?.employeeId || 'N/A'}</p>
                                 </div>
                                 <div className="text-right">
@@ -481,19 +481,19 @@ export default function PayrollPage() {
                             <div className="grid grid-cols-2 gap-4 text-xs">
                                 <div>
                                     <span className="text-text-secondary block font-medium">Bank Name</span>
-                                    <span className="text-white font-bold block mt-1">{payingPayroll.staff?.bankName || 'Not Provided'}</span>
+                                    <span className="text-text-primary font-bold block mt-1">{payingPayroll.staff?.bankName || 'Not Provided'}</span>
                                 </div>
                                 <div>
                                     <span className="text-text-secondary block font-medium">IFSC Code</span>
-                                    <span className="text-white font-bold block mt-1 font-mono">{payingPayroll.staff?.ifscCode || 'Not Provided'}</span>
+                                    <span className="text-text-primary font-bold block mt-1 font-mono">{payingPayroll.staff?.ifscCode || 'Not Provided'}</span>
                                 </div>
                                 <div className="col-span-2">
                                     <span className="text-text-secondary block font-medium">Account Number</span>
-                                    <span className="text-white font-bold block mt-1 font-mono tracking-wider">{payingPayroll.staff?.accountNumber || 'Not Provided'}</span>
+                                    <span className="text-text-primary font-bold block mt-1 font-mono tracking-wider">{payingPayroll.staff?.accountNumber || 'Not Provided'}</span>
                                 </div>
                             </div>
 
-                            <div className="pt-3 border-t border-white/5 flex justify-between items-center">
+                            <div className="pt-3 border-t border-border flex justify-between items-center">
                                 <span className="text-sm text-text-secondary font-medium">Net Salary Payable</span>
                                 <span className="text-xl font-bold text-primary font-mono">{formatCurrency(payingPayroll.netSalary)}</span>
                             </div>
@@ -504,7 +504,7 @@ export default function PayrollPage() {
                             <input
                                 value={manualTxId}
                                 onChange={e => setManualTxId(e.target.value)}
-                                className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:ring-1 focus:ring-primary font-mono"
+                                className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary outline-none focus:ring-1 focus:ring-primary font-mono"
                                 placeholder="e.g. TXN98721648123"
                             />
                         </div>

@@ -4,6 +4,31 @@
 
 @layer base {
   :root {
+    /* Premium High-Contrast Light Theme Palette */
+    --bg-dark: #f8fafc;
+    --surface-dark: #ffffff;
+    --surface-dark-rgb: 255 255 255;
+    --surface-hover: #f1f5f9;
+    --surface-hover-rgb: 241 245 249;
+
+    /* Glass Effect Basics */
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(15, 23, 42, 0.12);
+    --glass-highlight: rgba(15, 23, 42, 0.05);
+
+    /* Text Colors - Deep, rich, high contrast instead of washed-out grey */
+    --text-primary: #090d16;
+    --text-secondary: #1e293b;
+    --text-tertiary: #334155;
+    --text-disabled: #64748b;
+
+    /* Functional Colors */
+    --primary: #2563eb;
+    --primary-rgb: 37 99 235;
+    --primary-glow: rgba(37, 99, 235, 0.25);
+  }
+
+  .dark {
     /* Premium Dark Theme Palette */
     --bg-dark: #0f1115;
     --surface-dark: #0f1115;
@@ -20,12 +45,6 @@
     --text-primary: #e2e8f0;
     --text-secondary: #94a3b8;
     --text-tertiary: #64748b;
-
-    /* Functional Colors */
-    --primary: #4A9EFF;
-    --primary-rgb: 74 158 255;
-    /* Zenbourg Blue */
-    --primary-glow: rgba(74, 158, 255, 0.3);
   }
 
   * {
@@ -40,6 +59,19 @@
     @apply h-full bg-background text-text-primary font-sans antialiased select-none;
     background-color: var(--bg-dark);
     -webkit-user-select: none;
+  }
+
+  select.appearance-none,
+  .appearance-none {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: none !important;
+  }
+
+  select.appearance-none::-ms-expand,
+  select::-ms-expand {
+    display: none !important;
   }
 
   ::selection {
@@ -80,7 +112,7 @@
 
   /* Glass Card Styles */
   .card {
-    @apply relative overflow-hidden bg-surface border border-white/[0.08] shadow-2xl rounded-2xl transition-all duration-300;
+    @apply relative overflow-hidden bg-surface border border-border shadow-sm dark:shadow-2xl rounded-2xl transition-all duration-300;
   }
 
   .card-hover {
@@ -118,7 +150,7 @@
   }
 
   .btn-secondary {
-    @apply bg-white/[0.05] text-text-primary hover:bg-white/[0.1] border border-white/[0.08];
+    @apply bg-slate-100 dark:bg-white/[0.05] text-text-primary hover:bg-slate-200 dark:hover:bg-white/[0.1] border border-slate-200 dark:border-white/[0.08];
   }
 
   .btn-ghost {
@@ -239,5 +271,69 @@
     .no-print {
       display: none !important;
     }
+  }
+
+  /* Premium Native Select & Dropdown Styling */
+  select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23475569' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem 1rem;
+    padding-right: 2.25rem;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    color: var(--text-primary);
+    background-color: var(--surface-dark);
+    border-color: var(--glass-border);
+  }
+
+  select:hover {
+    border-color: rgba(37, 99, 235, 0.4);
+  }
+
+  select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232563eb' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  }
+
+  select::-ms-expand {
+    display: none;
+  }
+
+  option {
+    background-color: #ffffff;
+    color: #090d16;
+    padding: 8px 12px;
+  }
+
+  option:checked {
+    background-color: #f1f5f9;
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  .dark select {
+    color-scheme: dark;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  }
+
+  .dark select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234A9EFF' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    border-color: #4A9EFF;
+    box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+  }
+
+  .dark option {
+    background-color: #141824 !important;
+    color: #f1f5f9 !important;
+  }
+
+  .dark option:checked {
+    background-color: #1e293b !important;
+    color: #4A9EFF !important;
   }
 }

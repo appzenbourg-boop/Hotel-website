@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useState, useEffect, useCallback } from 'react'
 import { planHasFeature, planMeetsRequirement, type PlanTier } from '@/lib/plan-features'
+import { isFeatureActiveForProperty, normalizePropertyFeatures } from '@/lib/master-features'
 
 export type PermissionMap = Record<string, boolean>
 
@@ -12,6 +13,7 @@ interface UsePermissionsReturn {
     isAdmin: boolean
     role: string
     plan: string
+    features: string[]
     hasFeature: (featureKey: string) => boolean
     planMeets: (minPlan: PlanTier) => boolean
     loading: boolean
@@ -23,6 +25,7 @@ export function usePermissions(): UsePermissionsReturn {
     const { data: session } = useSession()
     const [permissions, setPermissions] = useState<PermissionMap>({})
     const [plan, setPlan] = useState<string>('BASE')
+    const [features, setFeatures] = useState<string[]>([])
     const [loading, setLoading] = useState(true)
 
     const role = session?.user?.role ?? ''
@@ -51,14 +54,18 @@ export function usePermissions(): UsePermissionsReturn {
         } catch { /* silent */ } finally { setLoading(false) }
     }, [propertyId, role, isAdmin])
 
-    const fetchPlan = useCallback(async () => {
+    const fetchPlanAndFeatures = useCallback(async () => {
         if (!propertyId || propertyId === 'ALL') return
         try {
             const res = await fetch(`/api/admin/settings/property?propertyId=${propertyId}`)
             if (res.ok) {
                 const json = await res.json()
                 const p = json.data?.plan ?? json.property?.plan
+                const f = json.data?.features ?? json.property?.features
                 if (p) setPlan(p)
+                if (Array.isArray(f)) {
+                    setFeatures(normalizePropertyFeatures(f, p))
+                }
             }
         } catch { /* silent */ }
     }, [propertyId])
@@ -66,44 +73,67 @@ export function usePermissions(): UsePermissionsReturn {
     useEffect(() => {
         if (session) {
             fetchPermissions()
-            fetchPlan()
+            fetchPlanAndFeatures()
         }
-    }, [session, fetchPermissions, fetchPlan])
+    }, [session, fetchPermissions, fetchPlanAndFeatures])
 
-    // Listen for plan upgrade event — re-fetch plan immediately without page reload
+    // Listen for plan or feature updates
     useEffect(() => {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent).detail
-            // If the upgraded property matches ours, update plan immediately
             if (!detail?.propertyId || detail.propertyId === propertyId) {
-                if (detail?.plan) {
-                    setPlan(detail.plan)
-                } else {
-                    fetchPlan()
+                if (detail?.plan) setPlan(detail.plan)
+                if (detail?.features && Array.isArray(detail.features)) {
+                    setFeatures(normalizePropertyFeatures(detail.features, detail.plan || plan))
                 }
+                if (!detail?.plan && !detail?.features) fetchPlanAndFeatures()
             }
         }
+        const rolesHandler = (e: Event) => {
+            _cache = null
+            fetchPermissions()
+        }
+        const onFocus = () => {
+            _cache = null
+            fetchPermissions()
+        }
         window.addEventListener('planUpgraded', handler)
-        return () => window.removeEventListener('planUpgraded', handler)
-    }, [propertyId, fetchPlan])
+        window.addEventListener('featuresUpdated', handler)
+        window.addEventListener('rolePermissionsUpdated', rolesHandler)
+        window.addEventListener('focus', onFocus)
+
+        // Poll every 45 seconds so permission changes by the owner propagate to active sessions
+        const interval = setInterval(() => {
+            _cache = null
+            fetchPermissions()
+        }, 45000)
+
+        return () => {
+            window.removeEventListener('planUpgraded', handler)
+            window.removeEventListener('featuresUpdated', handler)
+            window.removeEventListener('rolePermissionsUpdated', rolesHandler)
+            window.removeEventListener('focus', onFocus)
+            clearInterval(interval)
+        }
+    }, [propertyId, plan, fetchPlanAndFeatures, fetchPermissions])
 
     const can = useCallback((permissionId: string): boolean => {
         if (isAdmin) return true
         const val = permissions[permissionId]
-        // Handle both boolean (legacy) and PermissionLevel string formats
         if (typeof val === 'boolean') return val
         return val === 'READ' || val === 'READ_WRITE'
     }, [isAdmin, permissions])
 
     const hasFeature = useCallback((featureKey: string): boolean => {
         if (role === 'SUPER_ADMIN') return true
-        return planHasFeature(plan, featureKey)
-    }, [plan, role])
+        if (featureKey === 'dashboard') return true
+        return isFeatureActiveForProperty(features, featureKey, plan)
+    }, [plan, role, features])
 
     const planMeets = useCallback((minPlan: PlanTier): boolean => {
         if (role === 'SUPER_ADMIN') return true
         return planMeetsRequirement(plan, minPlan)
     }, [plan, role])
 
-    return { permissions, can, isAdmin, role, plan, hasFeature, planMeets, loading }
+    return { permissions, can, isAdmin, role, plan, features, hasFeature, planMeets, loading }
 }

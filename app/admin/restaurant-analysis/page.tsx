@@ -67,7 +67,7 @@ export default function RestaurantAnalysisPage() {
             <div className="space-y-6 animate-fade-in">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Restaurant Sales & Menu Popularity</h1>
+                        <h1 className="text-2xl font-bold text-text-primary">Restaurant Sales & Menu Popularity</h1>
                         <p className="text-text-secondary text-sm mt-0.5">Detailed analytics on restaurant performance and menu item optimization.</p>
                     </div>
                 </div>
@@ -78,14 +78,14 @@ export default function RestaurantAnalysisPage() {
                         <div className="absolute inset-0 bg-primary/5 blur-2xl animate-pulse"></div>
                     </div>
                     <div className="max-w-xs space-y-2">
-                        <h3 className="text-lg font-bold text-white uppercase tracking-tight">Data Accumulating</h3>
+                        <h3 className="text-lg font-bold text-text-primary uppercase tracking-tight">Data Accumulating</h3>
                         <p className="text-xs font-medium text-text-tertiary leading-relaxed uppercase tracking-widest">
                             {apiError ? `Error: ${apiError}` : "The restaurant analysis engine is active. Once your guests begin ordering from the menu, sales performance metrics will synchronize here."}
                         </p>
                     </div>
                     <button 
                         onClick={() => revalidate()}
-                        className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all active:scale-95"
+                        className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 border border-border/50 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-text-primary transition-all active:scale-95"
                     >
                         <RefreshCw className="w-4 h-4" /> Refresh Analysis
                     </button>
@@ -174,7 +174,7 @@ export default function RestaurantAnalysisPage() {
                 ) : items.map((item: any) => (
                     <div key={item.id} className="flex items-center justify-between p-3 bg-surface-light rounded-xl border border-border group">
                         <div>
-                            <p className="text-sm font-semibold text-white">{item.name}</p>
+                            <p className="text-sm font-semibold text-text-primary">{item.name}</p>
                             <p className="text-xs text-text-tertiary mt-0.5">{item.units} units sold</p>
                         </div>
                         <div className="text-right">
@@ -184,7 +184,7 @@ export default function RestaurantAnalysisPage() {
                                         type="number"
                                         value={editingValue}
                                         onChange={e => setEditingValue(e.target.value)}
-                                        className="w-20 bg-surface border border-primary rounded-lg px-2 py-1 text-xs text-white focus:outline-none"
+                                        className="w-20 bg-surface border border-primary rounded-lg px-2 py-1 text-xs text-text-primary focus:outline-none"
                                         autoFocus
                                     />
                                     <button onClick={() => handleUpdateMargin(item.id, parseFloat(editingValue))} className="p-1 hover:bg-emerald-500/20 rounded text-emerald-400">
@@ -216,7 +216,7 @@ export default function RestaurantAnalysisPage() {
         <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Restaurant Sales & Menu Popularity</h1>
+                    <h1 className="text-2xl font-bold text-text-primary">Restaurant Sales & Menu Popularity</h1>
                     <p className="text-text-secondary text-sm mt-0.5">Detailed analytics on restaurant performance and menu item optimization.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -227,22 +227,22 @@ export default function RestaurantAnalysisPage() {
                                 onClick={() => setActiveTab(t)}
                                 className={cn(
                                     "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-                                    activeTab === t ? "bg-primary text-white shadow-lg" : "text-text-tertiary hover:text-white"
+                                    activeTab === t ? "bg-primary text-text-primary shadow-lg" : "text-text-tertiary hover:text-text-primary"
                                 )}
                             >
                                 {t}
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center gap-2 bg-[#182433] border border-white/10 rounded-xl px-3 py-2 transition-all">
-                        <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                    <div className="flex items-center gap-2 bg-surface border border-border/50 rounded-xl px-3 py-2 transition-all">
+                        <Calendar className="w-4 h-4 text-text-secondary shrink-0" />
                         <select
                             value={timeRange}
                             onChange={(e) => setTimeRange(e.target.value)}
-                            className="bg-transparent text-[11px] font-bold text-white focus:outline-none focus:ring-0 outline-none border-none uppercase tracking-wider cursor-pointer shadow-none ring-0 appearance-none pr-2"
+                            className="bg-transparent text-[11px] font-bold text-text-primary focus:outline-none focus:ring-0 outline-none border-none uppercase tracking-wider cursor-pointer shadow-none ring-0 appearance-none pr-2"
                             style={{ outline: 'none', border: 'none', boxShadow: 'none' }}
                         >
-                            {Object.keys(rangeMap).map(r => <option key={r} value={r} className="bg-[#182433] text-white py-1">{r}</option>)}
+                            {Object.keys(rangeMap).map(r => <option key={r} value={r} className="bg-surface text-text-primary py-1">{r}</option>)}
                         </select>
                     </div>
                     <button
@@ -277,7 +277,7 @@ export default function RestaurantAnalysisPage() {
                             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">{kpi.trend}</span>
                         </div>
                         <p className="text-xs font-medium text-text-tertiary uppercase tracking-widest">{kpi.label}</p>
-                        <p className="text-2xl font-bold text-white mt-1">{kpi.value}</p>
+                        <p className="text-2xl font-bold text-text-primary mt-1">{kpi.value}</p>
                     </div>
                 ))}
             </div>
@@ -286,7 +286,7 @@ export default function RestaurantAnalysisPage() {
                 <div className="lg:col-span-2 bg-surface border border-border rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-lg font-bold text-white">Popularity Matrix</h3>
+                            <h3 className="text-lg font-bold text-text-primary">Popularity Matrix</h3>
                             <p className="text-xs text-text-tertiary">Performance distribution of menu items.</p>
                         </div>
                         <div className="flex items-center gap-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">
@@ -296,9 +296,9 @@ export default function RestaurantAnalysisPage() {
                     </div>
                     <div className="h-[300px]">
                         {barData.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center bg-[#0d1117]/40 rounded-2xl border border-dashed border-white/[0.05]">
+                            <div className="h-full flex flex-col items-center justify-center bg-background/40 rounded-2xl border border-dashed border-border">
                                 <BarChart3 className="w-10 h-10 text-text-tertiary/30 mb-3" />
-                                <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest">No Analysis Data</h4>
+                                <h4 className="text-sm font-bold text-text-tertiary uppercase tracking-widest">No Analysis Data</h4>
                                 <p className="text-[10px] text-gray-600 font-medium mt-1">Awaiting restaurant orders to begin calculating.</p>
                             </div>
                         ) : (
@@ -348,13 +348,13 @@ export default function RestaurantAnalysisPage() {
                 </div>
 
                 <div className="bg-surface border border-border rounded-2xl p-6">
-                    <h3 className="text-lg font-bold text-white mb-1">Revenue by Category</h3>
+                    <h3 className="text-lg font-bold text-text-primary mb-1">Revenue by Category</h3>
                     <p className="text-xs text-text-tertiary mb-8">Contribution to total sales.</p>
                     <div className="h-[250px] relative">
                         {pieData.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center bg-[#0d1117]/40 rounded-2xl border border-dashed border-white/[0.05]">
+                            <div className="h-full flex flex-col items-center justify-center bg-background/40 rounded-2xl border border-dashed border-border">
                                 <TrendingUp className="w-8 h-8 text-text-tertiary/30 mb-3" />
-                                <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest">No Data</h4>
+                                <h4 className="text-sm font-bold text-text-tertiary uppercase tracking-widest">No Data</h4>
                             </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
@@ -402,7 +402,7 @@ export default function RestaurantAnalysisPage() {
 
             <div className="bg-surface border border-border rounded-2xl overflow-hidden">
                 <div className="p-6 border-b border-border bg-surface-light/30">
-                    <h3 className="text-lg font-bold text-white">Underperforming Items</h3>
+                    <h3 className="text-lg font-bold text-text-primary">Underperforming Items</h3>
                     <p className="text-xs text-text-tertiary">Items requiring immediate menu engineering attention.</p>
                 </div>
                 <div className="overflow-x-auto">
@@ -424,7 +424,7 @@ export default function RestaurantAnalysisPage() {
                                                 {item.name?.substring(0, 2).toUpperCase() || 'IT'}
                                             </div>
                                             <div>
-                                                <p className="text-sm font-semibold text-white">{item.name}</p>
+                                                <p className="text-sm font-semibold text-text-primary">{item.name}</p>
                                                 <p className="text-[10px] text-text-tertiary uppercase">{item.category}</p>
                                             </div>
                                         </div>

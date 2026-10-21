@@ -22,7 +22,7 @@ const STATUS_DOT: Record<string, string> = {
     Offline: 'bg-red-400' }
 const STATUS_TEXT: Record<string, string> = {
     Live: 'text-emerald-400',
-    'Not Configured': 'text-slate-400',
+    'Not Configured': 'text-text-secondary',
     Offline: 'text-red-400' }
 const GATEWAY_ICONS: Record<string, React.ElementType> = {
     Razorpay:       CreditCard,
@@ -76,7 +76,7 @@ export default function InfrastructurePage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Infrastructure Health</h1>
+                    <h1 className="text-2xl font-bold text-text-primary">Infrastructure Health</h1>
                     <p className="text-text-secondary text-sm mt-0.5">
                         Live status of hotel operations, staff, guests and integrations.
                         {lastUpdated && (
@@ -89,7 +89,7 @@ export default function InfrastructurePage() {
                 <button
                     onClick={() => fetchData(true)}
                     disabled={refreshing}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-text-primary text-sm font-semibold rounded-xl transition-all disabled:opacity-50"
                 >
                     {refreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                     Refresh
@@ -104,7 +104,7 @@ export default function InfrastructurePage() {
                         value: live.staffOnDuty,
                         sub: live.staffOnDuty > 0 ? 'Currently clocked in' : 'No staff punched in',
                         icon: Users,
-                        color: live.staffOnDuty > 0 ? 'text-emerald-400' : 'text-slate-400',
+                        color: live.staffOnDuty > 0 ? 'text-emerald-400' : 'text-text-secondary',
                         bg: live.staffOnDuty > 0 ? 'bg-emerald-500/10' : 'bg-slate-500/10',
                         dot: live.staffOnDuty > 0 },
                     {
@@ -128,7 +128,7 @@ export default function InfrastructurePage() {
                         value: `${live.cleaningRooms + live.maintenanceRooms}`,
                         sub: `${live.cleaningRooms} cleaning · ${live.maintenanceRooms} maintenance`,
                         icon: Wrench,
-                        color: live.maintenanceRooms > 0 ? 'text-amber-400' : 'text-slate-400',
+                        color: live.maintenanceRooms > 0 ? 'text-amber-400' : 'text-text-secondary',
                         bg: 'bg-slate-500/10',
                         dot: false },
                 ].map((s, i) => (
@@ -145,7 +145,7 @@ export default function InfrastructurePage() {
                             )}
                         </div>
                         <p className="text-xs text-text-secondary mb-1">{s.label}</p>
-                        <p className="text-2xl font-bold text-white">{s.value}</p>
+                        <p className="text-2xl font-bold text-text-primary">{s.value}</p>
                         <p className={cn('text-[11px] mt-1', s.color)}>{s.sub}</p>
                     </div>
                 ))}
@@ -158,7 +158,7 @@ export default function InfrastructurePage() {
                     <div className="bg-surface border border-border rounded-2xl p-6">
                         <div className="flex items-center justify-between mb-5">
                             <div>
-                                <h3 className="text-base font-semibold text-white">Booking Activity — Last 24 Hours</h3>
+                                <h3 className="text-base font-semibold text-text-primary">Booking Activity — Last 24 Hours</h3>
                                 <p className="text-xs text-text-secondary mt-0.5">New bookings per 2-hour window</p>
                             </div>
                             <Activity className="w-4 h-4 text-text-tertiary" />
@@ -187,7 +187,7 @@ export default function InfrastructurePage() {
 
                     {/* Staff On Duty */}
                     <div className="bg-surface border border-border rounded-2xl p-6">
-                        <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-text-primary mb-4 flex items-center gap-2">
                             <Users className="w-4 h-4 text-emerald-400" />
                             Staff On Duty
                             <span className="ml-auto text-xs font-normal text-text-secondary">{live.staffList.length} active</span>
@@ -202,7 +202,7 @@ export default function InfrastructurePage() {
                                             <User className="w-4 h-4 text-emerald-400" />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm font-semibold text-white truncate">{s.name}</p>
+                                            <p className="text-sm font-semibold text-text-primary truncate">{s.name}</p>
                                             <p className="text-[11px] text-text-secondary">{s.department.replace('_', ' ')} · since {s.punchIn}</p>
                                         </div>
                                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
@@ -215,7 +215,7 @@ export default function InfrastructurePage() {
                     {/* Active Service Requests */}
                     {live.activeServices.length > 0 && (
                         <div className="bg-surface border border-border rounded-2xl p-6">
-                            <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                            <h3 className="text-base font-semibold text-text-primary mb-4 flex items-center gap-2">
                                 <Bell className="w-4 h-4 text-amber-400" />
                                 Active Service Requests
                                 <span className="ml-auto text-xs font-normal text-text-secondary">{live.activeServices.length} open</span>
@@ -227,7 +227,7 @@ export default function InfrastructurePage() {
                                         s.age > 60 ? 'bg-red-500/5 border-red-500/20' : 'bg-surface-light border-border'
                                     )}>
                                         <div>
-                                            <p className="text-sm font-semibold text-white">{s.title}</p>
+                                            <p className="text-sm font-semibold text-text-primary">{s.title}</p>
                                             <p className="text-[11px] text-text-secondary mt-0.5">
                                                 Room {s.room} · {s.type.replace('_', ' ')} ·
                                                 {s.assignedTo ? ` Assigned to ${s.assignedTo}` : ' Unassigned'}
@@ -254,7 +254,7 @@ export default function InfrastructurePage() {
                 <div className="lg:col-span-4 space-y-6">
                     {/* Alerts */}
                     <div className="bg-surface border border-border rounded-2xl p-6">
-                        <h3 className="text-base font-semibold text-white mb-4">Live Alerts</h3>
+                        <h3 className="text-base font-semibold text-text-primary mb-4">Live Alerts</h3>
                         <div className="space-y-4">
                             {alerts.map((a: any, i: number) => (
                                 <div key={i} className="flex gap-3">
@@ -269,7 +269,7 @@ export default function InfrastructurePage() {
                                                                  <CheckCircle2 className="w-4 h-4" />}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-sm font-semibold text-white leading-tight">{a.message}</p>
+                                        <p className="text-sm font-semibold text-text-primary leading-tight">{a.message}</p>
                                         <p className="text-[11px] text-text-secondary mt-0.5 line-clamp-2">{a.description}</p>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="text-[10px] text-text-tertiary">{a.time}</span>
@@ -284,7 +284,7 @@ export default function InfrastructurePage() {
 
                     {/* Integrations / Gateways */}
                     <div className="bg-surface border border-border rounded-2xl p-6">
-                        <h3 className="text-base font-semibold text-white mb-4">Integrations</h3>
+                        <h3 className="text-base font-semibold text-text-primary mb-4">Integrations</h3>
                         <div className="space-y-3">
                             {gateways.map((g: any, i: number) => {
                                 const Icon = GATEWAY_ICONS[g.name] ?? Wifi
@@ -294,12 +294,12 @@ export default function InfrastructurePage() {
                                             <Icon className="w-4 h-4 text-text-secondary" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold text-white">{g.name}</p>
+                                            <p className="text-sm font-semibold text-text-primary">{g.name}</p>
                                             <p className="text-[11px] text-text-tertiary truncate">{g.detail}</p>
                                         </div>
                                         <div className="flex items-center gap-1.5 shrink-0">
                                             <span className={cn('w-2 h-2 rounded-full', STATUS_DOT[g.status] ?? 'bg-slate-500')} />
-                                            <span className={cn('text-[10px] font-bold', STATUS_TEXT[g.status] ?? 'text-slate-400')}>
+                                            <span className={cn('text-[10px] font-bold', STATUS_TEXT[g.status] ?? 'text-text-secondary')}>
                                                 {g.status}
                                             </span>
                                         </div>
@@ -312,7 +312,7 @@ export default function InfrastructurePage() {
                     {/* Guests In-House */}
                     {live.guestList.length > 0 && (
                         <div className="bg-surface border border-border rounded-2xl p-6">
-                            <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                            <h3 className="text-base font-semibold text-text-primary mb-4 flex items-center gap-2">
                                 <BedDouble className="w-4 h-4 text-blue-400" />
                                 Guests In-House
                                 <span className="ml-auto text-xs font-normal text-text-secondary">{live.guestsInHouse} total</span>
@@ -324,7 +324,7 @@ export default function InfrastructurePage() {
                                             <div className="w-6 h-6 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-400">
                                                 {g.name.charAt(0)}
                                             </div>
-                                            <span className="text-white font-medium truncate max-w-[120px]">{g.name}</span>
+                                            <span className="text-text-primary font-medium truncate max-w-[120px]">{g.name}</span>
                                         </div>
                                         <div className="text-right">
                                             <span className="text-xs text-text-secondary">Room {g.room}</span>
@@ -341,7 +341,7 @@ export default function InfrastructurePage() {
 
                     {/* Today's Schedule */}
                     <div className="bg-surface border border-border rounded-2xl p-6">
-                        <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-text-primary mb-4 flex items-center gap-2">
                             <Clock className="w-4 h-4 text-text-secondary" />
                             Today&apos;s Schedule
                         </h3>

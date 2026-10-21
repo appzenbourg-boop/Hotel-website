@@ -4,6 +4,7 @@ import { SessionProvider } from 'next-auth/react'
 import { SWRConfig } from 'swr'
 import { useEffect } from 'react'
 import { Toaster } from 'sonner'
+import { ThemeProvider } from 'next-themes'
 
 const globalFetcher = async (url: string) => {
     const res = await fetch(url)
@@ -45,7 +46,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     },
                 }}
             >
-                {children}
+                <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+                    {children}
+                </ThemeProvider>
             </SWRConfig>
         </SessionProvider>
     )

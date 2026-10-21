@@ -24,9 +24,24 @@ export async function GET(request: Request) {
     const filter = searchParams.get('filter') || 'all'
     const queryPropertyId = searchParams.get('propertyId')
 
-    const propertyId = session.user.role === 'SUPER_ADMIN'
+    let propertyId = session.user.role === 'SUPER_ADMIN'
         ? (queryPropertyId && queryPropertyId !== 'ALL' ? queryPropertyId : null)
         : session.user.propertyId
+
+    if (!propertyId || propertyId === 'ALL') {
+        const dbUser = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { workplaceId: true, ownedPropertyIds: true }
+        })
+        propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+        if (!propertyId) {
+            const fallbackProp = await prisma.property.findFirst({
+                where: { ownerIds: { has: session.user.id } },
+                select: { id: true }
+            })
+            if (fallbackProp) propertyId = fallbackProp.id
+        }
+    }
 
     if (!propertyId) {
         return NextResponse.json({
@@ -76,8 +91,13 @@ export async function GET(request: Request) {
                 null
 
             // Apply tab filter
-            if (filter === 'pending' && activeBooking?.status !== 'RESERVED') continue
-            if (filter === 'completed' && activeBooking?.status !== 'CHECKED_IN') continue
+            if (filter === 'pending') {
+                if (activeBooking && activeBooking.status !== 'RESERVED') continue
+                // If activeBooking is null, they are a walk-in pending check-in, so keep them.
+            }
+            if (filter === 'completed') {
+                if (!activeBooking || activeBooking.status !== 'CHECKED_IN') continue
+            }
 
             rows.push({
                 // Use booking id if available, else guest id as key
@@ -126,8 +146,9 @@ export async function GET(request: Request) {
             ? ((currentlyCheckedIn / monthlyAverage) - 1) * 100
             : 0
 
+        // Guests who have completed the online form but are not yet verified by admin
         const verificationPending = rows.filter(r =>
-            r.checkInStatus !== 'VERIFIED' && r.checkInStatus !== 'COMPLETED'
+            r.checkInStatus === 'COMPLETED'
         ).length
 
         return NextResponse.json({

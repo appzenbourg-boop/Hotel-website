@@ -23,6 +23,9 @@ export async function GET() {
                             select: { id: true, name: true, email: true, role: true, status: true }
                         }
                     }
+                },
+                _count: {
+                    select: { rooms: true, staff: true, bookings: true }
                 }
             },
             orderBy: { createdAt: 'desc' }

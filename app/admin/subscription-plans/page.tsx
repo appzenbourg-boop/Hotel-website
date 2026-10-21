@@ -19,7 +19,7 @@ const PLAN_META: Record<string, {
     border: string
     badge?: string
 }> = {
-    BASE:       { icon: Building2, color: 'text-slate-400',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
+    BASE:       { icon: Building2, color: 'text-text-secondary',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
     STARTER:    { icon: Zap,       color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',  badge: 'Popular' },
     STANDARD:   { icon: Star,      color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20', badge: 'Best Value' },
     ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' } }
@@ -124,7 +124,7 @@ export default function SubscriptionPlansPage() {
         <div className="space-y-8 max-w-7xl mx-auto">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-white">Subscription Plans</h1>
+                <h1 className="text-2xl font-bold text-text-primary">Subscription Plans</h1>
                 <p className="text-text-secondary mt-1">
                     Configure pricing, discount percentages, room limits, and features for each plan tier.
                     Changes apply to new sign-ups immediately.
@@ -144,32 +144,32 @@ export default function SubscriptionPlansPage() {
                         <div
                             key={plan.plan}
                             className={cn(
-                                'relative bg-[#0d1117] border rounded-2xl overflow-hidden transition-all',
-                                isEditing ? 'border-primary/50 ring-1 ring-primary/20' : 'border-white/[0.07] hover:border-white/[0.12]'
+                                'relative bg-background border rounded-2xl overflow-hidden transition-all',
+                                isEditing ? 'border-primary/50 ring-1 ring-primary/20' : 'border-border hover:border-border'
                             )}
                         >
                             {/* Badge */}
                             {meta.badge && (
-                                <div className="absolute top-3 right-3 px-2 py-0.5 bg-primary text-white text-[9px] font-black uppercase tracking-widest rounded-full">
+                                <div className="absolute top-3 right-3 px-2 py-0.5 bg-primary text-text-primary text-[9px] font-black uppercase tracking-widest rounded-full">
                                     {meta.badge}
                                 </div>
                             )}
 
                             {/* Plan Header */}
-                            <div className={cn('p-6 border-b border-white/[0.06]', meta.bg)}>
+                            <div className={cn('p-6 border-b border-border', meta.bg)}>
                                 <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-3', meta.bg, 'border', meta.border)}>
                                     <Icon className={cn('w-5 h-5', meta.color)} />
                                 </div>
-                                <h3 className="text-lg font-bold text-white">{current.displayName}</h3>
+                                <h3 className="text-lg font-bold text-text-primary">{current.displayName}</h3>
                                 <p className="text-[11px] text-text-secondary mt-1 leading-relaxed">{current.tagline}</p>
                             </div>
 
                             {/* Pricing */}
-                            <div className="p-6 border-b border-white/[0.06] space-y-4">
+                            <div className="p-6 border-b border-border space-y-4">
                                 {plan.plan === 'ENTERPRISE' ? (
                                     <div className="flex items-center gap-2">
                                         <Infinity className="w-6 h-6 text-purple-400" />
-                                        <span className="text-xl font-bold text-white">Custom Pricing</span>
+                                        <span className="text-xl font-bold text-text-primary">Custom Pricing</span>
                                     </div>
                                 ) : (
                                     <>
@@ -184,7 +184,7 @@ export default function SubscriptionPlansPage() {
                                                             type="number"
                                                             value={current.originalPrice}
                                                             onChange={e => setEditingPlan({ ...current, originalPrice: parseFloat(e.target.value) || 0 })}
-                                                            className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                            className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:ring-1 focus:ring-primary outline-none"
                                                         />
                                                     </div>
                                                     <div>
@@ -201,7 +201,7 @@ export default function SubscriptionPlansPage() {
                                                                     : 0
                                                                 setEditingPlan({ ...current, discountedPrice: dp, discountPercent: pct })
                                                             }}
-                                                            className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                            className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:ring-1 focus:ring-primary outline-none"
                                                         />
                                                     </div>
                                                     <div>
@@ -218,14 +218,14 @@ export default function SubscriptionPlansPage() {
                                                                 const dp = Math.round(current.originalPrice * (1 - pct / 100))
                                                                 setEditingPlan({ ...current, discountPercent: pct, discountedPrice: dp })
                                                             }}
-                                                            className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-white text-sm focus:ring-1 focus:ring-primary outline-none"
+                                                            className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:ring-1 focus:ring-primary outline-none"
                                                         />
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <div>
                                                     <div className="flex items-baseline gap-2">
-                                                        <span className="text-2xl font-bold text-white">
+                                                        <span className="text-2xl font-bold text-text-primary">
                                                             ₹{current.discountedPrice.toLocaleString('en-IN')}
                                                         </span>
                                                         <span className="text-xs text-text-tertiary">/month</span>
@@ -264,11 +264,11 @@ export default function SubscriptionPlansPage() {
                                                 min={0}
                                                 value={current.maxRooms}
                                                 onChange={e => setEditingPlan({ ...current, maxRooms: parseInt(e.target.value) || 0 })}
-                                                className="w-full bg-transparent text-white text-sm font-bold outline-none"
+                                                className="w-full bg-transparent text-text-primary text-sm font-bold outline-none"
                                                 placeholder="0 = unlimited"
                                             />
                                         ) : (
-                                            <span className="text-sm font-bold text-white">
+                                            <span className="text-sm font-bold text-text-primary">
                                                 {current.maxRooms === 0 ? 'Unlimited' : `Up to ${current.maxRooms}`}
                                             </span>
                                         )}
@@ -284,11 +284,11 @@ export default function SubscriptionPlansPage() {
                                                 min={0}
                                                 value={current.maxStaff}
                                                 onChange={e => setEditingPlan({ ...current, maxStaff: parseInt(e.target.value) || 0 })}
-                                                className="w-full bg-transparent text-white text-sm font-bold outline-none"
+                                                className="w-full bg-transparent text-text-primary text-sm font-bold outline-none"
                                                 placeholder="0 = unlimited"
                                             />
                                         ) : (
-                                            <span className="text-sm font-bold text-white">
+                                            <span className="text-sm font-bold text-text-primary">
                                                 {current.maxStaff === 0 ? 'Unlimited' : `Up to ${current.maxStaff}`}
                                             </span>
                                         )}
@@ -304,7 +304,7 @@ export default function SubscriptionPlansPage() {
                                     </span>
                                     <button
                                         onClick={() => setExpandedFeatures(expandedFeatures === plan.plan ? null : plan.plan)}
-                                        className="text-text-tertiary hover:text-white transition-colors"
+                                        className="text-text-tertiary hover:text-text-primary transition-colors"
                                     >
                                         {expandedFeatures === plan.plan
                                             ? <ChevronUp className="w-4 h-4" />
@@ -326,10 +326,10 @@ export default function SubscriptionPlansPage() {
                                                     )}
                                                 >
                                                     {current.features.includes(f.id) && (
-                                                        <CheckCircle2 className="w-3 h-3 text-white" />
+                                                        <CheckCircle2 className="w-3 h-3 text-text-primary" />
                                                     )}
                                                 </div>
-                                                <span className="text-[11px] text-text-secondary group-hover:text-white transition-colors">
+                                                <span className="text-[11px] text-text-secondary group-hover:text-text-primary transition-colors">
                                                     {f.label}
                                                 </span>
                                             </label>
@@ -399,14 +399,14 @@ export default function SubscriptionPlansPage() {
             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 flex gap-4">
                 <IndianRupee className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                 <div>
-                    <h4 className="text-sm font-bold text-white mb-1">How pricing works</h4>
+                    <h4 className="text-sm font-bold text-text-primary mb-1">How pricing works</h4>
                     <p className="text-[12px] text-text-secondary leading-relaxed">
-                        The <strong className="text-white">Discount %</strong> field controls the strikethrough savings shown to hotel admins.
+                        The <strong className="text-text-primary">Discount %</strong> field controls the strikethrough savings shown to hotel admins.
                         Changing the discounted price auto-calculates the percentage, and vice versa.
                         <br />
-                        <strong className="text-white">Room/Staff limits</strong> set to <code className="text-primary">0</code> mean unlimited.
+                        <strong className="text-text-primary">Room/Staff limits</strong> set to <code className="text-primary">0</code> mean unlimited.
                         <br />
-                        Per-hotel <strong className="text-white">GST %, service charge %, and booking discounts</strong> are configured in each hotel&apos;s
+                        Per-hotel <strong className="text-text-primary">GST %, service charge %, and booking discounts</strong> are configured in each hotel&apos;s
                         Settings → Financial section.
                     </p>
                 </div>

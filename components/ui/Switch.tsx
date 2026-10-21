@@ -19,8 +19,8 @@ export default function Switch({ checked, onChange, label, textOn, textOff, clas
                 type="button"
                 onClick={() => onChange(!checked)}
                 className={cn(
-                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                    checked ? "bg-[#4A9EFF]" : "bg-white/10"
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none",
+                    checked ? "bg-primary border-primary" : "bg-slate-300 dark:bg-white/15 border-slate-300 dark:border-white/10"
                 )}
             >
                 <span

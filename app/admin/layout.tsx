@@ -180,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isTrapped) {
     return (
-      <div className="min-h-screen bg-[#030712] text-white flex flex-col items-center justify-center relative overflow-hidden font-sans selection:bg-[#4A9EFF]/30">
+      <div className="min-h-screen bg-background text-text-primary flex flex-col items-center justify-center relative overflow-hidden font-sans selection:bg-[#4A9EFF]/30">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#4A9EFF]/10 rounded-full blur-[150px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[150px]" />
         
@@ -188,7 +188,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-9 h-9 bg-gradient-to-br from-[#4A9EFF] to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-[#4A9EFF]/20">
             
           </div>
-          <span className="text-xl font-bold tracking-tight text-white">Zenbourg <span className="text-[#4A9EFF]">OS</span></span>
+          <span className="text-xl font-bold tracking-tight text-text-primary">Zenbourg <span className="text-[#4A9EFF]">OS</span></span>
         </div>
 
         <div className="max-w-md w-full px-6 z-10 relative text-center">
@@ -198,21 +198,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key="pending"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white/[0.02] border border-white/10 rounded-3xl p-8 md:p-10 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+                className="bg-surface-light border border-border/50 rounded-3xl p-8 md:p-10 backdrop-blur-md shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
               >
                 <div className="w-20 h-20 bg-[#4A9EFF]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#4A9EFF]/20">
                   <Clock size={32} className="text-[#4A9EFF] animate-pulse" />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3 text-white">Pricing Analysis</h2>
-                <p className="text-white/50 text-sm leading-relaxed mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3 text-text-primary">Pricing Analysis</h2>
+                <p className="text-text-primary/50 text-sm leading-relaxed mb-6">
                   Zenbourg HQ is currently evaluating your Custom Enterprise configuration to draft a tailored scale pricing quotation.
                 </p>
                 <div className="space-y-3 text-left mb-8">
-                  <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl p-3 text-xs text-white/60">
+                  <div className="flex items-center gap-3 bg-surface-light border border-border rounded-xl p-3 text-xs text-text-primary/60">
                     <CheckCircle2 size={14} className="text-[#4A9EFF] shrink-0" />
                     <span>Multi-Property & Analytics modules reserved.</span>
                   </div>
-                  <div className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl p-3 text-xs text-white/60">
+                  <div className="flex items-center gap-3 bg-surface-light border border-border rounded-xl p-3 text-xs text-text-primary/60">
                     <CheckCircle2 size={14} className="text-[#4A9EFF] shrink-0" />
                     <span>Cloud provision slots allocated to your region.</span>
                   </div>
@@ -235,8 +235,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/20">
                   <ShieldCheck size={36} className="text-emerald-400" />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2 text-white">Pricing Approved!</h2>
-                <p className="text-white/50 text-sm leading-relaxed mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2 text-text-primary">Pricing Approved!</h2>
+                <p className="text-text-primary/50 text-sm leading-relaxed mb-6">
                   The Super Admin has finalized your bespoke enterprise plan quote.
                 </p>
                 
@@ -248,8 +248,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   )}
                   
                   <span className={cn("text-[10px] font-bold text-[#4A9EFF] uppercase tracking-widest mb-1", allowsTrial && "mt-3")}>Annual Enterprise Fee</span>
-                  <span className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">{formatPrice(quoteAmount || 0)}</span>
-                  <span className="text-[11px] text-white/40 mt-1">
+                  <span className="text-3xl md:text-4xl font-extrabold tracking-tight text-text-primary">{formatPrice(quoteAmount || 0)}</span>
+                  <span className="text-[11px] text-text-primary/40 mt-1">
                     {allowsTrial ? "Trial mandates will only debit after 14 days." : "Tax invoice generated upon payout."}
                   </span>
                 </div>
@@ -259,7 +259,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <button
                       onClick={() => handlePayNow(true)}
                       disabled={paymentLoading}
-                      className="w-full py-4 bg-gradient-to-r from-purple-600 to-[#4A9EFF] hover:from-purple-500 hover:to-[#4A9EFF]/90 disabled:opacity-50 transition-all text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-purple-600/20 relative overflow-hidden group active:scale-[0.98]"
+                      className="w-full py-4 bg-gradient-to-r from-purple-600 to-[#4A9EFF] hover:from-purple-500 hover:to-[#4A9EFF]/90 disabled:opacity-50 transition-all text-text-primary font-bold rounded-xl text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-purple-600/20 relative overflow-hidden group active:scale-[0.98]"
                     >
                       {paymentLoading ? (
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -273,7 +273,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <button
                       onClick={() => handlePayNow(false)}
                       disabled={paymentLoading}
-                      className="w-full py-3 border border-white/10 hover:border-white/25 hover:bg-white/[0.02] transition-all text-white/60 hover:text-white font-bold rounded-xl text-[12px] flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3 border border-border/50 hover:border-white/25 hover:bg-surface-light transition-all text-text-primary/60 hover:text-text-primary font-bold rounded-xl text-[12px] flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CreditCard size={14} /> Pay Annual Quote Immediately
                     </button>
@@ -282,7 +282,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <button
                     onClick={() => handlePayNow(false)}
                     disabled={paymentLoading}
-                    className="w-full py-4 bg-[#4A9EFF] hover:bg-[#4A9EFF]/90 disabled:opacity-50 transition-all text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-[#4A9EFF]/25 relative overflow-hidden group active:scale-[0.98]"
+                    className="w-full py-4 bg-[#4A9EFF] hover:bg-[#4A9EFF]/90 disabled:opacity-50 transition-all text-text-primary font-bold rounded-xl text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-[#4A9EFF]/25 relative overflow-hidden group active:scale-[0.98]"
                   >
                     {paymentLoading ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -300,7 +300,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="mt-8 flex justify-center gap-6">
             <button
               onClick={() => signOut({ callbackUrl: '/' })}
-              className="flex items-center gap-2 text-white/40 hover:text-white text-xs font-medium transition-all cursor-pointer bg-transparent border-none outline-none"
+              className="flex items-center gap-2 text-text-primary/40 hover:text-text-primary text-xs font-medium transition-all cursor-pointer bg-transparent border-none outline-none"
             >
               <LogOut size={13} /> Exit to Homepage
             </button>
@@ -336,7 +336,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col md:ml-60 ml-0 overflow-hidden w-full relative bg-[#0f1115]">
+      <div className="flex-1 flex flex-col md:ml-60 ml-0 overflow-hidden w-full relative bg-background">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6 w-full custom-scrollbar relative">
           {children}
