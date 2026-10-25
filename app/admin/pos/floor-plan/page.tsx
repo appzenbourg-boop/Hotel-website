@@ -237,7 +237,7 @@ export default function FloorPlanPage() {
                     onClick={() => setActiveOutlet(outlet)}
                     className={cn(
                       "px-4 py-1.5 rounded-full text-xs font-bold transition-all",
-                      activeOutlet === outlet ? "bg-white text-black shadow-md" : "text-text-secondary hover:text-text-primary"
+                      activeOutlet === outlet ? "bg-primary text-white shadow-md shadow-primary/20" : "bg-surface border border-border text-text-secondary hover:text-text-primary"
                     )}
                   >
                     {outlet}
@@ -248,30 +248,30 @@ export default function FloorPlanPage() {
             </div>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="w-full sm:w-auto justify-center bg-[#2563EB] hover:bg-[#3B82F6] text-white px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] flex items-center gap-2 shrink-0 active:scale-95"
+              className="w-full sm:w-auto justify-center bg-primary hover:bg-primary-hover text-white px-5 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-primary/20 flex items-center gap-2 shrink-0 active:scale-95"
             >
               <Plus className="w-4 h-4" /> Add Table
             </button>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="flex items-center gap-4 bg-[#1E293B] border border-white/5 px-5 sm:px-6 py-4 rounded-3xl">
-              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-[#3B82F6] shrink-0">
+            <div className="flex items-center gap-4 bg-surface border border-border px-5 sm:px-6 py-4 rounded-3xl shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-primary shrink-0">
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Occupancy</div>
-                <div className="text-2xl font-black text-white">{occupiedSeats} <span className="text-sm font-normal text-gray-400">/{totalSeats} Seats</span></div>
+                <div className="text-xs text-text-tertiary font-bold uppercase tracking-wider">Occupancy</div>
+                <div className="text-2xl font-black text-text-primary">{occupiedSeats} <span className="text-sm font-normal text-text-tertiary">/{totalSeats} Seats</span></div>
               </div>
             </div>
             
-            <div className="flex items-center gap-4 bg-[#1E293B] border border-white/5 px-5 sm:px-6 py-4 rounded-3xl">
+            <div className="flex items-center gap-4 bg-surface border border-border px-5 sm:px-6 py-4 rounded-3xl shadow-xs">
               <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
                 <Utensils className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-xs text-gray-400 font-bold uppercase tracking-wider">Active Tables</div>
-                <div className="text-2xl font-black text-white">{totalOccupied} <span className="text-sm font-normal text-gray-400">/{tables.length} Tables</span></div>
+                <div className="text-xs text-text-tertiary font-bold uppercase tracking-wider">Active Tables</div>
+                <div className="text-2xl font-black text-text-primary">{totalOccupied} <span className="text-sm font-normal text-text-tertiary">/{tables.length} Tables</span></div>
               </div>
             </div>
           </div>
@@ -292,18 +292,20 @@ export default function FloorPlanPage() {
                 className={cn(
                   "relative flex flex-col justify-between p-6 rounded-3xl cursor-pointer transition-all duration-300 group overflow-hidden border h-60",
                   isOccupied
-                    ? "bg-[#0A4186] border-transparent text-white shadow-[0_12px_24px_rgba(10,65,134,0.4)] scale-[1.02]"
+                    ? "bg-blue-600 border-transparent text-white shadow-[0_12px_24px_rgba(37,99,235,0.3)] scale-[1.02]"
                     : isCleaning
-                      ? "bg-[#78350F] border-transparent text-white shadow-[0_8px_16px_rgba(120,53,15,0.2)]"
+                      ? "bg-amber-500/10 border-amber-500/30 text-text-primary shadow-xs"
                       : isReserved
-                        ? "bg-[#581C87] border-transparent text-white shadow-[0_8px_16px_rgba(88,28,135,0.2)]"
-                        : "bg-[#1E293B] border-white/5 text-white hover:bg-[#233648] hover:border-white/10"
+                        ? "bg-purple-500/10 border-purple-500/30 text-text-primary shadow-xs"
+                        : "bg-surface border-border text-text-primary hover:bg-surface-light hover:border-primary/40 shadow-xs"
                 )}
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="text-2xl font-black tracking-tight text-white">{table.tableId}</div>
-                    <div className={cn("text-xs font-bold mt-1", (isOccupied || isCleaning || isReserved) ? "opacity-70 text-white" : "text-gray-400")}>
+                    <div className={cn("text-2xl font-black tracking-tight", isOccupied ? "text-white" : "text-text-primary")}>
+                      {table.tableId}
+                    </div>
+                    <div className={cn("text-xs font-bold mt-1", isOccupied ? "text-white/80" : "text-text-tertiary")}>
                       {table.isBooth ? 'BOOTH' : 'TABLE'} FOR {table.size}
                     </div>
                   </div>
@@ -313,17 +315,17 @@ export default function FloorPlanPage() {
                     </span>
                   )}
                   {isCleaning && (
-                    <span className="px-2.5 py-1 bg-black/20 text-amber-300 rounded-lg text-[9px] font-black tracking-widest uppercase">
+                    <span className="px-2.5 py-1 bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 rounded-lg text-[9px] font-black tracking-widest uppercase">
                       Cleaning
                     </span>
                   )}
                   {isReserved && (
-                    <span className="px-2.5 py-1 bg-black/20 text-purple-300 rounded-lg text-[9px] font-black tracking-widest uppercase animate-pulse">
+                    <span className="px-2.5 py-1 bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 rounded-lg text-[9px] font-black tracking-widest uppercase animate-pulse">
                       Reserved
                     </span>
                   )}
                   {!isOccupied && !isCleaning && !isReserved && (
-                    <span className="px-2.5 py-1 bg-white/5 border border-white/10 text-gray-400 rounded-lg text-[9px] font-black tracking-widest uppercase">
+                    <span className="px-2.5 py-1 bg-surface-light border border-border text-text-tertiary rounded-lg text-[9px] font-black tracking-widest uppercase">
                       Ready
                     </span>
                   )}
@@ -334,24 +336,24 @@ export default function FloorPlanPage() {
                     <div>
                       <div className="text-3xl font-black tracking-tighter text-white">₹{activeOrder.total.toFixed(2)}</div>
                       <div className="flex justify-between items-center mt-2">
-                        <div className="text-[10px] font-bold opacity-80 uppercase tracking-wider text-white">{activeOrder.status}</div>
-                        <div className="text-[10px] font-bold opacity-80 text-white truncate max-w-[120px]">{activeOrder.guestName || 'Walk-in'}</div>
+                        <div className="text-[10px] font-bold opacity-90 uppercase tracking-wider text-white">{activeOrder.status}</div>
+                        <div className="text-[10px] font-bold opacity-90 text-white truncate max-w-[120px]">{activeOrder.guestName || 'Walk-in'}</div>
                       </div>
                     </div>
                   ) : isCleaning ? (
                     <div className="space-y-1">
-                      <div className="text-xl font-bold tracking-tight text-amber-200">Resetting Table</div>
-                      <div className="text-[10px] text-amber-300 font-semibold uppercase tracking-widest">Vacant Soon</div>
+                      <div className="text-xl font-bold tracking-tight text-amber-600 dark:text-amber-300">Resetting Table</div>
+                      <div className="text-[10px] text-amber-500 dark:text-amber-400 font-semibold uppercase tracking-widest">Vacant Soon</div>
                     </div>
                   ) : isReserved ? (
                     <div className="space-y-1">
-                      <div className="text-xl font-bold tracking-tight text-purple-200">{table.reservationTime || 'Reserved Slot'}</div>
-                      <div className="text-[10px] text-purple-300 font-semibold uppercase tracking-widest truncate">{table.reservationName || 'Awaiting Guest'}</div>
+                      <div className="text-xl font-bold tracking-tight text-purple-600 dark:text-purple-300">{table.reservationTime || 'Reserved Slot'}</div>
+                      <div className="text-[10px] text-purple-500 dark:text-purple-400 font-semibold uppercase tracking-widest truncate">{table.reservationName || 'Awaiting Guest'}</div>
                     </div>
                   ) : (
                     <div>
-                      <div className="text-3xl font-bold text-gray-500 tracking-tight">READY</div>
-                      <div className="text-[10px] text-[#3B82F6] font-black uppercase tracking-widest mt-2 group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      <div className="text-3xl font-bold text-text-tertiary tracking-tight">READY</div>
+                      <div className="text-[10px] text-primary font-black uppercase tracking-widest mt-2 group-hover:translate-x-1 transition-transform flex items-center gap-1">
                         Tap to Dine-in <ChevronRight className="w-3 h-3" />
                       </div>
                     </div>
@@ -360,7 +362,7 @@ export default function FloorPlanPage() {
 
                 {/* Occupancy Indicator Bar */}
                 {isOccupied && (
-                  <div className="absolute bottom-0 left-0 h-1.5 bg-gradient-to-r from-blue-400 to-indigo-500 w-full"></div>
+                  <div className="absolute bottom-0 left-0 h-1.5 bg-gradient-to-r from-blue-300 to-indigo-400 w-full"></div>
                 )}
               </div>
             )
@@ -374,64 +376,64 @@ export default function FloorPlanPage() {
         {/* Quick Actions */}
         <div className="space-y-6 mb-10">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-black tracking-tight uppercase text-gray-400">Quick Actions</h2>
-            <Activity className="w-5 h-5 text-[#3B82F6]" />
+            <h2 className="text-lg font-black tracking-tight uppercase text-text-secondary">Quick Actions</h2>
+            <Activity className="w-5 h-5 text-primary" />
           </div>
           
           <div className="space-y-3">
             <button
               onClick={() => router.push('/admin/pos/create-order')}
-              className="w-full flex items-center justify-between p-5 rounded-3xl bg-[#1E293B] border border-white/5 hover:bg-[#233648] hover:border-white/10 transition-all text-left shadow-sm hover:translate-y-[-2px]"
+              className="w-full flex items-center justify-between p-5 rounded-3xl bg-surface border border-border hover:bg-surface-light hover:border-primary/40 transition-all text-left shadow-xs hover:translate-y-[-2px]"
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-2xl flex items-center justify-center text-[#3B82F6]">
+                <div className="w-10 h-10 bg-blue-500/10 rounded-2xl flex items-center justify-center text-primary">
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white">New Walk-In</div>
-                  <div className="text-[10px] text-gray-500 font-semibold">Assign new table & order</div>
+                  <div className="text-sm font-bold text-text-primary">New Walk-In</div>
+                  <div className="text-[10px] text-text-tertiary font-semibold">Assign new table & order</div>
                 </div>
               </div>
             </button>
 
             <button
               onClick={() => router.push('/admin/pos/create-order?type=takeout')}
-              className="w-full flex items-center justify-between p-5 rounded-3xl bg-[#1E293B] border border-white/5 hover:bg-[#233648] hover:border-white/10 transition-all text-left shadow-sm hover:translate-y-[-2px]"
+              className="w-full flex items-center justify-between p-5 rounded-3xl bg-surface border border-border hover:bg-surface-light hover:border-primary/40 transition-all text-left shadow-xs hover:translate-y-[-2px]"
             >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-500">
                   <Utensils className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white">Takeout Order</div>
-                  <div className="text-[10px] text-gray-500 font-semibold">Self-pickup or counter sale</div>
+                  <div className="text-sm font-bold text-text-primary">Takeout Order</div>
+                  <div className="text-[10px] text-text-tertiary font-semibold">Self-pickup or counter sale</div>
                 </div>
               </div>
             </button>
 
             <button
               onClick={() => router.push('/admin/pos/create-order?type=direct-call')}
-              className="w-full flex items-center justify-between p-5 rounded-3xl bg-[#1E293B] border border-white/5 hover:bg-[#233648] hover:border-white/10 transition-all text-left shadow-sm hover:translate-y-[-2px]"
+              className="w-full flex items-center justify-between p-5 rounded-3xl bg-surface border border-border hover:bg-surface-light hover:border-primary/40 transition-all text-left shadow-xs hover:translate-y-[-2px]"
             >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-500">
                   <PhoneCall className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white">Direct Call</div>
-                  <div className="text-[10px] text-gray-500 font-semibold">Immediate counter billing</div>
+                  <div className="text-sm font-bold text-text-primary">Direct Call</div>
+                  <div className="text-[10px] text-text-tertiary font-semibold">Immediate counter billing</div>
                 </div>
               </div>
             </button>
 
-            <button className="w-full flex items-center justify-between p-5 rounded-3xl bg-[#1E293B] border border-white/5 hover:bg-[#233648] hover:border-white/10 transition-all text-left shadow-sm">
+            <button className="w-full flex items-center justify-between p-5 rounded-3xl bg-surface border border-border hover:bg-surface-light hover:border-primary/40 transition-all text-left shadow-xs">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white">Reservations</div>
-                  <div className="text-[10px] text-gray-500 font-semibold">Track bookings & schedules</div>
+                  <div className="text-sm font-bold text-text-primary">Reservations</div>
+                  <div className="text-[10px] text-text-tertiary font-semibold">Track bookings & schedules</div>
                 </div>
               </div>
             </button>

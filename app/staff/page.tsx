@@ -518,8 +518,19 @@ export default function StaffDashboard() {
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 blur-3xl rounded-full translate-x-16 -translate-y-16 group-hover:scale-125 transition-transform"></div>
                                 <div className="flex items-start justify-between relative z-10">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-rose-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/20">
-                                            <AlertTriangle className="w-5 h-5" />
+                                        <div className="w-10 h-10 rounded-2xl bg-rose-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/20 overflow-hidden relative shrink-0">
+                                            {task.room?.images && task.room.images.length > 0 ? (
+                                                <img
+                                                    src={task.room.images[0]}
+                                                    alt={`Room ${task.room.roomNumber}`}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLElement).style.display = 'none';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <AlertTriangle className="w-5 h-5" />
+                                            )}
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-0.5">Immediate Attention Required</p>
@@ -568,6 +579,19 @@ export default function StaffDashboard() {
                                     'w-1 self-stretch shrink-0',
                                     task.priority === 'URGENT' ? 'bg-rose-500' : 'bg-blue-600'
                                 )} />
+
+                                {task.room?.images && task.room.images.length > 0 && (
+                                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shrink-0 my-2.5 ml-1">
+                                        <img
+                                            src={task.room.images[0]}
+                                            alt={`Room ${task.room.roomNumber}`}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                (e.target as HTMLElement).style.display = 'none';
+                                            }}
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="flex-1 py-4 pr-4 min-w-0">
                                     <div className="flex items-start justify-between gap-2 mb-1">

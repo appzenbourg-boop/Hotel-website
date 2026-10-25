@@ -36,6 +36,12 @@ export default function POSTransactionsPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
 
+  // Active Rooms for Room Charge verification
+  const [activeRooms, setActiveRooms] = useState<any[]>([])
+  const [loadingActiveRooms, setLoadingActiveRooms] = useState(false)
+  const [verifiedBooking, setVerifiedBooking] = useState<any | null>(null)
+  const [roomError, setRoomError] = useState<string | null>(null)
+
   // Discount State
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false)
   const [discountType, setDiscountType] = useState('Percentage')
@@ -58,6 +64,94 @@ export default function POSTransactionsPage() {
     if (!selectedOrderId || !Array.isArray(allOrders)) return null
     return allOrders.find((o: any) => o.id === selectedOrderId) || null
   }, [selectedOrderId, allOrders])
+
+  // Fetch active checked-in rooms when Room Charge is selected
+  useEffect(() => {
+    if (paymentMethod === 'Room Charge') {
+      setLoadingActiveRooms(true)
+      const url = typeof window !== 'undefined' ? buildContextUrl('/api/admin/pos/active-rooms') : '/api/admin/pos/active-rooms'
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data?.rooms)) {
+            setActiveRooms(data.rooms)
+          } else {
+            setActiveRooms([])
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching active rooms:', err)
+          setActiveRooms([])
+        })
+        .finally(() => setLoadingActiveRooms(false))
+    }
+  }, [paymentMethod])
+
+  // Auto-fill roomNumber if selectedOrder table looks like a room
+  useEffect(() => {
+    if (selectedOrder?.table && !roomNumber) {
+      const match = selectedOrder.table.match(/^(?:Room\s*)?(\w+)$/i)
+      if (match && selectedOrder.table.toLowerCase().includes('room')) {
+        setRoomNumber(match[1])
+      }
+    }
+  }, [selectedOrder])
+
+  // Validate room number when it changes
+  useEffect(() => {
+    if (paymentMethod !== 'Room Charge') {
+      setVerifiedBooking(null)
+      setRoomError(null)
+      return
+    }
+
+    const cleanInput = roomNumber.trim().replace(/^room\s*/i, '')
+    if (!cleanInput) {
+      setVerifiedBooking(null)
+      setRoomError(null)
+      return
+    }
+
+    const match = activeRooms.find(r => r.roomNumber.toLowerCase() === cleanInput.toLowerCase())
+    if (match) {
+      setVerifiedBooking(match)
+      setRoomError(null)
+      return
+    }
+
+    if (!loadingActiveRooms && activeRooms.length > 0) {
+      setVerifiedBooking(null)
+      setRoomError(`Room ${cleanInput} has no active checked-in booking. Room charge cannot be accepted.`)
+      return
+    }
+
+    if (!loadingActiveRooms) {
+      const verifyUrl = typeof window !== 'undefined'
+        ? buildContextUrl(`/api/admin/pos/active-rooms?roomNumber=${encodeURIComponent(cleanInput)}`)
+        : `/api/admin/pos/active-rooms?roomNumber=${encodeURIComponent(cleanInput)}`
+      
+      let isSubscribed = true
+      fetch(verifyUrl)
+        .then(res => res.json())
+        .then(data => {
+          if (!isSubscribed) return
+          if (data.valid && data.booking) {
+            setVerifiedBooking(data.booking)
+            setRoomError(null)
+          } else {
+            setVerifiedBooking(null)
+            setRoomError(data.error || `Room ${cleanInput} has no active checked-in booking.`)
+          }
+        })
+        .catch(() => {
+          if (!isSubscribed) return
+          setVerifiedBooking(null)
+          setRoomError(`Could not verify room ${cleanInput}`)
+        })
+
+      return () => { isSubscribed = false }
+    }
+  }, [roomNumber, activeRooms, paymentMethod, loadingActiveRooms])
 
   // Canvas initialization
   useEffect(() => {
@@ -160,21 +254,24 @@ export default function POSTransactionsPage() {
     }
 
     try {
+      const activePropertyId = (session?.user as any)?.propertyId || 
+        (typeof window !== 'undefined' ? localStorage.getItem('super_admin_property_context') : undefined)
+
       const res = await fetch('/api/admin/pos/verify-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pin: authKey,
-          propertyId: (session?.user as any)?.propertyId
+          pin: authKey.trim(),
+          propertyId: activePropertyId && activePropertyId !== 'ALL' ? activePropertyId : undefined
         })
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (!data.valid) {
         toast.error(data.error || 'Invalid Manager Authorization PIN')
         return
       }
     } catch {
-      if (authKey !== '1234') {
+      if (authKey.trim() !== '1234') {
         toast.error('Invalid Manager Authorization PIN')
         return
       }
@@ -194,6 +291,10 @@ export default function POSTransactionsPage() {
 
   const handleProcessPayment = async () => {
     if (!selectedOrder) return
+    if (paymentMethod === 'Room Charge' && !verifiedBooking) {
+      toast.error('Cannot settle via Room Charge without a verified checked-in guest')
+      return
+    }
     setIsProcessing(true)
 
     try {
@@ -203,25 +304,29 @@ export default function POSTransactionsPage() {
         body: JSON.stringify({
           status: 'SERVED',
           paymentMethod,
-          roomNumber: paymentMethod === 'Room Charge' ? roomNumber : undefined,
+          roomNumber: paymentMethod === 'Room Charge' ? (verifiedBooking?.roomNumber || roomNumber) : undefined,
+          bookingId: paymentMethod === 'Room Charge' ? verifiedBooking?.bookingId : undefined,
           discountAmt: appliedDiscountAmt,
           discountReason
         })
       })
 
+      const data = await res.json().catch(() => ({}))
+
       if (res.ok) {
         setPaymentSuccess(true)
         mutate()
+        toast.success(paymentMethod === 'Room Charge' ? `Charged to Room ${verifiedBooking?.roomNumber} (${verifiedBooking?.guestName})` : 'Bill settled successfully')
         setTimeout(() => {
           setPaymentSuccess(false)
           setSelectedOrderId(null)
           router.push('/admin/pos/transactions')
         }, 1600)
       } else {
-        toast.error('Failed to settle bill')
+        toast.error(data.error || 'Failed to settle bill')
       }
-    } catch (e) {
-      toast.error('Error processing settlement')
+    } catch (e: any) {
+      toast.error(e?.message || 'Error processing settlement')
     } finally {
       setIsProcessing(false)
     }
@@ -452,15 +557,90 @@ export default function POSTransactionsPage() {
           </div>
 
           {paymentMethod === 'Room Charge' && (
-            <div className="space-y-2 mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-              <label className="text-xs font-bold text-amber-200">Guest Room Number *</label>
-              <input
-                type="text"
-                placeholder="e.g. 101 or 202"
-                value={roomNumber}
-                onChange={e => setRoomNumber(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl py-2.5 px-4 text-sm outline-none text-text-primary focus:border-amber-400"
-              />
+            <div className="space-y-3 mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-200 flex items-center gap-1.5">
+                  <Bed className="w-3.5 h-3.5" />
+                  Room Charge Verification *
+                </label>
+                {loadingActiveRooms && (
+                  <span className="text-[10px] text-amber-300 animate-pulse">Checking active bookings...</span>
+                )}
+              </div>
+
+              {/* Quick Select from Active Checked-in Rooms */}
+              {activeRooms.length > 0 ? (
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-text-tertiary mb-1 block">
+                    Select Active Checked-In Room
+                  </label>
+                  <select
+                    value={verifiedBooking ? verifiedBooking.roomNumber : ''}
+                    onChange={e => {
+                      const selected = activeRooms.find(r => r.roomNumber === e.target.value)
+                      if (selected) {
+                        setRoomNumber(selected.roomNumber)
+                        setVerifiedBooking(selected)
+                        setRoomError(null)
+                      } else {
+                        setRoomNumber(e.target.value)
+                      }
+                    }}
+                    className="w-full bg-background border border-amber-500/40 rounded-xl py-2 px-3 text-sm text-text-primary outline-none focus:border-amber-400 font-semibold"
+                  >
+                    <option value="">-- Choose active checked-in room --</option>
+                    {activeRooms.map(r => (
+                      <option key={r.bookingId} value={r.roomNumber}>
+                        Room {r.roomNumber} ({r.roomType || 'Standard'}) - {r.guestName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : !loadingActiveRooms ? (
+                <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>No guests currently checked in. Room Charge requires an active checked-in booking.</span>
+                </div>
+              ) : null}
+
+              {/* Manual Room Number Input */}
+              <div>
+                <label className="text-[10px] uppercase font-bold text-text-tertiary mb-1 block">
+                  Or Type Room Number
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 101 or 202"
+                  value={roomNumber}
+                  onChange={e => setRoomNumber(e.target.value)}
+                  className="w-full bg-background border border-border rounded-xl py-2 px-4 text-sm outline-none text-text-primary focus:border-amber-400 font-medium"
+                />
+              </div>
+
+              {/* Verification Feedback Badge */}
+              {verifiedBooking && (
+                <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-200">
+                  <div className="flex items-center gap-2 font-bold text-xs text-emerald-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Verified Resident Guest</span>
+                  </div>
+                  <div className="mt-1 text-xs text-text-secondary pl-6 space-y-0.5">
+                    <div><strong className="text-text-primary">{verifiedBooking.guestName}</strong> (Room {verifiedBooking.roomNumber} • {verifiedBooking.roomType || 'Standard'})</div>
+                    {verifiedBooking.guestPhone && <div className="text-[10px] text-text-tertiary">Phone: {verifiedBooking.guestPhone}</div>}
+                    <div className="text-[10px] text-emerald-400/80 font-mono">Folio Booking: {verifiedBooking.bookingId.slice(-8).toUpperCase()}</div>
+                  </div>
+                </div>
+              )}
+
+              {roomError && (
+                <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold">Cannot Post Room Charge</div>
+                    <div className="text-[11px] text-red-200/90">{roomError}</div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -492,10 +672,10 @@ export default function POSTransactionsPage() {
           {/* Settle Button */}
           <button
             onClick={handleProcessPayment}
-            disabled={isProcessing || (paymentMethod === 'Room Charge' && !roomNumber)}
+            disabled={isProcessing || (paymentMethod === 'Room Charge' && !verifiedBooking)}
             className={cn(
               "w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2",
-              (paymentMethod === 'Room Charge' && !roomNumber)
+              (paymentMethod === 'Room Charge' && !verifiedBooking)
                 ? "bg-gray-800 text-gray-500 cursor-not-allowed border border-border"
                 : "bg-[#2563EB] hover:bg-[#3B82F6] text-white active:scale-95"
             )}
@@ -609,53 +789,53 @@ export default function POSTransactionsPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#1E293B] border border-white/5 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-surface border border-border rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Total POS Revenue</span>
-            <div className="w-9 h-9 rounded-2xl bg-blue-500/10 flex items-center justify-center text-[#3B82F6]">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Total POS Revenue</span>
+            <div className="w-9 h-9 rounded-2xl bg-blue-500/10 flex items-center justify-center text-primary">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">₹{stats.totalRev.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-          <p className="text-[11px] text-[#3B82F6] font-semibold mt-1">All settled receipts</p>
+          <div className="text-2xl sm:text-3xl font-black text-text-primary">₹{stats.totalRev.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+          <p className="text-[11px] text-primary font-semibold mt-1">All settled receipts</p>
         </div>
 
-        <div className="bg-[#1E293B] border border-white/5 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-surface border border-border rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Settled Bills</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Settled Bills</span>
             <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">{stats.settledCount}</div>
-          <p className="text-[11px] text-emerald-400 font-semibold mt-1">Closed & paid tickets</p>
+          <div className="text-2xl sm:text-3xl font-black text-text-primary">{stats.settledCount}</div>
+          <p className="text-[11px] text-emerald-500 font-semibold mt-1">Closed & paid tickets</p>
         </div>
 
-        <div className="bg-[#1E293B] border border-white/5 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-surface border border-border rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Active Unsettled</span>
-            <div className="w-9 h-9 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Active Unsettled</span>
+            <div className="w-9 h-9 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
               <Utensils className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">{stats.activeCount}</div>
-          <p className="text-[11px] text-amber-400 font-semibold mt-1">Tables currently dining</p>
+          <div className="text-2xl sm:text-3xl font-black text-text-primary">{stats.activeCount}</div>
+          <p className="text-[11px] text-amber-500 font-semibold mt-1">Tables currently dining</p>
         </div>
 
-        <div className="bg-[#1E293B] border border-white/5 rounded-3xl p-5 shadow-lg relative overflow-hidden">
+        <div className="bg-surface border border-border rounded-3xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex justify-between items-start mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Average Bill Size</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-tertiary">Average Bill Size</span>
             <div className="w-9 h-9 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-white">₹{stats.avgBill.toFixed(2)}</div>
-          <p className="text-[11px] text-purple-400 font-semibold mt-1">Average guest ticket</p>
+          <div className="text-2xl sm:text-3xl font-black text-text-primary">₹{stats.avgBill.toFixed(2)}</div>
+          <p className="text-[11px] text-purple-500 font-semibold mt-1">Average guest ticket</p>
         </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-[#1E293B] border border-white/5 p-3 rounded-2xl shadow-lg">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-surface border border-border p-3 rounded-2xl shadow-xs">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: 'ALL', label: 'All Transactions' },
@@ -667,7 +847,7 @@ export default function POSTransactionsPage() {
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
                 "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap",
-                activeTab === tab.id ? "bg-[#2563EB] text-white shadow-md shadow-blue-500/20" : "text-gray-400 hover:text-white"
+                activeTab === tab.id ? "bg-primary text-white shadow-md shadow-primary/20" : "text-text-secondary hover:text-text-primary hover:bg-surface-light"
               )}
             >
               {tab.label}
@@ -676,22 +856,22 @@ export default function POSTransactionsPage() {
         </div>
 
         <div className="relative min-w-[260px]">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-text-tertiary absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search order #, table, guest or tag..."
-            className="w-full bg-[#0F172A] border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white outline-none focus:border-[#3B82F6]"
+            className="w-full bg-surface-light border border-border rounded-xl pl-9 pr-4 py-2 text-xs text-text-primary outline-none focus:border-primary placeholder:text-text-tertiary transition-colors"
           />
         </div>
       </div>
 
       {/* Transactions Table / List */}
-      <div className="bg-[#1E293B] border border-white/5 rounded-3xl overflow-hidden shadow-xl">
+      <div className="bg-surface border border-border rounded-3xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#0F172A] border-b border-white/5 uppercase text-gray-400 font-black tracking-wider text-[10px]">
+            <thead className="bg-surface-light border-b border-border uppercase text-text-tertiary font-black tracking-wider text-[10px]">
               <tr>
                 <th className="py-4 px-6">Order #</th>
                 <th className="py-4 px-6">Table</th>
@@ -703,13 +883,13 @@ export default function POSTransactionsPage() {
                 <th className="py-4 px-6 text-center">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-gray-400">
+                  <td colSpan={8} className="py-16 text-center text-text-tertiary">
                     <ReceiptText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="font-bold text-sm text-white">No transactions found</p>
-                    <p className="text-xs text-gray-400 mt-1">No orders match the selected criteria.</p>
+                    <p className="font-bold text-sm text-text-primary">No transactions found</p>
+                    <p className="text-xs text-text-tertiary mt-1">No orders match the selected criteria.</p>
                   </td>
                 </tr>
               ) : (
@@ -717,46 +897,46 @@ export default function POSTransactionsPage() {
                   const isSettled = order.status === 'SERVED'
 
                   return (
-                    <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="py-4 px-6 font-bold text-white">
+                    <tr key={order.id} className="hover:bg-surface-light/50 transition-colors">
+                      <td className="py-4 px-6 font-bold text-text-primary">
                         {order.orderNumber}
                       </td>
-                      <td className="py-4 px-6 font-bold text-white">
+                      <td className="py-4 px-6 font-bold text-text-primary">
                         {order.table}
                       </td>
-                      <td className="py-4 px-6 text-gray-300">
+                      <td className="py-4 px-6 text-text-secondary">
                         {order.guestName || 'Walk-in'}
                       </td>
-                      <td className="py-4 px-6 text-gray-400">
+                      <td className="py-4 px-6 text-text-tertiary">
                         {new Date(order.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}{' '}
                         {new Date(order.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="py-4 px-6 text-gray-400">
+                      <td className="py-4 px-6 text-text-tertiary">
                         {order.serverName || 'Staff'}
                       </td>
                       <td className="py-4 px-6">
                         <span className={cn(
                           "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider",
-                          isSettled ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/15 text-amber-300 border border-amber-500/20"
+                          isSettled ? "bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20" : "bg-amber-500/15 text-amber-500 dark:text-amber-300 border border-amber-500/20"
                         )}>
                           {isSettled ? 'Paid / Closed' : order.status}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-right font-black text-white text-sm">
+                      <td className="py-4 px-6 text-right font-black text-text-primary text-sm">
                         ₹{(order.total || 0).toFixed(2)}
                       </td>
                       <td className="py-4 px-6 text-center">
                         {isSettled ? (
                           <button
                             onClick={() => setInvoiceModalOrder(order)}
-                            className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] transition-all border border-white/5 flex items-center gap-1.5 mx-auto"
+                            className="px-3.5 py-1.5 rounded-xl bg-surface-light hover:bg-surface text-text-primary font-bold text-[11px] transition-all border border-border flex items-center gap-1.5 mx-auto shadow-xs"
                           >
-                            <ReceiptText className="w-3.5 h-3.5 text-[#3B82F6]" /> View Invoice
+                            <ReceiptText className="w-3.5 h-3.5 text-primary" /> View Invoice
                           </button>
                         ) : (
                           <button
                             onClick={() => setSelectedOrderId(order.id)}
-                            className="px-3.5 py-1.5 rounded-xl bg-[#2563EB] hover:bg-[#3B82F6] text-white font-bold text-[11px] transition-all shadow-md shadow-blue-500/20 flex items-center gap-1.5 mx-auto active:scale-95"
+                            className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-[11px] transition-all shadow-md shadow-primary/20 flex items-center gap-1.5 mx-auto active:scale-95"
                           >
                             <CreditCard className="w-3.5 h-3.5" /> Settle Bill
                           </button>

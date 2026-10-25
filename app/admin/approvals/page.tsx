@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { 
     CheckCircle2, XCircle, Clock, ArrowUp, Calendar, 
     User, Search, Loader2, RefreshCw, AlertCircle,
-    Building2, Hash, CreditCard
+    Building2, Hash, CreditCard, X
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -22,6 +22,8 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 export default function ApprovalsPage() {
     const [statusFilter, setStatusFilter] = useState('PENDING')
     const [processingId, setProcessingId] = useState<string | null>(null)
+    const [rejectingRequest, setRejectingRequest] = useState<any | null>(null)
+    const [rejectionReason, setRejectionReason] = useState('')
 
     const apiUrl = buildContextUrl('/api/admin/bookings/requests', { status: statusFilter })
     const { data: raw, error, isLoading, mutate } = useSWR(apiUrl, fetcher)
@@ -201,8 +203,8 @@ export default function ApprovalsPage() {
                                         <button
                                             disabled={processingId === req.id}
                                             onClick={() => {
-                                                const reason = window.prompt('Enter rejection reason:')
-                                                if (reason !== null) handleProcess(req.id, 'REJECT', reason)
+                                                setRejectingRequest(req)
+                                                setRejectionReason('')
                                             }}
                                             className="h-11 px-6 bg-white/5 hover:bg-red-500/10 border border-border/50 hover:border-red-500/20 text-text-tertiary hover:text-red-400 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
@@ -234,6 +236,136 @@ export default function ApprovalsPage() {
                             </div>
                         </Card>
                     ))}
+                </div>
+            )}
+
+            {/* Rejection Modal Popup */}
+            {rejectingRequest && (
+                <div 
+                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget && processingId !== rejectingRequest.id) {
+                            setRejectingRequest(null)
+                        }
+                    }}
+                >
+                    <div className="bg-surface border border-border rounded-3xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-6 border-b border-border bg-surface-light flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+                                    <XCircle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-black text-text-primary tracking-tight">Reject Request</h2>
+                                    <p className="text-xs text-text-secondary mt-0.5">
+                                        {rejectingRequest.type} #{rejectingRequest.id.slice(-6)} • {rejectingRequest.booking?.guest?.name || 'Guest'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => setRejectingRequest(null)}
+                                disabled={processingId === rejectingRequest.id}
+                                className="p-2 hover:bg-surface rounded-xl text-text-tertiary hover:text-text-primary transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-text-tertiary tracking-widest mb-2 block">
+                                    Quick Reasons
+                                </label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {[
+                                        'Room unavailable',
+                                        'Housekeeping delay',
+                                        'Rate discrepancy',
+                                        'Guest cancelled',
+                                        'Operational conflict'
+                                    ].map(r => (
+                                        <button
+                                            key={r}
+                                            type="button"
+                                            onClick={() => setRejectionReason(r)}
+                                            className={cn(
+                                                "px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all",
+                                                rejectionReason === r
+                                                    ? "bg-red-500/20 border-red-500/40 text-red-400"
+                                                    : "bg-surface-light border-border text-text-secondary hover:text-text-primary hover:bg-surface"
+                                            )}
+                                        >
+                                            {r}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-text-tertiary tracking-widest mb-1.5 block">
+                                    Rejection Reason / Note
+                                </label>
+                                <textarea
+                                    value={rejectionReason}
+                                    onChange={e => setRejectionReason(e.target.value)}
+                                    placeholder="Enter rejection reason for the guest & audit log..."
+                                    rows={3}
+                                    autoFocus
+                                    className="w-full bg-surface-light border border-border rounded-xl p-3 text-xs text-text-primary outline-none focus:border-red-500/50 resize-none transition-all placeholder:text-text-tertiary"
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                                            handleProcess(
+                                                rejectingRequest.id,
+                                                'REJECT',
+                                                rejectionReason.trim() || 'Request rejected by management'
+                                            ).then(() => setRejectingRequest(null))
+                                        }
+                                    }}
+                                />
+                                <p className="text-[10px] text-text-tertiary mt-1">Press Ctrl+Enter or click below to submit</p>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-border bg-surface-light/50 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setRejectingRequest(null)}
+                                disabled={processingId === rejectingRequest.id}
+                                className="px-4 py-2.5 rounded-xl bg-surface hover:bg-surface-light text-text-secondary text-xs font-bold transition-colors border border-border"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={processingId === rejectingRequest.id}
+                                onClick={async () => {
+                                    await handleProcess(
+                                        rejectingRequest.id, 
+                                        'REJECT', 
+                                        rejectionReason.trim() || 'Request rejected by management'
+                                    )
+                                    setRejectingRequest(null)
+                                }}
+                                className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-lg shadow-red-500/20 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {processingId === rejectingRequest.id ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Rejecting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <XCircle className="w-4 h-4" />
+                                        <span>Confirm Rejection</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

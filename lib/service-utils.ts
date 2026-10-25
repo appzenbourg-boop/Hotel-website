@@ -5,7 +5,8 @@ import { redis } from '@/lib/redis'
 const typeToDeptMap: Record<string, string> = {
     HOUSEKEEPING: 'HOUSEKEEPING',
     MAINTENANCE: 'MAINTENANCE',
-    ROOM_SERVICE: 'KITCHEN',
+    ROOM_SERVICE: 'ROOM_SERVICE',
+    FOOD_ORDER: 'KITCHEN',
     RECEPTION: 'FRONT_DESK',
     OTHER: 'FRONT_DESK'
 }
@@ -43,8 +44,8 @@ export async function autoAssignRequests(propertyId: string, minAgeSeconds?: num
         return { assignedCount: 0, totalProcessed: 0, assignments: [] }
     }
 
-    // 2. Fetch only ON-DUTY STAFF for this property
-    const staffList = await prisma.staff.findMany({
+    // 2. Fetch ON-DUTY STAFF for this property (clocked in)
+    let staffList = await prisma.staff.findMany({
         where: { 
             propertyId,
             attendances: {
@@ -56,7 +57,19 @@ export async function autoAssignRequests(propertyId: string, minAgeSeconds?: num
         include: { user: { select: { name: true, id: true } } }
     })
 
+    // Fallback: If no staff is currently clocked in, fetch all ACTIVE staff at the property
     if (staffList.length === 0) {
+        staffList = await prisma.staff.findMany({
+            where: {
+                propertyId,
+                user: { status: 'ACTIVE' }
+            },
+            include: { user: { select: { name: true, id: true } } }
+        })
+    }
+
+    if (staffList.length === 0) {
+        console.warn(`[AUTO-ASSIGN] No active or on-duty staff found for property ${propertyId}`)
         return { assignedCount: 0, totalProcessed: requests.length, assignments: [] }
     }
 
@@ -66,7 +79,23 @@ export async function autoAssignRequests(propertyId: string, minAgeSeconds?: num
     const updatePromises = requests.map(async (request) => {
         try {
             const targetDept = typeToDeptMap[request.type] || 'FRONT_DESK'
-            const availableStaff = staffList.filter(s => s.department === targetDept)
+            let availableStaff = staffList.filter(s => s.department === targetDept)
+
+            // Cross-department fallback for food/kitchen orders
+            if (availableStaff.length === 0) {
+                if (targetDept === 'KITCHEN') {
+                    availableStaff = staffList.filter(s => s.department === 'ROOM_SERVICE' || s.department === 'FRONT_DESK')
+                } else if (targetDept === 'ROOM_SERVICE') {
+                    availableStaff = staffList.filter(s => s.department === 'KITCHEN' || s.department === 'FRONT_DESK')
+                } else {
+                    availableStaff = staffList.filter(s => s.department === 'FRONT_DESK' || s.department === 'MANAGEMENT')
+                }
+            }
+
+            // Ultimate fallback to any staff in the property
+            if (availableStaff.length === 0) {
+                availableStaff = staffList
+            }
 
             if (availableStaff.length > 0) {
                 const staff = availableStaff[Math.floor(Math.random() * availableStaff.length)]
@@ -79,9 +108,22 @@ export async function autoAssignRequests(propertyId: string, minAgeSeconds?: num
                     }
                 })
 
-                // Invalidate staff dashboard cache
+                // Create an in-app notification for the assigned staff member
                 if (staff.user?.id) {
-                    await redis.del(`staff_me:${staff.user.id}`)
+                    await prisma.inAppNotification.create({
+                        data: {
+                            userId: staff.user.id,
+                            title: request.type === 'FOOD_ORDER' || request.type === 'ROOM_SERVICE' 
+                                ? 'New Kitchen/Food Order' 
+                                : 'New Task Assigned',
+                            description: request.title,
+                            type: 'TASK',
+                            isRead: false
+                        }
+                    }).catch(() => {})
+
+                    // Invalidate staff dashboard cache in Redis
+                    await redis.del(`staff_me:${staff.user.id}`).catch(() => {})
                 }
 
                 assignedCount++

@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import {
-    ChevronLeft, MapPin, Clock,
+    ChevronLeft, ChevronRight, MapPin, Clock,
     CheckCircle2, AlertCircle, MessageSquare,
     Loader2, Camera, Info, ArrowRight,
-    Star, Building2, Zap
+    Star, Building2, Zap, Image as ImageIcon
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,7 @@ export default function TaskDetailsPage() {
     const { id } = useParams()
     const [loading, setLoading] = useState(true)
     const [task, setTask] = useState<any>(null)
+    const [activeImgIndex, setActiveImgIndex] = useState(0)
     const [completing, setCompleting] = useState(false)
     const [message, setMessage] = useState('')
     const [completionNotes, setCompletionNotes] = useState('')
@@ -190,40 +191,129 @@ export default function TaskDetailsPage() {
             </div>
 
             {/* Hero Image / Location Card */}
-            <div className="relative h-64 rounded-[45px] overflow-hidden border border-white/[0.05] shadow-2xl group">
-                <img
-                    src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800"
-                    alt="Property"
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-[#0d1117]/40 to-transparent"></div>
-                
-                <div className="absolute bottom-8 left-8 right-8">
-                    <div className="flex items-center gap-2 mb-3">
-                        <div className={cn(
-                            "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
-                            task.priority === 'URGENT' ? 'bg-rose-500 text-white border-rose-400/50' : 'bg-blue-600 text-white border-blue-400/50'
-                        )}>
-                            Priority Level: {task.priority}
-                        </div>
-                        <div className="px-3 py-1 bg-black/60 backdrop-blur-xl rounded-full text-[8px] font-black text-white uppercase tracking-widest border border-white/10">
-                            {task.type}
-                        </div>
-                    </div>
-                    <div className="flex items-end justify-between">
-                        <div>
-                            <h2 className="text-3xl font-black text-white  tracking-tighter mb-1">Room {task.room?.roomNumber || 'Gen-Ops'}</h2>
-                            <div className="flex items-center gap-2 text-gray-400">
-                              <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] ">Zenbourg Hotel & Resort</span>
+            {(() => {
+                const roomImages: string[] = Array.isArray(task.room?.images)
+                    ? task.room.images.filter((img: any) => typeof img === 'string' && img.trim().length > 0)
+                    : []
+
+                const currentImage = roomImages[activeImgIndex] || 
+                    task.property?.coverImage || 
+                    (Array.isArray(task.property?.images) && task.property.images[0]) || 
+                    "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=800"
+
+                const hotelName = task.property?.name || task.room?.property?.name || 'Zenbourg Hotel & Resort'
+
+                return (
+                    <div className="relative h-72 sm:h-80 rounded-[40px] overflow-hidden border border-white/[0.08] shadow-2xl group select-none">
+                        <img
+                            src={currentImage}
+                            alt={task.room?.roomNumber ? `Room ${task.room.roomNumber}` : 'Room'}
+                            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&q=80&w=800"
+                            }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-[#0d1117]/50 to-black/30"></div>
+                        
+                        {/* Image gallery navigation controls if multiple room photos exist */}
+                        {roomImages.length > 1 && (
+                            <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/70 backdrop-blur-md rounded-full border border-white/15 text-[11px] font-bold text-white shadow-lg">
+                                    <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+                                    <span>{activeImgIndex + 1} / {roomImages.length}</span>
+                                </div>
+                                <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md p-1 rounded-full border border-white/10">
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setActiveImgIndex((prev) => (prev > 0 ? prev - 1 : roomImages.length - 1))
+                                        }}
+                                        className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95"
+                                        title="Previous Photo"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setActiveImgIndex((prev) => (prev < roomImages.length - 1 ? prev + 1 : 0))
+                                        }}
+                                        className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all active:scale-95"
+                                        title="Next Photo"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Dots indicator at the top if multiple images */}
+                        {roomImages.length > 1 && (
+                            <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5">
+                                {roomImages.map((_, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setActiveImgIndex(idx)
+                                        }}
+                                        className={cn(
+                                            "h-1.5 rounded-full transition-all duration-300",
+                                            idx === activeImgIndex ? "w-6 bg-blue-500 shadow-md shadow-blue-500/50" : "w-1.5 bg-white/40 hover:bg-white/70"
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="absolute bottom-6 left-6 right-6 z-10">
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                                <div className={cn(
+                                    "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-lg",
+                                    task.priority === 'URGENT' ? 'bg-rose-500 text-white border-rose-400/50 shadow-rose-500/20' : 'bg-blue-600 text-white border-blue-400/50 shadow-blue-500/20'
+                                )}>
+                                    Priority Level: {task.priority}
+                                </div>
+                                <div className="px-3 py-1 bg-black/70 backdrop-blur-xl rounded-full text-[9px] font-black text-white uppercase tracking-widest border border-white/15">
+                                    {task.type}
+                                </div>
+                                {task.room?.category && (
+                                    <div className="px-2.5 py-1 bg-blue-500/20 backdrop-blur-xl rounded-full text-[9px] font-bold text-blue-300 uppercase tracking-wider border border-blue-400/30">
+                                        {task.room.category}
+                                    </div>
+                                )}
+                                {task.room?.type && task.room.type !== task.room?.category && (
+                                    <div className="px-2.5 py-1 bg-white/10 backdrop-blur-xl rounded-full text-[9px] font-medium text-gray-200 border border-white/10">
+                                        {task.room.type}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-end justify-between gap-4">
+                                <div className="min-w-0">
+                                    <h2 className="text-3xl font-black text-white tracking-tighter mb-1 drop-shadow-md">
+                                        Room {task.room?.roomNumber || 'Gen-Ops'}
+                                    </h2>
+                                    <div className="flex items-center gap-2 text-gray-300">
+                                      <MapPin className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                      <span className="text-[11px] font-bold uppercase tracking-[0.18em] truncate">
+                                        {hotelName}
+                                      </span>
+                                    </div>
+                                </div>
+                                <div className="w-16 h-16 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl flex flex-col items-center justify-center shadow-2xl shrink-0">
+                                    <Building2 className="w-6 h-6 text-white mb-0.5" />
+                                    <span className="text-[9px] font-black text-white/80 uppercase tracking-wider">
+                                        {task.room?.floor ? `Fl. ${task.room.floor}` : (task.room?.category || 'Room')}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/40">
-                            <Building2 className="w-8 h-8 text-black" />
-                        </div>
                     </div>
-                </div>
-            </div>
+                )
+            })()}
 
             {/* Instruction Panel */}
             <div className="bg-[#161b22] border border-white/[0.05] rounded-[40px] p-8 space-y-8 shadow-3xl">

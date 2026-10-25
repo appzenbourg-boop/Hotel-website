@@ -128,8 +128,19 @@ export default function StaffTasksPage() {
                             <div className="p-10">
                                 <div className="flex items-center justify-between mb-8">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center group-hover:bg-blue-600/10 transition-all duration-500 shadow-inner">
-                                            <LayoutGrid className="w-7 h-7 text-gray-600 group-hover:text-blue-500 transition-colors" />
+                                        <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center group-hover:bg-blue-600/10 transition-all duration-500 shadow-inner overflow-hidden relative shrink-0">
+                                            {task.room?.images && task.room.images.length > 0 ? (
+                                                <img
+                                                    src={task.room.images[0]}
+                                                    alt={`Room ${task.room.roomNumber}`}
+                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLElement).style.display = 'none';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <LayoutGrid className="w-7 h-7 text-gray-600 group-hover:text-blue-500 transition-colors" />
+                                            )}
                                         </div>
                                         <div>
                                             <h4 className="text-lg font-black text-white  tracking-tight leading-none mb-2">Room {task.room?.roomNumber || 'Gen-Ops'}</h4>

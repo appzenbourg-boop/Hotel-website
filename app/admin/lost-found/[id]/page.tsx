@@ -375,7 +375,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
                             </h3>
 
                             <div className="space-y-6">
-                                    <div className="p-8 bg-gradient-to-r from-[#161b22] to-[#0d1117] border border-gray-800 rounded-2xl shadow-xl">
+                                    <div className="p-8 bg-surface border border-border rounded-2xl shadow-xl">
                                         <div className="flex items-start justify-between mb-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-500 shadow-inner">

@@ -107,7 +107,7 @@ export function validateGSTIN(gstin?: string | null): { isValid: boolean; messag
   if (cleaned.length !== 15) {
     return { isValid: false, message: `GSTIN must be 15 characters (currently ${cleaned.length})` }
   }
-  const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+  const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{2}$/
   if (!regex.test(cleaned)) {
     return { isValid: false, message: 'Invalid GSTIN format (e.g. 22AAAAA0000A1Z5)' }
   }

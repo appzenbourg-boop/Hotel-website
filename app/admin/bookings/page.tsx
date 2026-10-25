@@ -12,6 +12,7 @@ import { formatCurrency } from '@/lib/utils'
 import { generateGuestDetailsPDFReport, GuestDetailsReportBooking } from '@/lib/guest-details-pdf'
 import { InvoiceModal } from '@/components/admin/InvoiceModal'
 import { generateTaxInvoicePDF, TaxInvoiceItem } from '@/lib/invoice-pdf-generator'
+import { buildContextUrl } from '@/lib/admin-context'
 
 // ---- Color/status helpers ----
 const STATUS_CONFIG: Record<string, { bar: string; label: string; dot: string; text: string }> = {
@@ -268,11 +269,14 @@ export default function BookingsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const roomsRes = await fetch('/api/admin/rooms?status=ALL')
+      const roomsRes = await fetch(buildContextUrl('/api/admin/rooms', { status: 'ALL' }))
       const roomsJson = await roomsRes.json()
       setRooms(Array.isArray(roomsJson) ? roomsJson : (roomsJson?.data ?? []))
 
-      const bookingsRes = await fetch(`/api/admin/bookings?start=${startDate.toISOString()}&end=${endDate.toISOString()}`)
+      const bookingsRes = await fetch(buildContextUrl('/api/admin/bookings', { 
+        start: startDate.toISOString(), 
+        end: endDate.toISOString() 
+      }))
       const bookingsJson = await bookingsRes.json()
       const bookingsData = Array.isArray(bookingsJson) ? bookingsJson : (bookingsJson?.data ?? [])
 
@@ -284,6 +288,7 @@ export default function BookingsPage() {
         guestAddress: b.guest?.address ?? '',
         idType: b.guest?.idType ?? 'Aadhar',
         idNumber: b.guest?.idNumber ?? '',
+        roomId: b.roomId || b.room?.id,
         room: b.room?.roomNumber ?? '',
         startDate: parseLocal(b.checkIn),
         endDate: parseLocal(b.checkOut),
@@ -294,6 +299,19 @@ export default function BookingsPage() {
         source: b.source ?? '',
         notes: b.notes ?? '',
         isVip: b.isVip ?? false,
+        isComplimentary: b.isComplimentary ?? false,
+        baseAmount: b.baseAmount ?? 0,
+        gstPercent: b.gstPercent ?? 0,
+        gstAmount: b.gstAmount ?? 0,
+        mealPlan: b.mealPlan ?? null,
+        mealPlanPricePerDay: b.mealPlanPricePerDay ?? 0,
+        mealPlanAmount: b.mealPlanAmount ?? 0,
+        extraAddons: b.extraAddons ?? null,
+        extraAddonsAmount: b.extraAddonsAmount ?? 0,
+        discountPercent: b.discountPercent ?? 0,
+        discountAmount: b.discountAmount ?? 0,
+        finalAmount: b.finalAmount ?? b.totalAmount ?? 0,
+        taxExempt: b.taxExempt ?? false,
         totalAmount: b.totalAmount ?? 0,
         paidAmount: b.paidAmount ?? 0,
         paymentMethod: b.paymentMethod ?? 'CASH',
@@ -308,6 +326,14 @@ export default function BookingsPage() {
       setLoading(false)
     }
   }, [startDate, endDate])
+
+  useEffect(() => {
+    const handleContextChange = () => {
+      fetchData()
+    }
+    window.addEventListener('propertyContextChange', handleContextChange)
+    return () => window.removeEventListener('propertyContextChange', handleContextChange)
+  }, [fetchData])
 
   const handleExportPDFReport = () => {
     if (bookings.length === 0) {
@@ -360,13 +386,26 @@ export default function BookingsPage() {
       if (res.ok) {
         const orders = await res.json()
         // filter orders for this room that are not already settled
-        const roomNum = booking.room?.roomNumber || booking.room
-        const relevant = (Array.isArray(orders) ? orders : []).filter((o: any) =>
-          (o.guestName?.toLowerCase().includes((booking.guest?.name || booking.guest)?.toLowerCase()?.split(' ')[0] || '') ||
-           o.table?.toLowerCase().includes(`room ${roomNum}`.toLowerCase()) ||
-           o.table?.toLowerCase().includes(`${roomNum}`.toLowerCase())) &&
-          o.status !== 'SETTLED'
-        )
+        const roomNum = String(booking.room?.roomNumber || booking.room || '').trim()
+        const relevant = (Array.isArray(orders) ? orders : []).filter((o: any) => {
+          const hasRoomTag = o.tags?.some((t: string) => 
+            t.toLowerCase() === `room: ${roomNum.toLowerCase()}` || 
+            t.toLowerCase().includes(`room ${roomNum.toLowerCase()}`) ||
+            (booking.id && t.includes(`bookingid: ${booking.id.toLowerCase()}`))
+          )
+          const matchesTable = roomNum && (
+            o.table?.toLowerCase().includes(`room ${roomNum.toLowerCase()}`) ||
+            o.table?.toLowerCase() === roomNum.toLowerCase()
+          )
+          const matchesGuest = Boolean(
+            booking.guest?.name && 
+            o.guestName && 
+            o.guestName.toLowerCase().trim() === (booking.guest?.name || '').toLowerCase().trim() &&
+            o.guestName.toLowerCase() !== 'walk-in'
+          )
+          const isSettledAtCheckout = o.tags?.some((t: string) => t.includes('SETTLED_AT_CHECKOUT'))
+          return (hasRoomTag || matchesTable || matchesGuest) && o.status !== 'SETTLED' && !isSettledAtCheckout
+        })
         setCheckoutPosOrders(relevant)
       }
     } catch {
@@ -408,6 +447,20 @@ export default function BookingsPage() {
         toast.success('Guest checked out & payment settled successfully')
         setShowCheckoutModal(false)
 
+        // Mark checkout POS orders as SETTLED_AT_CHECKOUT
+        if (checkoutPosOrders.length > 0) {
+          Promise.all(checkoutPosOrders.map((o: any) =>
+            fetch(`/api/admin/pos/orders/${o.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                status: 'SERVED',
+                paymentMethod: 'SETTLED_AT_CHECKOUT'
+              })
+            }).catch(() => {})
+          )).catch(() => {})
+        }
+
         // Fetch full booking details for invoice modal
         const allRes = await fetch(`/api/admin/bookings?status=ALL&limit=200`)
         if (allRes.ok) {
@@ -447,7 +500,7 @@ export default function BookingsPage() {
         // On checkout — fetch full booking details and show invoice
         if (action === 'CHECK_OUT') {
           try {
-            const allRes = await fetch(`/api/admin/bookings?status=ALL&limit=200`)
+            const allRes = await fetch(buildContextUrl('/api/admin/bookings', { status: 'ALL', limit: 200 }))
             if (allRes.ok) {
               const allJson = await allRes.json()
               const allBookings = Array.isArray(allJson) ? allJson : (allJson?.data ?? [])
@@ -758,14 +811,21 @@ export default function BookingsPage() {
                 </div>
              </div>
           ) : filteredRooms.map((room, idx) => {
-              const roomBookings = bookings.filter(b => b.room === room.roomNumber)
+              const roomBookings = bookings.filter(b => b.roomId ? b.roomId === room.id : b.room === room.roomNumber)
               const statusCfg = ROOM_STATUS_CONFIG[room.status || 'CLEAN'] || ROOM_STATUS_CONFIG['CLEAN']
               return (
                 <div key={room.id} className={cn('flex border-b border-border h-[80px] group transition-colors', idx % 2 === 0 ? 'bg-surface' : 'bg-surface', 'hover:bg-white/[0.08]')}>
                   <div className="w-[180px] shrink-0 px-4 flex flex-col justify-center border-r border-border gap-1.5 sticky left-0 z-20 bg-inherit group-hover:bg-surface transition-colors">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-black text-text-primary">{room.roomNumber}</span>
-                      <span className={cn('text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md', statusCfg.cls)}>{statusCfg.label}</span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-black text-text-primary">{room.roomNumber}</span>
+                        {room.property?.name && (
+                          <span className="text-[9px] font-semibold text-text-secondary truncate max-w-[80px]" title={room.property.name}>
+                            · {room.property.name}
+                          </span>
+                        )}
+                      </div>
+                      <span className={cn('text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-md shrink-0', statusCfg.cls)}>{statusCfg.label}</span>
                     </div>
                     <span className="text-[10px] font-bold text-text-tertiary capitalize tracking-tight">{(room.type || 'standard').replace('_', ' ')}</span>
                   </div>
@@ -1103,9 +1163,12 @@ export default function BookingsPage() {
                     <button
                       disabled={isUpdating}
                       onClick={() => {
-                        const total = selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0
+                        const isComp = Boolean(selectedBooking.isComplimentary || selectedBooking.raw?.isComplimentary)
+                        const total = isComp 
+                          ? ((selectedBooking.mealPlanAmount || 0) + (selectedBooking.extraAddonsAmount || 0))
+                          : (selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0)
                         const rem = Math.max(0, total - (selectedBooking.paidAmount ?? 0))
-                        setCheckoutPaidAmount(rem > 0 ? rem.toString() : total.toString())
+                        setCheckoutPaidAmount(rem.toString())
                         setCheckoutPaymentMethod('CASH')
                         setCheckoutNotes('')
                         setCheckoutExtraCharge('')
@@ -1473,10 +1536,17 @@ export default function BookingsPage() {
 
       {/* === CHECKOUT PAYMENT & CLEARANCE MODAL === */}
       {showCheckoutModal && selectedBooking && (() => {
+        const isComp = Boolean(selectedBooking.isComplimentary ?? selectedBooking.raw?.isComplimentary)
         const posTotal = checkoutPosOrders.reduce((s: number, o: any) => s + (o.total || 0), 0)
         const extraCharge = parseFloat(checkoutExtraCharge) || 0
         const discount = parseFloat(checkoutDiscount) || 0
-        const baseInvoice = selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0
+        const roomTariff = isComp ? 0 : (selectedBooking.baseAmount || selectedBooking.totalAmount || 0)
+        const roomGst = isComp ? 0 : (selectedBooking.gstAmount || 0)
+        const mealPlanAmt = selectedBooking.mealPlanAmount || 0
+        const extraAddonsAmt = selectedBooking.extraAddonsAmount || 0
+        const baseInvoice = isComp 
+          ? (mealPlanAmt + extraAddonsAmt)
+          : (selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0)
         const grandTotal = Math.max(0, baseInvoice + posTotal + extraCharge - discount)
         const alreadyPaid = selectedBooking.paidAmount ?? 0
         const balanceDue = Math.max(0, grandTotal - alreadyPaid)
@@ -1518,26 +1588,47 @@ export default function BookingsPage() {
                     <tbody className="divide-y divide-border/30">
                       <tr>
                         <td className="px-3 py-2 text-text-secondary">1</td>
-                        <td className="px-3 py-2 text-text-primary">Room Tariff ({selectedBooking.nights}N)</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{(selectedBooking.baseAmount || selectedBooking.totalAmount || 0).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-text-primary">
+                          <div className="flex items-center gap-2">
+                            <span>Room Tariff ({selectedBooking.nights}N)</span>
+                            {isComp && (
+                              <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Complimentary
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-text-primary font-mono text-right">
+                          {isComp ? (
+                            <span className="text-emerald-400 font-bold">&#8377;0</span>
+                          ) : (
+                            <>&#8377;{roomTariff.toLocaleString()}</>
+                          )}
+                        </td>
                       </tr>
-                      {(selectedBooking.gstAmount || 0) > 0 && (<>
+                      {!isComp && roomGst > 0 && (<>
                       <tr>
                         <td className="px-3 py-2 text-text-secondary">2</td>
                         <td className="px-3 py-2 text-text-primary">CGST {(selectedBooking.gstPercent || 0)/2}%</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{((selectedBooking.gstAmount || 0)/2).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{(roomGst/2).toLocaleString()}</td>
                       </tr>
                       <tr>
                         <td className="px-3 py-2 text-text-secondary">3</td>
                         <td className="px-3 py-2 text-text-primary">SGST {(selectedBooking.gstPercent || 0)/2}%</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{((selectedBooking.gstAmount || 0)/2).toLocaleString()}</td>
+                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{(roomGst/2).toLocaleString()}</td>
                       </tr>
                       </>)}
-                      {(selectedBooking.mealPlanAmount || 0) > 0 && (
+                      {mealPlanAmt > 0 && (
                       <tr>
-                        <td className="px-3 py-2 text-text-secondary">4</td>
+                        <td className="px-3 py-2 text-text-secondary">{!isComp && roomGst > 0 ? 4 : 2}</td>
                         <td className="px-3 py-2 text-text-primary">Meal Plan ({selectedBooking.mealPlan})</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{selectedBooking.mealPlanAmount?.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{mealPlanAmt.toLocaleString()}</td>
+                      </tr>)}
+                      {extraAddonsAmt > 0 && (
+                      <tr>
+                        <td className="px-3 py-2 text-text-secondary">3</td>
+                        <td className="px-3 py-2 text-text-primary">Extra Add-ons</td>
+                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{extraAddonsAmt.toLocaleString()}</td>
                       </tr>)}
                     </tbody>
                   </table>
@@ -1629,8 +1720,14 @@ export default function BookingsPage() {
                 <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest mb-3">Bill Summary</p>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex justify-between text-text-secondary">
-                    <span>Room + Taxes + Meal Plan</span>
-                    <span className="font-mono">&#8377;{baseInvoice.toLocaleString()}</span>
+                    <span>{isComp ? 'Room (Complimentary) + Meal Plan' : 'Room + Taxes + Meal Plan'}</span>
+                    <span className="font-mono">
+                      {isComp && baseInvoice === 0 ? (
+                        <span className="text-emerald-400 font-bold">&#8377;0</span>
+                      ) : (
+                        <>&#8377;{baseInvoice.toLocaleString()}</>
+                      )}
+                    </span>
                   </div>
                   {posTotal > 0 && (
                     <div className="flex justify-between text-amber-400">

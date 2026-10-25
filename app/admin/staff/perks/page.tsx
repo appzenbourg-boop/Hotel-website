@@ -141,12 +141,12 @@ export default function StaffPerksPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] bg-background overflow-hidden">
             {/* Header */}
-            <div className="shrink-0 p-8 border-b border-border bg-gradient-to-b from-[#161b22] to-[#0d1117]">
+            <div className="shrink-0 p-8 border-b border-border bg-surface">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                <Award className="w-5 h-5 text-blue-400" />
+                                <Award className="w-5 h-5 text-blue-500" />
                             </div>
                             <h1 className="text-2xl font-black text-text-primary tracking-tight">Staff Incentives & Bonuses</h1>
                         </div>
@@ -165,18 +165,18 @@ export default function StaffPerksPage() {
                             <button
                                 key={staff.id}
                                 onClick={() => openModalForStaff(staff)}
-                                className="w-40 shrink-0 bg-surface-light border border-border rounded-2xl p-4 flex flex-col items-center text-center group hover:bg-blue-500/10 hover:border-blue-500/30 transition-all hover:-translate-y-1 snap-start"
+                                className="w-44 shrink-0 bg-surface-light/60 hover:bg-surface-light border border-border rounded-2xl p-4 flex flex-col items-center text-center group hover:border-blue-500/40 transition-all hover:-translate-y-1 shadow-sm snap-start"
                             >
-                                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20 mb-3 group-hover:scale-110 transition-transform overflow-hidden shadow-xl">
+                                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 mb-3 group-hover:scale-105 transition-transform overflow-hidden shadow-sm">
                                     {staff.profilePhoto ? (
                                         <img src={staff.profilePhoto} className="w-full h-full object-cover" alt="" />
                                     ) : (
-                                        <span className="text-xs font-black text-blue-400">{staff.name.charAt(0)}</span>
+                                        <span className="text-sm font-black text-blue-500">{staff.name.charAt(0)}</span>
                                     )}
                                 </div>
                                 <p className="text-xs font-black text-text-primary truncate w-full">{staff.name}</p>
-                                <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-1">{staff.department}</p>
-                                <div className="mt-3 px-3 py-1 rounded-full bg-surface-light text-[8px] font-black text-text-tertiary uppercase tracking-tighter group-hover:bg-blue-600 text-white transition-all">
+                                <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest mt-1">{staff.department}</p>
+                                <div className="mt-3 px-3 py-1 rounded-full bg-surface border border-border text-[9px] font-black text-text-secondary uppercase tracking-tight group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all">
                                     Reward Now
                                 </div>
                             </button>
@@ -188,43 +188,43 @@ export default function StaffPerksPage() {
             {/* Filters Bar */}
             <div className="shrink-0 flex flex-wrap items-center gap-4 px-8 py-4 border-b border-border bg-surface">
                 <div className="relative flex-1 min-w-[250px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
                     <input
                         type="text"
                         placeholder="Search records..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full bg-surface-light border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-gray-700 outline-none focus:border-blue-500/40 transition-all shadow-inner"
+                        className="w-full bg-surface-light border border-border rounded-xl pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-blue-500/40 transition-all"
                     />
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 bg-surface-light border border-border rounded-xl p-1 shadow-lg">
+                    <div className="flex items-center gap-1 bg-surface-light border border-border rounded-xl p-1 shadow-sm">
                         <select 
                             value={typeFilter} 
                             onChange={e => setTypeFilter(e.target.value)}
                             className="bg-transparent text-[10px] font-black uppercase tracking-widest text-text-secondary outline-none px-3 py-2 cursor-pointer hover:text-text-primary transition-colors border-none"
                         >
-                            <option value="ALL">All Types</option>
-                            <option value="INCENTIVE">Incentives</option>
-                            <option value="BONUS">Bonuses</option>
-                            <option value="ALLOWANCE">Allowances</option>
+                            <option value="ALL" className="bg-surface text-text-primary">All Types</option>
+                            <option value="INCENTIVE" className="bg-surface text-text-primary">Incentives</option>
+                            <option value="BONUS" className="bg-surface text-text-primary">Bonuses</option>
+                            <option value="ALLOWANCE" className="bg-surface text-text-primary">Allowances</option>
                         </select>
-                        <div className="w-[1px] h-4 bg-white/[0.06]" />
+                        <div className="w-[1px] h-4 bg-border" />
                         <select 
                             value={selectedMonth} 
                             onChange={e => setSelectedMonth(e.target.value)}
                             className="bg-transparent text-[10px] font-black uppercase tracking-widest text-text-secondary outline-none px-3 py-2 cursor-pointer hover:text-text-primary transition-colors border-none"
                         >
-                            {months.map(m => <option key={m} value={m}>{m}</option>)}
+                            {months.map(m => <option key={m} value={m} className="bg-surface text-text-primary">{m}</option>)}
                         </select>
-                        <div className="w-[1px] h-4 bg-white/[0.06]" />
+                        <div className="w-[1px] h-4 bg-border" />
                         <select 
                             value={selectedYear} 
                             onChange={e => setSelectedYear(e.target.value)}
                             className="bg-transparent text-[10px] font-black uppercase tracking-widest text-text-secondary outline-none px-3 py-2 cursor-pointer hover:text-text-primary transition-colors border-none"
                         >
-                            {['2024', '2025', '2026'].map(y => <option key={y} value={y}>{y}</option>)}
+                            {['2024', '2025', '2026'].map(y => <option key={y} value={y} className="bg-surface text-text-primary">{y}</option>)}
                         </select>
                     </div>
                 </div>
@@ -233,7 +233,7 @@ export default function StaffPerksPage() {
             {/* Table */}
             <div className="flex-1 overflow-auto custom-scrollbar bg-background">
                 <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-background z-10 border-b border-border">
+                    <thead className="sticky top-0 bg-surface/90 backdrop-blur-md z-10 border-b border-border">
                         <tr>
                             <th className="px-8 py-5 text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Staff Member</th>
                             <th className="px-6 py-5 text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Type</th>
@@ -243,51 +243,51 @@ export default function StaffPerksPage() {
                             <th className="px-8 py-5 text-right text-[10px] font-black text-text-tertiary uppercase tracking-[0.2em]">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.03]">
+                    <tbody className="divide-y divide-border">
                         {loading ? (
                             <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto" /></td></tr>
                         ) : filteredAdjustments.length === 0 ? (
-                            <tr><td colSpan={6} className="py-20 text-center text-gray-600 font-medium italic">No historical records found for this criteria.</td></tr>
+                            <tr><td colSpan={6} className="py-20 text-center text-text-tertiary font-medium italic">No historical records found for this criteria.</td></tr>
                         ) : filteredAdjustments.map(item => (
-                            <tr key={item.id} className="group hover:bg-surface-light transition-all">
+                            <tr key={item.id} className="group hover:bg-surface-light/60 transition-all">
                                 <td className="px-8 py-5">
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-full bg-surface-light flex items-center justify-center border border-border overflow-hidden">
                                             {item.staff?.profilePhoto ? (
-                                                <img src={item.staff.profilePhoto} className="w-full h-full object-cover opacity-80" alt="" />
+                                                <img src={item.staff.profilePhoto} className="w-full h-full object-cover" alt="" />
                                             ) : (
                                                 <span className="text-[10px] font-black text-text-tertiary">{item.staff?.user?.name.charAt(0)}</span>
                                             )}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-gray-200">{item.staff?.user?.name}</p>
-                                            <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest mt-0.5">{item.staff?.department}</p>
+                                            <p className="text-sm font-bold text-text-primary">{item.staff?.user?.name}</p>
+                                            <p className="text-[10px] text-text-tertiary font-medium uppercase tracking-wider mt-0.5">{item.staff?.department}</p>
                                         </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-5">
                                     <span className={cn(
                                         "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border shadow-sm",
-                                        item.type === 'INCENTIVE' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-                                        item.type === 'BONUS' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                                        item.type === 'ALLOWANCE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                                        'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                        item.type === 'INCENTIVE' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                        item.type === 'BONUS' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                                        item.type === 'ALLOWANCE' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                        'bg-rose-500/10 text-rose-500 border-rose-500/20'
                                     )}>
                                         {item.type}
                                     </span>
                                 </td>
                                 <td className="px-6 py-5">
-                                    <p className="text-xs text-text-tertiary font-medium truncate max-w-[200px] group-hover:text-text-secondary transition-colors">{item.reason || '—'}</p>
+                                    <p className="text-xs text-text-secondary font-medium truncate max-w-[200px] group-hover:text-text-primary transition-colors">{item.reason || '—'}</p>
                                 </td>
                                 <td className="px-6 py-5">
-                                    <div className="flex items-center gap-2 text-gray-600 group-hover:text-text-secondary transition-colors">
-                                        <Calendar className="w-3 h-3" />
+                                    <div className="flex items-center gap-2 text-text-tertiary group-hover:text-text-secondary transition-colors">
+                                        <Calendar className="w-3.5 h-3.5" />
                                         <span className="text-[10px] font-black uppercase tracking-widest">{item.month} &apos;{item.year.toString().slice(-2)}</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-5">
                                     <span className={cn(
-                                        "text-sm font-black tracking-tighter",
+                                        "text-sm font-black tracking-tight",
                                         item.type === 'DEDUCTION' ? 'text-rose-500' : 'text-emerald-500'
                                     )}>
                                         {item.type === 'DEDUCTION' ? '−' : '+'} ₹{item.amount.toLocaleString()}
@@ -296,7 +296,7 @@ export default function StaffPerksPage() {
                                 <td className="px-8 py-5 text-right">
                                     <button 
                                         onClick={() => setDeleteConfirmId(item.id)}
-                                        className="p-2 text-gray-700 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                                        className="p-2 text-text-tertiary hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>

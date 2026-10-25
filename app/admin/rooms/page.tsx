@@ -153,6 +153,11 @@ export default function RoomsPage() {
         if (!airbnbUrl.trim()) {
             return toast.error('Please paste an Airbnb or Booking.com Listing / iCal link')
         }
+        const trimmedAirbnbNumber = (airbnbForm.roomNumber || '').trim()
+        if (trimmedAirbnbNumber && rooms.some(r => String(r.roomNumber || '').trim().toLowerCase() === trimmedAirbnbNumber.toLowerCase())) {
+            return toast.error(`Room "${trimmedAirbnbNumber}" already exists in this hotel!`)
+        }
+
         setImportingAirbnb(true)
         try {
             const res = await fetch('/api/admin/rooms/import-airbnb', {
@@ -161,7 +166,7 @@ export default function RoomsPage() {
                 body: JSON.stringify({
                     url: airbnbUrl,
                     otaChannel,
-                    roomNumber: airbnbForm.roomNumber || undefined,
+                    roomNumber: trimmedAirbnbNumber || undefined,
                     floor: airbnbForm.floor,
                     basePrice: airbnbForm.basePrice,
                     category: airbnbForm.category,
@@ -224,6 +229,12 @@ export default function RoomsPage() {
 
     const handleSave = async () => {
         if (!configSelected) return
+        const trimmedNumber = (cfgForm.roomNumber || '').trim()
+        if (!trimmedNumber) return toast.error('Please enter a room number')
+        if (rooms.some(r => r.id !== configSelected.id && String(r.roomNumber || '').trim().toLowerCase() === trimmedNumber.toLowerCase())) {
+            return toast.error(`Room "${trimmedNumber}" already exists in this hotel!`)
+        }
+
         setSaving(true)
         try {
             const res = await fetch(`/api/admin/rooms/${configSelected.id}`, {
@@ -231,7 +242,7 @@ export default function RoomsPage() {
                 body: JSON.stringify({
                     type: cfgForm.type,
                     category: cfgForm.category,
-                    roomNumber: cfgForm.roomNumber,
+                    roomNumber: trimmedNumber,
                     floor: parseInt(cfgForm.floor),
                     basePrice: parseFloat(cfgForm.basePrice),
                     maxOccupancy: parseInt(cfgForm.maxOccupancy),
@@ -245,17 +256,25 @@ export default function RoomsPage() {
                     adaCompliant: cfgForm.adaCompliant,
                     weekendSurcharge: parseFloat(cfgForm.weekendSurcharge) }) })
             if (res.ok) { toast.success('Room saved'); setShowConfig(false); fetchRooms() }
-            else toast.error('Failed to save')
+            else {
+                toast.error(await getApiErrorMessage(res, 'Failed to save'))
+            }
         } catch { toast.error('Error') }
         finally { setSaving(false) }
     }
 
     const handleCreate = async () => {
+        const trimmedNumber = (newForm.roomNumber || '').trim()
+        if (!trimmedNumber) return toast.error('Please enter a room number')
+        if (rooms.some(r => String(r.roomNumber || '').trim().toLowerCase() === trimmedNumber.toLowerCase())) {
+            return toast.error(`Room "${trimmedNumber}" already exists in this hotel!`)
+        }
+
         try {
             const res = await fetch('/api/admin/rooms', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(newForm) 
+                body: JSON.stringify({ ...newForm, roomNumber: trimmedNumber }) 
             })
             if (res.ok) { 
                 toast.success('Room created successfully!') 

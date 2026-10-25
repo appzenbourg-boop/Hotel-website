@@ -45,9 +45,54 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
+    let verifiedBooking: any = null
+    let verifiedRoom: any = null
+
+    if (paymentMethod === 'Room Charge') {
+      if (!roomNumber || !roomNumber.trim()) {
+        return NextResponse.json({ error: 'Room number is required for Room Charge payment.' }, { status: 400 })
+      }
+
+      verifiedRoom = await prisma.room.findFirst({
+        where: {
+          propertyId: existingOrder.propertyId,
+          roomNumber: { equals: roomNumber.trim(), mode: 'insensitive' }
+        }
+      })
+
+      if (!verifiedRoom) {
+        return NextResponse.json({ error: `Room "${roomNumber}" does not exist in this property.` }, { status: 400 })
+      }
+
+      verifiedBooking = await prisma.booking.findFirst({
+        where: {
+          propertyId: existingOrder.propertyId,
+          roomId: verifiedRoom.id,
+          status: 'CHECKED_IN'
+        },
+        include: { guest: true }
+      })
+
+      if (!verifiedBooking) {
+        return NextResponse.json({
+          error: `Room ${verifiedRoom.roomNumber} has no active checked-in guest. Room Charge cannot be posted.`
+        }, { status: 400 })
+      }
+    }
+
     const newTags = [...(existingOrder.tags || [])]
     if (paymentMethod) newTags.push(`Paid: ${paymentMethod}`)
-    if (roomNumber) newTags.push(`Room: ${roomNumber}`)
+    if (verifiedRoom) {
+      newTags.push(`Room: ${verifiedRoom.roomNumber}`)
+      if (verifiedBooking) {
+        newTags.push(`BookingId: ${verifiedBooking.id}`)
+        if (verifiedBooking.guest?.name) {
+          newTags.push(`Guest: ${verifiedBooking.guest.name}`)
+        }
+      }
+    } else if (roomNumber) {
+      newTags.push(`Room: ${roomNumber}`)
+    }
     if (discountAmt && discountAmt > 0) newTags.push(`Discount: ₹${discountAmt} (${discountReason || 'Manual'})`)
 
     const updateData: any = {}
@@ -55,6 +100,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     if (paymentMethod || roomNumber || discountAmt) updateData.tags = newTags
     if (kitchenNotes !== undefined) updateData.kitchenNotes = kitchenNotes
     if (table) updateData.table = table
+    if (verifiedBooking?.guest?.name) updateData.guestName = verifiedBooking.guest.name
+    if (verifiedRoom && existingOrder.table && !existingOrder.table.toLowerCase().includes(verifiedRoom.roomNumber.toLowerCase())) {
+      updateData.table = `${existingOrder.table} (Room ${verifiedRoom.roomNumber})`
+    }
     
     if (discountAmt && discountAmt > 0) {
       const newSubtotal = Math.max(0, existingOrder.subtotal - discountAmt)

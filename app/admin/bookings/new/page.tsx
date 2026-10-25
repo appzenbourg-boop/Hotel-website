@@ -443,7 +443,7 @@ function NewBookingContent() {
                         specialRequests: bookingDetails.specialRequests,
                         mealPlan: selectedMealPlan,
                         mealPlanPricePerDay: activeMealPlanRate,
-                        extraAddons: extraAddons.filter(a => (a.qty > 0 || a.price > 0) && a.name),
+                        extraAddons: extraAddons.filter(a => Number(a.qty) > 0 && a.name),
                         extraAddonsAmount: extraAddonsTotal })
                 })
             ))

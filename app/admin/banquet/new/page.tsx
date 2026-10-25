@@ -226,6 +226,11 @@ function BanquetNewPageInner() {
     }
   }, [editId])
 
+  const MAX_PAX = 50000
+  const MAX_HALL_RENT = 10000000 // ₹1 Crore
+  const MAX_PER_PLATE = 50000 // ₹50,000 per plate
+  const MAX_EVENT_AMOUNT = 999999999 // ₹99.99 Crore
+
   const calcAmount = (ev: {
     guaranteedPax?: string | number
     perPlateRate?: string | number
@@ -233,10 +238,13 @@ function BanquetNewPageInner() {
     hallOnRent?: boolean
     inclusive?: boolean
   }) => {
-    const pax = Math.max(0, parseInt(String(ev.guaranteedPax || 0)) || 0)
-    const ppr = Math.max(0, parseFloat(String(ev.perPlateRate || 0)) || 0)
+    const rawPax = Math.max(0, parseInt(String(ev.guaranteedPax || 0)) || 0)
+    const pax = Math.min(MAX_PAX, rawPax)
+    const rawPpr = Math.max(0, parseFloat(String(ev.perPlateRate || 0)) || 0)
+    const ppr = Math.min(MAX_PER_PLATE, rawPpr)
     const isRentActive = ev.hallOnRent !== false
-    const rent = isRentActive ? Math.max(0, parseFloat(String(ev.hallRent || 0)) || 0) : 0
+    const rawRent = isRentActive ? Math.max(0, parseFloat(String(ev.hallRent || 0)) || 0) : 0
+    const rent = Math.min(MAX_HALL_RENT, rawRent)
     const foodCost = pax * ppr
 
     let total = 0
@@ -247,13 +255,28 @@ function BanquetNewPageInner() {
       // Standard: Catering + Hall Rental (or Hall Rental alone if no catering)
       total = foodCost + rent
     }
-    return String(Math.round(total))
+    return String(Math.min(MAX_EVENT_AMOUNT, Math.round(total)))
   }
 
   const updateEvent = (idx: number, fieldOrUpdates: string | Record<string, any>, value?: any) => {
     setEvents(prev => prev.map((e, i) => {
       if (i !== idx) return e
-      const updates = typeof fieldOrUpdates === 'string' ? { [fieldOrUpdates]: value } : fieldOrUpdates
+      let updates = typeof fieldOrUpdates === 'string' ? { [fieldOrUpdates]: value } : { ...fieldOrUpdates }
+
+      // Enforce strict character & value limits on numeric event fields
+      if ('guaranteedPax' in updates) {
+        updates.guaranteedPax = String(updates.guaranteedPax ?? '').replace(/\D/g, '').slice(0, 6)
+      }
+      if ('childPax' in updates) {
+        updates.childPax = String(updates.childPax ?? '').replace(/\D/g, '').slice(0, 6)
+      }
+      if ('hallRent' in updates) {
+        updates.hallRent = String(updates.hallRent ?? '').replace(/[^\d.]/g, '').slice(0, 8)
+      }
+      if ('perPlateRate' in updates) {
+        updates.perPlateRate = String(updates.perPlateRate ?? '').replace(/[^\d.]/g, '').slice(0, 6)
+      }
+
       const merged = { ...e, ...updates }
 
       // Auto-recalculate amount unless amount was explicitly hand-typed
@@ -307,6 +330,15 @@ function BanquetNewPageInner() {
   const handleSave = async () => {
     if (!firstName || !mobile) return toast.error('First name and mobile are required')
     if (events.some(e => !e.hallName || !e.eventType)) return toast.error('All events need a hall and event type')
+
+    for (const e of events) {
+      const pax = parseInt(e.guaranteedPax) || 0
+      const rent = parseFloat(e.hallRent) || 0
+      const ppr = parseFloat(e.perPlateRate) || 0
+      if (pax > MAX_PAX) return toast.error(`Guest pax cannot exceed ${MAX_PAX.toLocaleString('en-IN')} for ${e.hallName || 'Hall'}`)
+      if (rent > MAX_HALL_RENT) return toast.error(`Hall rent cannot exceed ₹${MAX_HALL_RENT.toLocaleString('en-IN')} for ${e.hallName || 'Hall'}`)
+      if (ppr > MAX_PER_PLATE) return toast.error(`Per-plate rate cannot exceed ₹${MAX_PER_PLATE.toLocaleString('en-IN')} for ${e.hallName || 'Hall'}`)
+    }
 
     setSaving(true)
     try {
@@ -551,7 +583,13 @@ function BanquetNewPageInner() {
           </div>
           <div>
             <label className={labelCls}>Mobile No. <span className="text-red-400">*</span></label>
-            <input value={mobile} onChange={e => setMobile(e.target.value)} className={inputCls} placeholder="Mobile" />
+            <input 
+              value={mobile} 
+              maxLength={15}
+              onChange={e => setMobile(e.target.value.replace(/[^\d+\-\s]/g, '').slice(0, 15))} 
+              className={inputCls} 
+              placeholder="Mobile (e.g. 9876543210)" 
+            />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -561,7 +599,13 @@ function BanquetNewPageInner() {
           </div>
           <div>
             <label className={labelCls}>Guest GSTIN</label>
-            <input value={guestGstin} onChange={e => setGuestGstin(e.target.value)} className={inputCls} placeholder="GSTIN" />
+            <input 
+              value={guestGstin} 
+              maxLength={15}
+              onChange={e => setGuestGstin(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15))} 
+              className={inputCls} 
+              placeholder="15-digit GSTIN" 
+            />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -575,16 +619,59 @@ function BanquetNewPageInner() {
           <div><label className={labelCls}>City <span className="text-red-400">*</span></label><input value={city} onChange={e => setCity(e.target.value)} className={inputCls} placeholder="City" /></div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><label className={labelCls}>ZIP Code</label><input value={zipCode} onChange={e => setZipCode(e.target.value)} className={inputCls} placeholder="ZIP" /></div>
-          <div><label className={labelCls}>Aadhaar No.</label><input value={aadhaarNo} onChange={e => setAadhaarNo(e.target.value)} className={inputCls} placeholder="Aadhaar" /></div>
-          <div><label className={labelCls}>PAN</label><input value={panNo} onChange={e => setPanNo(e.target.value)} className={inputCls} placeholder="PAN" /></div>
+          <div>
+            <label className={labelCls}>ZIP Code</label>
+            <input 
+              value={zipCode} 
+              maxLength={6}
+              onChange={e => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 6))} 
+              className={inputCls} 
+              placeholder="6-digit PIN" 
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Aadhaar No.</label>
+            <input 
+              value={aadhaarNo} 
+              maxLength={12}
+              onChange={e => setAadhaarNo(e.target.value.replace(/\D/g, '').slice(0, 12))} 
+              className={inputCls} 
+              placeholder="12-digit Aadhaar" 
+            />
+          </div>
+          <div>
+            <label className={labelCls}>PAN</label>
+            <input 
+              value={panNo} 
+              maxLength={10}
+              onChange={e => setPanNo(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))} 
+              className={inputCls} 
+              placeholder="10-digit PAN" 
+            />
+          </div>
           <div><label className={labelCls}>Reference</label><input value={reference} onChange={e => setReference(e.target.value)} className={inputCls} placeholder="Reference" /></div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div><label className={labelCls}>Party Name 1</label><input value={partyName1} onChange={e => setPartyName1(e.target.value)} className={inputCls} /></div>
-          <div><label className={labelCls}>Contact Number 1</label><input value={contactNo1} onChange={e => setContactNo1(e.target.value)} className={inputCls} /></div>
+          <div>
+            <label className={labelCls}>Contact Number 1</label>
+            <input 
+              value={contactNo1} 
+              maxLength={15}
+              onChange={e => setContactNo1(e.target.value.replace(/[^\d+\-\s]/g, '').slice(0, 15))} 
+              className={inputCls} 
+            />
+          </div>
           <div><label className={labelCls}>Party Name 2</label><input value={partyName2} onChange={e => setPartyName2(e.target.value)} className={inputCls} /></div>
-          <div><label className={labelCls}>Contact Number 2</label><input value={contactNo2} onChange={e => setContactNo2(e.target.value)} className={inputCls} /></div>
+          <div>
+            <label className={labelCls}>Contact Number 2</label>
+            <input 
+              value={contactNo2} 
+              maxLength={15}
+              onChange={e => setContactNo2(e.target.value.replace(/[^\d+\-\s]/g, '').slice(0, 15))} 
+              className={inputCls} 
+            />
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div><label className={labelCls}>Event Name</label><input value={eventName} onChange={e => setEventName(e.target.value)} className={inputCls} placeholder="Event Name" /></div>
@@ -775,9 +862,13 @@ function BanquetNewPageInner() {
                     <td className="px-3 py-3">
                       <input
                         type="number"
-                        min="0"
+                        min="1"
+                        max={MAX_PAX}
                         value={ev.guaranteedPax}
-                        onChange={e => updateEvent(idx, 'guaranteedPax', e.target.value)}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                          updateEvent(idx, 'guaranteedPax', val)
+                        }}
                         placeholder="Pax"
                         className="w-full bg-[#141A23] hover:bg-[#1A2230] border border-white/10 rounded-xl px-2.5 py-2 text-xs font-bold text-white text-center outline-none focus:border-[#4A9EFF]"
                       />
@@ -814,9 +905,13 @@ function BanquetNewPageInner() {
                         <input
                           type="number"
                           min="0"
+                          max={MAX_HALL_RENT}
                           value={ev.hallRent}
                           disabled={!ev.hallOnRent}
-                          onChange={e => updateEvent(idx, 'hallRent', e.target.value)}
+                          onChange={e => {
+                            const val = e.target.value.replace(/[^\d.]/g, '').slice(0, 8)
+                            updateEvent(idx, 'hallRent', val)
+                          }}
                           placeholder="0"
                           className={cn(
                             "w-full bg-[#141A23] hover:bg-[#1A2230] border border-white/10 rounded-xl pl-6 pr-2 py-2 text-xs font-mono font-bold text-white outline-none focus:border-[#4A9EFF]",
@@ -833,8 +928,12 @@ function BanquetNewPageInner() {
                         <input
                           type="number"
                           min="0"
+                          max={MAX_PER_PLATE}
                           value={ev.perPlateRate}
-                          onChange={e => updateEvent(idx, 'perPlateRate', e.target.value)}
+                          onChange={e => {
+                            const val = e.target.value.replace(/[^\d.]/g, '').slice(0, 6)
+                            updateEvent(idx, 'perPlateRate', val)
+                          }}
                           placeholder="0"
                           className="w-full bg-[#141A23] hover:bg-[#1A2230] border border-white/10 rounded-xl pl-6 pr-2 py-2 text-xs font-mono font-bold text-white outline-none focus:border-[#4A9EFF]"
                         />
@@ -854,7 +953,7 @@ function BanquetNewPageInner() {
 
                     {/* Amount */}
                     <td className="px-3 py-3 text-right">
-                      <div className="px-3 py-2 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-[#4A9EFF]/30 rounded-xl font-mono font-black text-xs text-[#4A9EFF] text-right shadow-sm">
+                      <div className="px-3 py-2 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-[#4A9EFF]/30 rounded-xl font-mono font-black text-xs text-[#4A9EFF] text-right shadow-sm truncate max-w-[140px] ml-auto">
                         ₹{currentAmount.toLocaleString('en-IN')}
                       </div>
                     </td>
@@ -863,7 +962,8 @@ function BanquetNewPageInner() {
                     <td className="px-3 py-3">
                       <input
                         value={ev.fpNumber}
-                        onChange={e => updateEvent(idx, 'fpNumber', e.target.value)}
+                        maxLength={20}
+                        onChange={e => updateEvent(idx, 'fpNumber', e.target.value.slice(0, 20))}
                         placeholder="FP#"
                         className="w-full bg-[#141A23] hover:bg-[#1A2230] border border-white/10 rounded-xl px-2.5 py-2 text-xs text-white text-center outline-none focus:border-[#4A9EFF]"
                       />
@@ -890,24 +990,24 @@ function BanquetNewPageInner() {
         </div>
 
         {/* Events Financial Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-black/40 border border-white/10 rounded-2xl p-4">
-          <div className="space-y-0.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-black/40 border border-white/10 rounded-2xl p-4 overflow-hidden">
+          <div className="space-y-0.5 min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Total Events</span>
-            <p className="text-base font-black text-white">{events.length} Allocated</p>
+            <p className="text-base font-black text-white truncate">{events.length} Allocated</p>
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Total Pax</span>
-            <p className="text-base font-black text-white">{events.reduce((s, e) => s + (parseInt(e.guaranteedPax) || 0), 0)} Guests</p>
+            <p className="text-base font-black text-white truncate">{events.reduce((s, e) => s + (parseInt(e.guaranteedPax) || 0), 0).toLocaleString('en-IN')} Guests</p>
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">Venue Rental Sum</span>
-            <p className="text-base font-black text-emerald-400 font-mono">
+            <p className="text-base font-black text-emerald-400 font-mono truncate" title={`₹${events.reduce((s, e) => s + (e.hallOnRent ? (parseFloat(e.hallRent) || 0) : 0), 0).toLocaleString('en-IN')}`}>
               ₹{events.reduce((s, e) => s + (e.hallOnRent ? (parseFloat(e.hallRent) || 0) : 0), 0).toLocaleString('en-IN')}
             </p>
           </div>
-          <div className="space-y-0.5 text-right">
+          <div className="space-y-0.5 text-right min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A9EFF]">Grand Total Amount</span>
-            <p className="text-2xl font-black text-[#4A9EFF] font-mono tracking-tight">
+            <p className="text-xl md:text-2xl font-black text-[#4A9EFF] font-mono tracking-tight truncate" title={`₹${totalAmount.toLocaleString('en-IN')}`}>
               ₹{totalAmount.toLocaleString('en-IN')}
             </p>
           </div>

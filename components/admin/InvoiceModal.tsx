@@ -45,13 +45,14 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
     new Date(booking.checkIn)
   ) || 1
 
-  const base       = booking.baseAmount       ?? booking.totalAmount ?? 0
-  const gstAmt     = booking.gstAmount        ?? 0
-  const scAmt      = booking.serviceChargeAmount ?? 0
-  const ltAmt      = booking.luxuryTaxAmount  ?? 0
+  const isComp     = Boolean(booking.isComplimentary || booking.raw?.isComplimentary)
+  const base       = isComp ? 0 : (booking.baseAmount ?? booking.totalAmount ?? 0)
+  const gstAmt     = isComp ? 0 : (booking.gstAmount ?? 0)
+  const scAmt      = isComp ? 0 : (booking.serviceChargeAmount ?? 0)
+  const ltAmt      = isComp ? 0 : (booking.luxuryTaxAmount ?? 0)
   const discAmt    = booking.discountAmount   ?? 0
   const mealAmt    = booking.mealPlanAmount   ?? 0
-  const finalAmt   = booking.finalAmount      ?? booking.totalAmount ?? 0
+  const finalAmt   = isComp ? (mealAmt + (booking.extraAddonsAmount ?? 0)) : (booking.finalAmount ?? booking.totalAmount ?? 0)
   const gstPct     = booking.gstPercent       ?? 0
   const scPct      = booking.serviceChargePercent ?? 0
   const ltPct      = booking.luxuryTaxPercent ?? 0
@@ -86,9 +87,9 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
         {
           date: format(new Date(booking.checkIn), 'dd-MMM-yyyy'),
           roomNo: String(roomNo),
-          description: `Tariff (${nights} night${nights > 1 ? 's' : ''})`,
+          description: isComp ? `Tariff (${nights} night${nights > 1 ? 's' : ''}) - Complimentary Stay` : `Tariff (${nights} night${nights > 1 ? 's' : ''})`,
           hsnCode: '996311',
-          rackRate: booking.room?.basePrice || booking.room?.pricePerNight ? (booking.room.basePrice || booking.room.pricePerNight).toLocaleString() : (base/nights).toFixed(2),
+          rackRate: isComp ? 'Complimentary' : (booking.room?.basePrice || booking.room?.pricePerNight ? (booking.room.basePrice || booking.room.pricePerNight).toLocaleString() : (base/nights).toFixed(2)),
           amount: base,
         }
       ]
@@ -269,10 +270,17 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
                   <tr className="bg-white">
                     <td className="px-3 py-2 text-xs text-slate-700">{format(new Date(booking.checkIn), 'dd-MMM-yyyy')}</td>
                     <td className="px-3 py-2 text-xs text-slate-700">{roomNo}</td>
-                    <td className="px-3 py-2 text-xs text-slate-700">Tariff ({nights} night{nights > 1 ? 's' : ''})</td>
+                    <td className="px-3 py-2 text-xs text-slate-700">
+                      Tariff ({nights} night{nights > 1 ? 's' : ''})
+                      {isComp && (
+                        <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                          Complimentary
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-xs text-slate-700">996311</td>
                     <td className="px-3 py-2 text-xs font-mono text-slate-800 text-right">
-                      {booking.room?.basePrice || booking.room?.pricePerNight ? (booking.room.basePrice || booking.room.pricePerNight).toLocaleString() : (base/nights).toFixed(2)}
+                      {isComp ? 'Complimentary' : (booking.room?.basePrice || booking.room?.pricePerNight ? (booking.room.basePrice || booking.room.pricePerNight).toLocaleString() : (base/nights).toFixed(2))}
                     </td>
                     <td className="px-3 py-2 text-xs font-mono font-bold text-slate-800 text-right">{base.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   </tr>

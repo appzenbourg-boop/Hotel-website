@@ -131,6 +131,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
     }
 
+    // Server-side validation constraints
+    const MAX_PAX = 50000
+    const MAX_RENT = 10000000
+    const MAX_PPR = 50000
+
+    for (const e of body.events || []) {
+      const pax = parseInt(e.guaranteedPax) || 0
+      const rent = parseFloat(e.hallRent) || 0
+      const ppr = parseFloat(e.perPlateRate) || 0
+      if (pax > MAX_PAX) {
+        return NextResponse.json({ error: `Guaranteed Pax cannot exceed ${MAX_PAX.toLocaleString('en-IN')} guests per event` }, { status: 400 })
+      }
+      if (rent > MAX_RENT) {
+        return NextResponse.json({ error: `Venue rent cannot exceed ₹${MAX_RENT.toLocaleString('en-IN')} per event` }, { status: 400 })
+      }
+      if (ppr > MAX_PPR) {
+        return NextResponse.json({ error: `Per-plate rate cannot exceed ₹${MAX_PPR.toLocaleString('en-IN')}` }, { status: 400 })
+      }
+    }
+
     // Generate booking number
     const count = await (prisma as any).banquetBooking.count({ where: { propertyId } })
     const bookingNumber = `BQ-${String(count + 1).padStart(4, '0')}`
@@ -215,6 +235,25 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json()
     const { id, events, ...data } = body
+
+    const MAX_PAX = 50000
+    const MAX_RENT = 10000000
+    const MAX_PPR = 50000
+
+    for (const e of events || []) {
+      const pax = parseInt(e.guaranteedPax) || 0
+      const rent = parseFloat(e.hallRent) || 0
+      const ppr = parseFloat(e.perPlateRate) || 0
+      if (pax > MAX_PAX) {
+        return NextResponse.json({ error: `Guaranteed Pax cannot exceed ${MAX_PAX.toLocaleString('en-IN')} guests per event` }, { status: 400 })
+      }
+      if (rent > MAX_RENT) {
+        return NextResponse.json({ error: `Venue rent cannot exceed ₹${MAX_RENT.toLocaleString('en-IN')} per event` }, { status: 400 })
+      }
+      if (ppr > MAX_PPR) {
+        return NextResponse.json({ error: `Per-plate rate cannot exceed ₹${MAX_PPR.toLocaleString('en-IN')}` }, { status: 400 })
+      }
+    }
 
     const totalAmount = (events || []).reduce((s: number, e: any) => s + (e.amount || 0), 0)
 

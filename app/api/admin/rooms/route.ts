@@ -58,6 +58,9 @@ export async function GET(request: NextRequest) {
         }
         const rooms = await prisma.room.findMany({
             where,
+            include: {
+                property: { select: { id: true, name: true } }
+            },
             orderBy: { roomNumber: 'asc' },
             skip: (page - 1) * limit,
             take: limit,
@@ -149,7 +152,8 @@ export async function POST(request: NextRequest) {
         const { roomNumber, floor, category, type, basePrice, maxOccupancy, propertyId: bodyPropertyId, images, description } = body
         console.log(`[ADMIN_ROOMS] Creating new room "${roomNumber}". Description included: "${description || 'NULL'}"`)
 
-        if (!roomNumber || !category || !type || basePrice === undefined) {
+        const trimmedNumber = String(roomNumber || '').trim()
+        if (!trimmedNumber || !category || !type || basePrice === undefined) {
             return badRequest('roomNumber, category, type and basePrice are required')
         }
 
@@ -172,10 +176,21 @@ export async function POST(request: NextRequest) {
         }
         if (!propertyId) return badRequest('No property associated with account')
 
+        // Explicit constraint check: ensure room number is unique within this property
+        const existingRoom = await prisma.room.findFirst({
+            where: {
+                propertyId,
+                roomNumber: { equals: trimmedNumber, mode: 'insensitive' }
+            }
+        })
+        if (existingRoom) {
+            return conflict(`Room "${trimmedNumber}" already exists in this hotel property.`)
+        }
+
         const room = await prisma.room.create({
             data: {
                 propertyId,
-                roomNumber,
+                roomNumber: trimmedNumber,
                 floor: parseInt(floor) || 1,
                 category,
                 type,
@@ -192,7 +207,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, data: room }, { status: 201 })
     } catch (error: any) {
-        if (error?.code === 'P2002') return conflict('Room number already exists in this property')
+        if (error?.code === 'P2002') return conflict('Room number already exists in this hotel property')
         return serverError(error, 'ROOMS_POST')
     }
 }

@@ -1186,9 +1186,10 @@ model PropertySettings {
   luxuryTaxPercent     Float   @default(0.0)
   gstNumber            String? // Hotel GSTIN / GST Number (e.g. 22AAAAA0000A1Z5)
 
-  // Discount
-  defaultDiscountPercent Float  @default(0.0)
+  // Discount & POS Auth
+  defaultDiscountPercent Float   @default(0.0)
   discountLabel          String? @default("Discount")
+  managerPin             String? @default("1234")
 
   // Invoice
   invoicePrefix  String  @default("INV")

@@ -19,7 +19,11 @@ export async function GET(
         const task = await prisma.serviceRequest.findUnique({
             where: { id },
             include: {
-                room: true,
+                room: {
+                    include: {
+                        property: true
+                    }
+                },
                 property: true,
                 messages: {
                     orderBy: { createdAt: 'asc' }

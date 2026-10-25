@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/db'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth/options'
+import { performAutoAssignment } from '@/lib/service-utils'
 
 export async function GET(req: Request) {
   try {
@@ -118,6 +119,66 @@ export async function POST(req: Request) {
         items: true
       }
     })
+
+    // Raise ServiceRequest for staff panel & kitchen operations
+    try {
+      const roomMatch = table ? table.trim().match(/^(?:room[\s-]*)?(\d+[a-z]?)$/i) : null
+      let linkedRoom: any = null
+      let activeBooking: any = null
+
+      if (roomMatch) {
+        linkedRoom = await prisma.room.findFirst({
+          where: {
+            propertyId,
+            roomNumber: { equals: roomMatch[1], mode: 'insensitive' }
+          }
+        })
+        if (linkedRoom) {
+          activeBooking = await prisma.booking.findFirst({
+            where: {
+              propertyId,
+              roomId: linkedRoom.id,
+              status: 'CHECKED_IN'
+            },
+            include: { guest: true }
+          })
+        }
+      }
+
+      const itemsSummary = (items || []).map((i: any) => `${i.name} (x${i.quantity || 1})`).join(', ')
+      const descriptionLines = [
+        `POS Order: ${orderNumber}`,
+        `Location: ${table || 'Dine-In'}`,
+        activeBooking ? `Guest: ${activeBooking.guest?.name || guestName || 'Resident Guest'} (Room ${linkedRoom?.roomNumber})` : (guestName ? `Guest: ${guestName}` : null),
+        `Items: ${itemsSummary}`,
+        kitchenNotes ? `Kitchen Notes: ${kitchenNotes}` : null,
+        `Amount: ₹${parseFloat(total) || 0}`
+      ].filter(Boolean).join('\n')
+
+      await prisma.serviceRequest.create({
+        data: {
+          propertyId,
+          roomId: linkedRoom?.id || null,
+          guestId: activeBooking?.guestId || null,
+          type: linkedRoom ? 'ROOM_SERVICE' : 'FOOD_ORDER',
+          title: `Kitchen Order ${orderNumber} - ${table || 'Dine-In'}`,
+          description: descriptionLines,
+          priority: 'URGENT',
+          status: 'PENDING',
+          amount: parseFloat(total) || 0,
+          paymentStatus: 'PENDING',
+          slaMinutes: 30,
+          assignedToId: null,
+        }
+      })
+
+      // Asynchronously assign on-duty / active staff and notify them
+      performAutoAssignment(propertyId, 0).catch(err => {
+        console.error('[POS_ORDER_AUTO_ASSIGN_ERR]', err)
+      })
+    } catch (srErr) {
+      console.error('[POS_SERVICE_REQUEST_CREATE_ERR]', srErr)
+    }
 
     return NextResponse.json(order)
   } catch (error) {

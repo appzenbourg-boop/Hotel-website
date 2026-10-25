@@ -221,8 +221,11 @@ export async function POST(request: NextRequest) {
         let extraAddonsAmount = 0
         let extraAddonsJson: any = null
         if (Array.isArray(inputExtraAddons) && inputExtraAddons.length > 0) {
-            extraAddonsJson = inputExtraAddons
-            extraAddonsAmount = inputExtraAddons.reduce((sum: number, item: any) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 1)), 0)
+            const validAddons = inputExtraAddons.filter((item: any) => Number(item.qty) > 0)
+            if (validAddons.length > 0) {
+                extraAddonsJson = validAddons
+                extraAddonsAmount = validAddons.reduce((sum: number, item: any) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0)
+            }
         }
 
         // Apply pricing (on room cost only — meal plan & extra add-ons added separately)
@@ -354,15 +357,21 @@ export async function PUT(request: NextRequest) {
         let extraAddonsJson: any = existing.extraAddons
         if (inputExtraAddons !== undefined) {
             if (Array.isArray(inputExtraAddons)) {
-                extraAddonsJson = inputExtraAddons
-                extraAddonsAmount = inputExtraAddons.reduce((sum: number, item: any) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 1)), 0)
+                const validAddons = inputExtraAddons.filter((item: any) => Number(item.qty) > 0)
+                if (validAddons.length > 0) {
+                    extraAddonsJson = validAddons
+                    extraAddonsAmount = validAddons.reduce((sum: number, item: any) => sum + ((Number(item.price) || 0) * (Number(item.qty) || 0)), 0)
+                } else {
+                    extraAddonsJson = null
+                    extraAddonsAmount = 0
+                }
             } else {
                 extraAddonsJson = null
                 extraAddonsAmount = 0
             }
         }
 
-        const baseTotal = existing.baseAmount || existing.totalAmount || 0
+        const baseTotal = existing.isComplimentary ? 0 : (existing.baseAmount ?? existing.totalAmount ?? 0)
         const pricingSettings = {
             gstPercent: existing.gstPercent || 0,
             serviceChargePercent: existing.serviceChargePercent || 0,

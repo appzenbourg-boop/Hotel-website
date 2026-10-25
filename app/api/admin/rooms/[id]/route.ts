@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
-import { unauthorized, forbidden, badRequest, notFound, noContent, serverError } from '@/lib/api-response'
+import { unauthorized, forbidden, badRequest, notFound, conflict, noContent, serverError } from '@/lib/api-response'
 import { redis } from '@/lib/redis'
 import { invalidateRoomAndDashboardCaches } from '@/lib/room-status'
 
@@ -61,7 +61,28 @@ export async function PATCH(
             if (body.images !== undefined) updateData.images = body.images
             if (body.maxOccupancy !== undefined) updateData.maxOccupancy = parseInt(String(body.maxOccupancy))
             if (body.floor !== undefined) updateData.floor = parseInt(String(body.floor))
-            if (body.roomNumber !== undefined) updateData.roomNumber = body.roomNumber
+            if (body.roomNumber !== undefined) {
+                const trimmedNumber = String(body.roomNumber).trim()
+                if (!trimmedNumber) return badRequest('Room number cannot be empty')
+
+                const currentRoom = await prisma.room.findUnique({
+                    where: { id: params.id },
+                    select: { propertyId: true }
+                })
+                if (currentRoom) {
+                    const existing = await prisma.room.findFirst({
+                        where: {
+                            propertyId: currentRoom.propertyId,
+                            roomNumber: { equals: trimmedNumber, mode: 'insensitive' },
+                            id: { not: params.id }
+                        }
+                    })
+                    if (existing) {
+                        return conflict(`Room "${trimmedNumber}" already exists in this hotel property`)
+                    }
+                }
+                updateData.roomNumber = trimmedNumber
+            }
             if (body.description !== undefined) updateData.description = body.description
             if (body.amenities !== undefined) updateData.amenities = body.amenities
             if (body.weekendSurcharge !== undefined) updateData.weekendSurcharge = parseFloat(String(body.weekendSurcharge))
@@ -100,6 +121,7 @@ export async function PATCH(
         return NextResponse.json({ success: true, data: room })
     } catch (error: any) {
         if (error?.code === 'P2025') return notFound('Room')
+        if (error?.code === 'P2002') return conflict('Room number already exists in this hotel property')
         return serverError(error, 'ROOM_PATCH')
     }
 }

@@ -47,8 +47,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const queryPropertyId = searchParams.get('propertyId')
 
-    let propertyId = session.user.role === 'SUPER_ADMIN'
-        ? (queryPropertyId ?? session.user.propertyId)
+    let propertyId = queryPropertyId && queryPropertyId !== 'ALL'
+        ? queryPropertyId
         : session.user.propertyId
 
     if (!propertyId || propertyId === 'ALL') {
@@ -90,7 +90,22 @@ export async function GET(req: NextRequest) {
                 safeSettings.bankAccountNumber.slice(-4)
         }
 
-        return NextResponse.json({ success: true, data: safeSettings })
+        // Retrieve managerPin directly from settings or raw document to guarantee fresh persistence
+        let managerPin = settings?.managerPin ? String(settings.managerPin).trim() : '1234'
+        if (managerPin === '1234') {
+            try {
+                const raw = await prisma.$runCommandRaw({
+                    find: 'property_settings',
+                    filter: { propertyId: { $oid: propertyId } }
+                }) as any
+                const doc = raw?.cursor?.firstBatch?.[0]
+                if (doc?.managerPin) managerPin = String(doc.managerPin).trim()
+            } catch {
+                // ignore
+            }
+        }
+
+        return NextResponse.json({ success: true, data: { ...safeSettings, managerPin } })
     } catch (error) {
         return serverError(error, 'FINANCIAL_SETTINGS_GET')
     }
@@ -122,9 +137,23 @@ export async function POST(req: NextRequest) {
             razorpayKeyId, razorpayKeySecret,
         } = body
 
-        const propertyId = session.user.role === 'SUPER_ADMIN'
-            ? (bodyPropertyId ?? session.user.propertyId)
+        let propertyId = bodyPropertyId && bodyPropertyId !== 'ALL'
+            ? bodyPropertyId
             : session.user.propertyId
+
+        if (!propertyId || propertyId === 'ALL') {
+            const dbUser = await prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { workplaceId: true, ownedPropertyIds: true }
+            })
+            propertyId = dbUser?.workplaceId || dbUser?.ownedPropertyIds?.[0] || null
+            if (!propertyId) {
+                const firstProp = await prisma.property.findFirst({
+                    where: session.user.role === 'SUPER_ADMIN' ? undefined : { ownerIds: { has: session.user.id } }
+                })
+                if (firstProp) propertyId = firstProp.id
+            }
+        }
 
         if (!propertyId || propertyId === 'ALL') return badRequest('propertyId is required')
 
@@ -185,8 +214,27 @@ export async function POST(req: NextRequest) {
             create: { propertyId, ...DEFAULTS, ...data },
         })
 
+        // Ensure managerPin is directly persisted to raw document in MongoDB
+        if (managerPin !== undefined) {
+            const cleanPin = String(managerPin).trim()
+            try {
+                await prisma.$runCommandRaw({
+                    update: 'property_settings',
+                    updates: [
+                        {
+                            q: { propertyId: { $oid: propertyId } },
+                            u: { $set: { managerPin: cleanPin } },
+                            upsert: true
+                        }
+                    ]
+                })
+            } catch (rawErr) {
+                console.error('Error updating managerPin via raw command:', rawErr)
+            }
+        }
+
         const { razorpayKeySecret: _secret, ...safeSettings } = settings
-        return NextResponse.json({ success: true, data: safeSettings })
+        return NextResponse.json({ success: true, data: { ...safeSettings, managerPin: managerPin !== undefined ? String(managerPin).trim() : undefined } })
     } catch (error) {
         return serverError(error, 'FINANCIAL_SETTINGS_POST')
     }
