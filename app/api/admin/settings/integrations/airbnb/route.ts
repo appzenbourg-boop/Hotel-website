@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     // 3. Fetch rooms list to map
     const rooms = await prisma.room.findMany({
       where: { propertyId },
-      select: { id: true, roomNumber: true, type: true, category: true },
+      select: { id: true, roomNumber: true, type: true, category: true, propertyId: true },
       orderBy: { roomNumber: 'asc' },
     })
 

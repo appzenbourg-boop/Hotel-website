@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic'
  * Normalizes an Airbnb or Booking.com URL or extracts iCal URL / Listing metadata
  */
 function parseOtaUrl(inputUrl: string, requestedOta?: string) {
-    const trimmed = inputUrl.trim()
+    // Strip all internal, leading, and trailing whitespace so accidental copy-paste spaces don't break the URL
+    const trimmed = inputUrl.replace(/\s+/g, '')
     let isIcal = false
     let icalUrl = ''
     let listingId = ''
@@ -20,7 +21,7 @@ function parseOtaUrl(inputUrl: string, requestedOta?: string) {
 
     if (trimmed.includes('booking.com') || otaName === 'BOOKING_COM') {
         otaName = 'BOOKING_COM'
-        if (trimmed.includes('/ical') || trimmed.endsWith('.ics')) {
+        if (trimmed.includes('/ical') || trimmed.includes('.ics')) {
             isIcal = true
             icalUrl = trimmed
         } else {
@@ -30,18 +31,19 @@ function parseOtaUrl(inputUrl: string, requestedOta?: string) {
         }
     } else if (trimmed.includes('agoda.com') || otaName === 'AGODA') {
         otaName = 'AGODA'
-        isIcal = trimmed.includes('/ical') || trimmed.endsWith('.ics') || trimmed.includes('calendar')
+        isIcal = trimmed.includes('/ical') || trimmed.includes('.ics') || trimmed.includes('calendar')
         icalUrl = trimmed
         const match = trimmed.match(/hotel\/[^\/]+\/([^\/\?]+)/) || trimmed.match(/([0-9]+)/)
         if (match) listingId = match[1]
     } else {
         otaName = 'AIRBNB'
-        if (trimmed.includes('airbnb.com/calendar/ical/') || trimmed.endsWith('.ics')) {
+        // Supports airbnb.com, airbnb.co.in, airbnb.co.uk etc. and handles ?t= or ?s= query params
+        if (trimmed.includes('airbnb') && (trimmed.includes('/calendar/ical/') || trimmed.includes('.ics'))) {
             isIcal = true
             icalUrl = trimmed
-            const match = trimmed.match(/ical\/(\d+)\.ics/)
+            const match = trimmed.match(/ical\/(\d+)/)
             if (match) listingId = match[1]
-        } else if (trimmed.includes('airbnb.com/rooms/')) {
+        } else if (trimmed.includes('airbnb') && trimmed.includes('/rooms/')) {
             const match = trimmed.match(/rooms\/(\d+)/)
             if (match) {
                 listingId = match[1]
@@ -50,6 +52,11 @@ function parseOtaUrl(inputUrl: string, requestedOta?: string) {
         } else if (/^\d+$/.test(trimmed)) {
             listingId = trimmed
             icalUrl = `https://www.airbnb.com/calendar/ical/${listingId}.ics`
+        } else if (trimmed.includes('.ics')) {
+            isIcal = true
+            icalUrl = trimmed
+            const match = trimmed.match(/(\d{6,})/)
+            if (match) listingId = match[1]
         }
     }
 
@@ -113,46 +120,57 @@ export async function POST(request: NextRequest) {
             'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200&q=80'
         ]
 
-        // 3. Determine final values
-        const prefix = parsed.otaName === 'BOOKING_COM' ? 'BK' : parsed.otaName === 'AGODA' ? 'AG' : 'AB'
-        const finalRoomNumber = roomNumber || (parsed.listingId ? `${prefix}-${parsed.listingId.slice(-4)}` : `${prefix}-${Math.floor(100 + Math.random() * 900)}`)
-        const finalFloor = parseInt(floor ?? '1') || 1
-        const finalBasePrice = parseFloat(basePrice ?? '3500') || 3500
-        const finalCategory = (category || 'DELUXE').toUpperCase()
-        const finalType = type || (detectedName !== `${channelLabel} Listing ${parsed.listingId || ''}` ? detectedName : `${channelLabel} Deluxe Suite`)
-        const finalDescription = description || `Automatically imported ${channelLabel} Listing (${parsed.listingId || 'Sync Connection'})`
+        let targetRoom: any = null
 
-        // Check for existing room number in property
-        const existingRoom = await prisma.room.findUnique({
-            where: {
-                propertyId_roomNumber: {
-                    propertyId: targetPropertyId,
-                    roomNumber: finalRoomNumber
+        // If user selected an existing room, link directly to it
+        if (body.roomId && body.roomId !== 'NEW') {
+            targetRoom = await prisma.room.findFirst({
+                where: { id: body.roomId, propertyId: targetPropertyId }
+            })
+            if (!targetRoom) {
+                return badRequest('Selected hotel room not found in this property')
+            }
+        } else {
+            // 3. Determine final values for creating a new room
+            const prefix = parsed.otaName === 'BOOKING_COM' ? 'BK' : parsed.otaName === 'AGODA' ? 'AG' : 'AB'
+            const finalRoomNumber = roomNumber || (parsed.listingId ? `${prefix}-${parsed.listingId.slice(-4)}` : `${prefix}-${Math.floor(100 + Math.random() * 900)}`)
+            const finalFloor = parseInt(floor ?? '1') || 1
+            const finalBasePrice = parseFloat(basePrice ?? '3500') || 3500
+            const finalCategory = (category || 'DELUXE').toUpperCase()
+            const finalType = type || (detectedName !== `${channelLabel} Listing ${parsed.listingId || ''}` ? detectedName : `${channelLabel} Deluxe Suite`)
+            const finalDescription = description || `Automatically imported ${channelLabel} Listing (${parsed.listingId || 'Sync Connection'})`
+
+            // Check if room number already exists
+            const existingRoom = await prisma.room.findUnique({
+                where: {
+                    propertyId_roomNumber: {
+                        propertyId: targetPropertyId,
+                        roomNumber: finalRoomNumber
+                    }
                 }
-            }
-        })
+            })
 
-        if (existingRoom) {
-            return badRequest(`Room number "${finalRoomNumber}" already exists in this property. Please specify a unique Room Number.`)
+            if (existingRoom) {
+                targetRoom = existingRoom
+            } else {
+                targetRoom = await prisma.room.create({
+                    data: {
+                        propertyId: targetPropertyId,
+                        roomNumber: finalRoomNumber,
+                        floor: finalFloor,
+                        category: finalCategory as any,
+                        type: finalType,
+                        maxOccupancy: 2,
+                        basePrice: finalBasePrice,
+                        amenities: ['Wifi', 'Air Conditioning', `${channelLabel} Sync`, 'Self Check-in', 'Desk'],
+                        images: stockPhotos,
+                        description: finalDescription,
+                        status: 'AVAILABLE',
+                        visibleOnline: true
+                    }
+                })
+            }
         }
-
-        // 4. Create Room in database
-        const newRoom = await prisma.room.create({
-            data: {
-                propertyId: targetPropertyId,
-                roomNumber: finalRoomNumber,
-                floor: finalFloor,
-                category: finalCategory as any,
-                type: finalType,
-                maxOccupancy: 2,
-                basePrice: finalBasePrice,
-                amenities: ['Wifi', 'Air Conditioning', `${channelLabel} Sync`, 'Self Check-in', 'Desk'],
-                images: stockPhotos,
-                description: finalDescription,
-                status: 'AVAILABLE',
-                visibleOnline: true
-            }
-        })
 
         // 5. Ensure OTA Connection exists for this property
         const connection = await prisma.otaConnection.upsert({
@@ -173,11 +191,19 @@ export async function POST(request: NextRequest) {
             }
         })
 
-        // 6. Create RoomOtaMapping
+        // 6. Upsert RoomOtaMapping for this room
+        await prisma.roomOtaMapping.deleteMany({
+            where: {
+                propertyId: targetPropertyId,
+                roomId: targetRoom.id,
+                otaConnectionId: connection.id
+            }
+        })
+
         const mapping = await prisma.roomOtaMapping.create({
             data: {
                 propertyId: targetPropertyId,
-                roomId: newRoom.id,
+                roomId: targetRoom.id,
                 otaConnectionId: connection.id,
                 otaRoomId: parsed.icalUrl,
                 ratePlanCode: 'STANDARD'
@@ -200,7 +226,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: {
-                room: newRoom,
+                room: targetRoom,
                 mapping,
                 syncReport,
                 channel: parsed.otaName,

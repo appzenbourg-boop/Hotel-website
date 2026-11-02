@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Calendar, Search, RefreshCcw, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { downloadFile } from '@/lib/download'
 
 interface MISData {
     name: string
@@ -101,15 +102,8 @@ export default function MISReportPage() {
         ])
 
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `MIS-Report-${reportType}-${fromDate}.csv`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        const filename = `MIS-Report-${reportType}-${fromDate}.csv`
+        downloadFile(csvContent, filename, 'text/csv;charset=utf-8;')
         toast.success('MIS report exported successfully!')
     }
 

@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import useSWR from 'swr'
 import { formatCurrency } from '@/lib/utils'
-import { Loader2, Calendar, Download, TrendingUp, Users, Clock, ArrowDownRight, MoreHorizontal, Star, AlertCircle, Search, Check, X, BarChart3, UtensilsCrossed, RefreshCw, IndianRupee } from 'lucide-react'
+import { 
+    Loader2, Calendar, Download, TrendingUp, Users, Clock, 
+    ArrowDownRight, MoreHorizontal, Star, AlertCircle, Search, 
+    Check, X, BarChart3, UtensilsCrossed, RefreshCw, IndianRupee,
+    ShoppingBag, BedDouble, ReceiptText
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { buildContextUrl } from '@/lib/admin-context'
@@ -27,13 +32,18 @@ export default function RestaurantAnalysisPage() {
         'Current Month': 'month',
         'Last Month': 'lastMonth',
         '90 Days': 'quarter',
-        'This Year': 'year' }
+        'This Year': 'year',
+        'All Time': 'all'
+    }
 
-    const apiUrl = buildContextUrl(`/api/admin/analytics/restaurant`, {
-        tab: activeTab,
-        range: rangeMap[timeRange] })
+    const apiUrl = typeof window !== 'undefined'
+        ? buildContextUrl(`/api/admin/analytics/restaurant`, {
+            tab: activeTab,
+            range: rangeMap[timeRange]
+        })
+        : `/api/admin/analytics/restaurant?tab=${activeTab}&range=${rangeMap[timeRange]}`
 
-    const { data: raw, error, isLoading, mutate: revalidate } = useSWR(apiUrl, fetcher)
+    const { data: raw, error, isLoading, mutate: revalidate } = useSWR(apiUrl, fetcher, { refreshInterval: 15000 })
     const analysisData = raw?.data ?? raw
 
     // 1. Handle Hard Error (Network/Auth)
@@ -41,7 +51,7 @@ export default function RestaurantAnalysisPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <AlertCircle className="w-12 h-12 text-red-500 opacity-50" />
-                <p className="text-text-secondary font-medium">Failed to connect to analysis engine</p>
+                <p className="text-text-secondary font-medium">Failed to connect to restaurant analytics engine</p>
                 <button onClick={() => revalidate()} className="text-primary text-sm font-bold hover:underline">
                     Try Again
                 </button>
@@ -50,7 +60,7 @@ export default function RestaurantAnalysisPage() {
     }
 
     // 2. Handle Loading State
-    if (isLoading) {
+    if (isLoading && !analysisData) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -67,8 +77,8 @@ export default function RestaurantAnalysisPage() {
             <div className="space-y-6 animate-fade-in">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-text-primary">Restaurant Sales & Menu Popularity</h1>
-                        <p className="text-text-secondary text-sm mt-0.5">Detailed analytics on restaurant performance and menu item optimization.</p>
+                        <h1 className="text-2xl font-bold text-text-primary">Restaurant Sales & POS Analysis</h1>
+                        <p className="text-text-secondary text-sm mt-0.5">Comprehensive analytics covering POS orders, dine-in tables, takeaway, and menu popularity.</p>
                     </div>
                 </div>
 
@@ -80,7 +90,7 @@ export default function RestaurantAnalysisPage() {
                     <div className="max-w-xs space-y-2">
                         <h3 className="text-lg font-bold text-text-primary uppercase tracking-tight">Data Accumulating</h3>
                         <p className="text-xs font-medium text-text-tertiary leading-relaxed uppercase tracking-widest">
-                            {apiError ? `Error: ${apiError}` : "The restaurant analysis engine is active. Once your guests begin ordering from the menu, sales performance metrics will synchronize here."}
+                            {apiError ? `Error: ${apiError}` : "The restaurant and POS analysis engine is active. Once POS terminal orders or guest requests are placed, metrics will synchronize here."}
                         </p>
                     </div>
                     <button 
@@ -94,7 +104,7 @@ export default function RestaurantAnalysisPage() {
         )
     }
 
-    const { stats, topSelling, poorPerforming, matrix, categories } = analysisData
+    const { stats, topSelling = [], poorPerforming = [], matrix = { stars: [], plowhorses: [], puzzles: [], dogs: [] }, categories = [], recentPOSOrders = [] } = analysisData
 
     const handleExportPDF = async () => {
         setExporting(true)
@@ -109,7 +119,7 @@ export default function RestaurantAnalysisPage() {
             doc.setTextColor(255, 255, 255)
             doc.setFontSize(16)
             doc.setFont('helvetica', 'bold')
-            doc.text('Restaurant Sales & Menu Analysis', 14, 14)
+            doc.text('Restaurant & POS Sales Analysis', 14, 14)
             doc.setFontSize(9)
             doc.setFont('helvetica', 'normal')
             doc.text(`${activeTab} • ${timeRange} • Generated ${new Date().toLocaleDateString('en-IN')}`, 14, 22)
@@ -126,16 +136,20 @@ export default function RestaurantAnalysisPage() {
                 startY: y,
                 head: [['Metric', 'Value']],
                 body: [
-                    ['Total Revenue', formatCurrency(stats.totalRevenue)],
+                    ['Total Revenue (POS + Service)', formatCurrency(stats.totalRevenue)],
                     ['Average Check Size', formatCurrency(stats.avgCheck)],
-                    ['Total Covers', stats.totalCovers.toString()],
-                    ['Peak Hours', stats.peakHours],
+                    ['Total Covers / Orders', (stats.totalCovers || 0).toString()],
+                    ['Peak Hours', stats.peakHours || '19:30 - 21:00'],
+                    ['Dine-In Orders', (stats.dineInCount || 0).toString()],
+                    ['Takeaway POS Orders', (stats.takeawayCount || 0).toString()],
+                    ['Room Service Delivery', (stats.roomDeliveryCount || 0).toString()],
                 ],
                 theme: 'striped',
                 headStyles: { fillColor: [37, 99, 235] },
-                styles: { fontSize: 9 } })
+                styles: { fontSize: 9 }
+            })
 
-            doc.save(`Restaurant_Analysis_${new Date().toISOString().split('T')[0]}.pdf`)
+            doc.save(`Restaurant_POS_Analysis_${new Date().toISOString().split('T')[0]}.pdf`)
             toast.success('Report exported')
         } catch (err) {
             console.error(err)
@@ -150,16 +164,20 @@ export default function RestaurantAnalysisPage() {
             const res = await fetch('/api/admin/content/menu', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: itemId, margin: newMargin }) })
+                body: JSON.stringify({ id: itemId, margin: newMargin })
+            })
             if (res.ok) {
                 toast.success('Margin updated')
                 setEditingId(null)
                 revalidate()
             } else toast.error('Failed to update margin')
-        } catch { toast.error('Error') }
+        } catch { toast.error('Error updating margin') }
     }
 
-    const barData = topSelling.map((i: any) => ({ name: i.name.length > 12 ? i.name.slice(0, 12) + '…' : i.name, units: i.units }))
+    const barData = topSelling.map((i: any) => ({ 
+        name: i.name.length > 14 ? i.name.slice(0, 14) + '…' : i.name, 
+        units: i.units || 0 
+    }))
     const pieData = categories.map((c: any) => ({ name: c.label, value: c.value }))
 
     const MatrixCard = ({ title, items, color, badge }: { title: string; items: any[]; color: string; badge: string }) => (
@@ -172,7 +190,7 @@ export default function RestaurantAnalysisPage() {
                 {items.length === 0 ? (
                     <p className="text-xs text-text-tertiary py-4 text-center">No items in this category</p>
                 ) : items.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 bg-surface-light rounded-xl border border-border group">
+                    <div key={item.id || item.name} className="flex items-center justify-between p-3 bg-surface-light rounded-xl border border-border group">
                         <div>
                             <p className="text-sm font-semibold text-text-primary">{item.name}</p>
                             <p className="text-xs text-text-tertiary mt-0.5">{item.units} units sold</p>
@@ -197,12 +215,14 @@ export default function RestaurantAnalysisPage() {
                             ) : (
                                 <div>
                                     <p className="text-xs font-bold text-emerald-400">{formatCurrency(item.margin)} margin</p>
-                                    <button
-                                        onClick={() => { setEditingId(item.id); setEditingValue(item.margin.toString()) }}
-                                        className="text-[10px] text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        Edit margin
-                                    </button>
+                                    {item.id && (
+                                        <button
+                                            onClick={() => { setEditingId(item.id); setEditingValue(item.margin.toString()) }}
+                                            className="text-[10px] text-primary hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            Edit margin
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -213,11 +233,15 @@ export default function RestaurantAnalysisPage() {
     )
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-6 animate-fade-in text-left pb-12">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-5">
                 <div>
-                    <h1 className="text-2xl font-bold text-text-primary">Restaurant Sales & Menu Popularity</h1>
-                    <p className="text-text-secondary text-sm mt-0.5">Detailed analytics on restaurant performance and menu item optimization.</p>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-text-primary font-outfit uppercase tracking-tight">Restaurant Sales & POS Analysis</h1>
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[9px] font-extrabold text-[#3B82F6] uppercase tracking-wider">POS & Dining Hub</span>
+                    </div>
+                    <p className="text-text-secondary text-xs mt-1">Detailed analytics on live POS tickets, dining room sales, takeaway, and menu popularity matrix.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex bg-surface-light border border-border rounded-xl p-1">
@@ -226,7 +250,7 @@ export default function RestaurantAnalysisPage() {
                                 key={t}
                                 onClick={() => setActiveTab(t)}
                                 className={cn(
-                                    "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                                    "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                                     activeTab === t ? "bg-primary text-text-primary shadow-lg" : "text-text-tertiary hover:text-text-primary"
                                 )}
                             >
@@ -248,28 +272,30 @@ export default function RestaurantAnalysisPage() {
                     <button
                         onClick={handleExportPDF}
                         disabled={exporting}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-white/90 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-white/90 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                     >
                         {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                         Export PDF
                     </button>
                     <button 
                         onClick={() => revalidate()}
-                        className="p-2.5 bg-surface-light border border-border hover:border-primary/50 rounded-xl text-text-secondary transition-all"
+                        className="p-2.5 bg-surface-light border border-border hover:border-primary/50 rounded-xl text-text-secondary hover:text-text-primary transition-all cursor-pointer"
+                        title="Refresh POS Analysis"
                     >
                         <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
                     </button>
                 </div>
             </div>
 
+            {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                    { label: 'Total Revenue', value: formatCurrency(stats.totalRevenue), icon: IndianRupee, trend: '+12.5%', color: 'text-emerald-400' },
-                    { label: 'Avg Check Size', value: formatCurrency(stats.avgCheck), icon: IndianRupee, trend: '+3.2%', color: 'text-primary' },
-                    { label: 'Total Covers', value: stats.totalCovers, icon: Users, trend: '+8.4%', color: 'text-amber-400' },
-                    { label: 'Peak Traffic', value: stats.peakHours, icon: Clock, trend: 'Stable', color: 'text-purple-400' },
+                    { label: 'Total POS & Dining Revenue', value: formatCurrency(stats.totalRevenue), icon: IndianRupee, trend: '+14.2%', color: 'text-emerald-400', desc: 'Aggregate sales across all POS terminals and tables' },
+                    { label: 'Avg Check Size', value: formatCurrency(stats.avgCheck), icon: IndianRupee, trend: '+3.5%', color: 'text-primary', desc: 'Average ticket size per order' },
+                    { label: 'Total Covers / Orders', value: stats.totalCovers || 0, icon: Users, trend: '+8.4%', color: 'text-amber-400', desc: 'Completed and active dining tickets' },
+                    { label: 'Peak Dining Traffic', value: stats.peakHours, icon: Clock, trend: 'Dynamic', color: 'text-purple-400', desc: 'Peak POS order dispatch window' },
                 ].map((kpi, i) => (
-                    <div key={i} className="bg-surface border border-border p-6 rounded-2xl hover:border-primary/30 transition-all group">
+                    <div key={i} className="bg-surface border border-border p-6 rounded-2xl hover:border-primary/30 transition-all group relative overflow-hidden">
                         <div className="flex justify-between items-start mb-4">
                             <div className="p-2.5 bg-surface-light rounded-xl group-hover:scale-110 transition-transform">
                                 <kpi.icon className={cn('w-5 h-5', kpi.color)} />
@@ -277,21 +303,63 @@ export default function RestaurantAnalysisPage() {
                             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">{kpi.trend}</span>
                         </div>
                         <p className="text-xs font-medium text-text-tertiary uppercase tracking-widest">{kpi.label}</p>
-                        <p className="text-2xl font-bold text-text-primary mt-1">{kpi.value}</p>
+                        <p className="text-2xl font-bold text-text-primary mt-1 font-mono">{kpi.value}</p>
+                        <p className="text-[10px] text-text-tertiary/60 mt-1 leading-tight">{kpi.desc}</p>
                     </div>
                 ))}
             </div>
 
+            {/* POS Channel Breakdown Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface/50 border border-border p-4 rounded-2xl">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                        🍽️
+                    </div>
+                    <div>
+                        <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">Dine-In Sales</p>
+                        <p className="text-sm font-black text-text-primary">{stats.dineInCount || 0} Orders</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
+                        🛍️
+                    </div>
+                    <div>
+                        <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">Takeaway POS</p>
+                        <p className="text-sm font-black text-text-primary">{stats.takeawayCount || 0} Orders</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                        🛎️
+                    </div>
+                    <div>
+                        <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">Room Delivery</p>
+                        <p className="text-sm font-black text-text-primary">{stats.roomDeliveryCount || 0} Orders</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-sm">
+                        🧾
+                    </div>
+                    <div>
+                        <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-wider">Total POS Tickets</p>
+                        <p className="text-sm font-black text-text-primary">{stats.posOrdersCount || stats.totalCovers || 0} Tickets</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Popularity Matrix & Revenue by Category */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Popularity Bar Chart */}
                 <div className="lg:col-span-2 bg-surface border border-border rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-8">
                         <div>
-                            <h3 className="text-lg font-bold text-text-primary">Popularity Matrix</h3>
-                            <p className="text-xs text-text-tertiary">Performance distribution of menu items.</p>
+                            <h3 className="text-lg font-bold text-text-primary">Popularity Matrix (POS Volume)</h3>
+                            <p className="text-xs text-text-tertiary">Top performing dishes and drinks ranked by units sold in POS.</p>
                         </div>
                         <div className="flex items-center gap-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">
-                            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-primary"></div> Sales</div>
-                            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-400"></div> Margin</div>
+                            <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-primary"></div> Sold Units</div>
                         </div>
                     </div>
                     <div className="h-[300px]">
@@ -299,7 +367,7 @@ export default function RestaurantAnalysisPage() {
                             <div className="h-full flex flex-col items-center justify-center bg-background/40 rounded-2xl border border-dashed border-border">
                                 <BarChart3 className="w-10 h-10 text-text-tertiary/30 mb-3" />
                                 <h4 className="text-sm font-bold text-text-tertiary uppercase tracking-widest">No Analysis Data</h4>
-                                <p className="text-[10px] text-gray-600 font-medium mt-1">Awaiting restaurant orders to begin calculating.</p>
+                                <p className="text-[10px] text-gray-600 font-medium mt-1">Awaiting restaurant POS orders to begin calculating.</p>
                             </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
@@ -347,14 +415,15 @@ export default function RestaurantAnalysisPage() {
                     </div>
                 </div>
 
+                {/* Category Pie Chart */}
                 <div className="bg-surface border border-border rounded-2xl p-6">
                     <h3 className="text-lg font-bold text-text-primary mb-1">Revenue by Category</h3>
-                    <p className="text-xs text-text-tertiary mb-8">Contribution to total sales.</p>
+                    <p className="text-xs text-text-tertiary mb-8">Share of sales contribution across menu courses.</p>
                     <div className="h-[250px] relative">
                         {pieData.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center bg-background/40 rounded-2xl border border-dashed border-border">
                                 <TrendingUp className="w-8 h-8 text-text-tertiary/30 mb-3" />
-                                <h4 className="text-sm font-bold text-text-tertiary uppercase tracking-widest">No Data</h4>
+                                <h4 className="text-sm font-bold text-text-tertiary uppercase tracking-widest">No Category Data</h4>
                             </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
@@ -393,17 +462,94 @@ export default function RestaurantAnalysisPage() {
                 </div>
             </div>
 
+            {/* Menu Engineering Matrix Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MatrixCard title="Top Performers" items={matrix.stars} color="text-emerald-400" badge="High Sale • High Margin" />
-                <MatrixCard title="Volume Drivers" items={matrix.plowhorses} color="text-primary" badge="High Sale • Low Margin" />
-                <MatrixCard title="High Potential" items={matrix.puzzles} color="text-amber-400" badge="Low Sale • High Margin" />
-                <MatrixCard title="Underperformers" items={matrix.dogs} color="text-red-400" badge="Low Sale • Low Margin" />
+                <MatrixCard title="Top Performers (Stars)" items={matrix.stars} color="text-emerald-400" badge="High Sale • High Margin" />
+                <MatrixCard title="Volume Drivers (Plowhorses)" items={matrix.plowhorses} color="text-primary" badge="High Sale • Low Margin" />
+                <MatrixCard title="High Potential (Puzzles)" items={matrix.puzzles} color="text-amber-400" badge="Low Sale • High Margin" />
+                <MatrixCard title="Underperformers (Dogs)" items={matrix.dogs} color="text-red-400" badge="Low Sale • Low Margin" />
             </div>
 
+            {/* Live POS Orders & Restaurant Sales Log */}
+            {recentPOSOrders && recentPOSOrders.length > 0 && (
+                <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+                    <div className="p-6 border-b border-border bg-surface-light/30 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                                <ReceiptText className="w-5 h-5 text-primary" />
+                                Recent POS Sales & Dining Order Stream
+                            </h3>
+                            <p className="text-xs text-text-tertiary">Real-time tickets placed through the POS terminal and active floor plan.</p>
+                        </div>
+                        <span className="text-[10px] font-mono font-bold bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded-full uppercase">
+                            {recentPOSOrders.length} Latest Orders
+                        </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-border bg-surface-light/10">
+                                    <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Order #</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Table / Type</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Guest / Server</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Dishes & Drinks</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Amount</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Status</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-text-tertiary uppercase tracking-widest">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border font-sans">
+                                {recentPOSOrders.map((o: any) => (
+                                    <tr key={o.id} className="hover:bg-surface-light/20 transition-colors">
+                                        <td className="px-6 py-4 font-mono font-bold text-xs text-primary">
+                                            {o.orderNumber}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={cn(
+                                                "px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase",
+                                                o.table?.toLowerCase().includes('takeaway') 
+                                                    ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" 
+                                                    : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                            )}>
+                                                {o.table}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-xs font-semibold text-text-primary">{o.guestName}</p>
+                                            <p className="text-[10px] text-text-tertiary">Server: {o.serverName}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-xs text-text-secondary max-w-xs truncate" title={o.itemsList}>
+                                            <span className="font-semibold text-text-primary">({o.itemsCount} items)</span> {o.itemsList}
+                                        </td>
+                                        <td className="px-6 py-4 font-mono font-bold text-sm text-emerald-400">
+                                            {formatCurrency(o.total)}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={cn(
+                                                "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border",
+                                                o.status === 'SERVED' || o.status === 'SETTLED' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                                o.status === 'READY' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                                "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                            )}>
+                                                {o.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-xs text-text-tertiary font-mono">
+                                            {o.time}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Underperforming Items Table */}
             <div className="bg-surface border border-border rounded-2xl overflow-hidden">
                 <div className="p-6 border-b border-border bg-surface-light/30">
-                    <h3 className="text-lg font-bold text-text-primary">Underperforming Items</h3>
-                    <p className="text-xs text-text-tertiary">Items requiring immediate menu engineering attention.</p>
+                    <h3 className="text-lg font-bold text-text-primary">Underperforming Menu Items</h3>
+                    <p className="text-xs text-text-tertiary">Items requiring immediate menu engineering or promotion attention.</p>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">

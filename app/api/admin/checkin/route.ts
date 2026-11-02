@@ -99,6 +99,18 @@ export async function GET(request: Request) {
                 if (!activeBooking || activeBooking.status !== 'CHECKED_IN') continue
             }
 
+            let accompanyingGuests: any[] = []
+            if (activeBooking?.notes && activeBooking.notes.includes('[ACCOMPANYING_GUESTS:')) {
+                try {
+                    const match = activeBooking.notes.match(/\[ACCOMPANYING_GUESTS:\s*([\s\S]*?)\]/)
+                    if (match && match[1]) {
+                        accompanyingGuests = JSON.parse(match[1])
+                    }
+                } catch (e) {
+                    console.warn('[CHECKIN_API] Error parsing accompanying guests:', e)
+                }
+            }
+
             rows.push({
                 // Use booking id if available, else guest id as key
                 id: activeBooking?.id ?? guest.id,
@@ -121,6 +133,8 @@ export async function GET(request: Request) {
                 idDocumentBack: guest.idDocumentBack,
                 checkInStatus: guest.checkInStatus,
                 checkInCompletedAt: guest.checkInCompletedAt,
+                accompanyingGuests,
+                numberOfGuests: activeBooking?.numberOfGuests ?? (1 + accompanyingGuests.length),
             })
         }
 

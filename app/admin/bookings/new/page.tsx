@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, validateGSTIN, getApiErrorMessage } from '@/lib/utils'
+import { getHotelGSTRate, INDIAN_GST_STATE_CODES } from '@/lib/gst-helper'
 import { buildContextUrl } from '@/lib/admin-context'
 import Button from '@/components/ui/Button'
 
@@ -94,8 +95,60 @@ function NewBookingContent() {
         billTo: 'GUEST',
         taxExempt: false,
         isComplimentary: false,
-        discountAmount: 0
+        discountAmount: 0,
+        guestGstNumber: '',
+        guestCompanyName: '',
+        guestCompanyAddress: '',
     })
+
+    const [isFetchingGst, setIsFetchingGst] = useState(false)
+    const [gstLookupResult, setGstLookupResult] = useState<any>(null)
+
+    const handleGstLookup = async (gstinToLookup?: string) => {
+        const target = (gstinToLookup ?? bookingDetails.guestGstNumber ?? '').trim().toUpperCase().replace(/\s+/g, '')
+        if (!target) return
+        if (target.length !== 15) {
+            toast.error(`GSTIN must be 15 characters (currently ${target.length})`)
+            return
+        }
+        const val = validateGSTIN(target)
+        if (!val.isValid) {
+            toast.error(val.message)
+            return
+        }
+
+        setIsFetchingGst(true)
+        try {
+            const res = await fetch(`/api/admin/gst-lookup?gstin=${target}`)
+            const json = await res.json()
+            if (json.success && json.data) {
+                const d = json.data
+                setBookingDetails(prev => ({
+                    ...prev,
+                    guestGstNumber: target,
+                    guestCompanyName: d.companyName || prev.guestCompanyName,
+                    guestCompanyAddress: d.companyAddress || prev.guestCompanyAddress,
+                    billTo: 'COMPANY'
+                }))
+                setGstLookupResult(d)
+                toast.success(`GSTIN Verified: ${d.companyName}`)
+            } else {
+                toast.error(json.error || 'Failed to fetch GST details')
+            }
+        } catch (err) {
+            toast.error('Network error while looking up GSTIN')
+        } finally {
+            setIsFetchingGst(false)
+        }
+    }
+
+    const handleGstInputChange = (val: string) => {
+        const clean = val.toUpperCase().replace(/\s+/g, '')
+        setBookingDetails(prev => ({ ...prev, guestGstNumber: clean }))
+        if (clean.length === 15) {
+            handleGstLookup(clean)
+        }
+    }
 
     // Meal plans state
     const [mealPlans, setMealPlans] = useState<any[]>([])
@@ -312,8 +365,25 @@ function NewBookingContent() {
 
     const subtotal = useMemo(() => {
         if (selectedRooms.length === 0 || stayDuration <= 0) return 0
-        return selectedRooms.reduce((acc, room) => acc + (room.basePrice * stayDuration), 0)
+        return selectedRooms.reduce((acc, room) => acc + ((room.customPrice ?? room.basePrice) * stayDuration), 0)
     }, [selectedRooms, stayDuration])
+
+    // Indian Hotel GST Slabs:
+    // Up to ₹7,500/night: 5% GST (No ITC)
+    // Above ₹7,500/night: 18% GST (Full ITC)
+    const effectiveNightlyRate = useMemo(() => {
+        if (selectedRooms.length === 0 || stayDuration <= 0) return 0
+        return subtotal / (stayDuration * selectedRooms.length)
+    }, [subtotal, stayDuration, selectedRooms.length])
+
+    const gstSlabInfo = useMemo(() => {
+        return getHotelGSTRate(effectiveNightlyRate)
+    }, [effectiveNightlyRate])
+
+    const appliedGstPercent = useMemo(() => {
+        if (bookingDetails.taxExempt) return 0
+        return gstSlabInfo.gstPercent
+    }, [bookingDetails.taxExempt, gstSlabInfo.gstPercent])
 
     const activeMealPlanObj = useMemo(() => {
         return mealPlans.find(mp => mp.type === selectedMealPlan)
@@ -335,7 +405,7 @@ function NewBookingContent() {
     }, [extraAddons])
 
     const actualSubtotal = bookingDetails.isComplimentary ? 0 : subtotal
-    const gstAmount = bookingDetails.taxExempt ? 0 : Math.round(actualSubtotal * pricingSettings.gstPercent / 100 * 100) / 100
+    const gstAmount = bookingDetails.taxExempt ? 0 : Math.round(actualSubtotal * appliedGstPercent / 100 * 100) / 100
     const serviceChargeAmount = Math.round(actualSubtotal * pricingSettings.serviceChargePercent / 100 * 100) / 100
     const luxuryTaxAmount = bookingDetails.taxExempt ? 0 : Math.round(actualSubtotal * pricingSettings.luxuryTaxPercent / 100 * 100) / 100
     const totalBeforeDiscount = actualSubtotal + gstAmount + serviceChargeAmount + luxuryTaxAmount
@@ -432,7 +502,7 @@ function NewBookingContent() {
                         checkIn: bookingDetails.checkIn,
                         checkOut: bookingDetails.checkOut,
                         numberOfGuests: bookingDetails.guests,
-                        totalAmount: bookingDetails.isComplimentary ? 0 : room.basePrice * stayDuration, // base; API applies taxes
+                        totalAmount: bookingDetails.isComplimentary ? 0 : (room.customPrice ?? room.basePrice) * stayDuration, // base; API applies taxes
                         source: bookingDetails.source,
                         marketSegment: bookingDetails.marketSegment,
                         billTo: bookingDetails.billTo,
@@ -444,7 +514,10 @@ function NewBookingContent() {
                         mealPlan: selectedMealPlan,
                         mealPlanPricePerDay: activeMealPlanRate,
                         extraAddons: extraAddons.filter(a => Number(a.qty) > 0 && a.name),
-                        extraAddonsAmount: extraAddonsTotal })
+                        extraAddonsAmount: extraAddonsTotal,
+                        guestGstNumber: bookingDetails.guestGstNumber ? bookingDetails.guestGstNumber.trim().toUpperCase() : undefined,
+                        guestCompanyName: bookingDetails.guestCompanyName ? bookingDetails.guestCompanyName.trim() : undefined,
+                        guestCompanyAddress: bookingDetails.guestCompanyAddress ? bookingDetails.guestCompanyAddress.trim() : undefined })
                 })
             ))
 
@@ -1317,6 +1390,81 @@ function NewBookingContent() {
                             />
                         </div>
 
+                        {/* GUEST COMPANY GST (B2B INVOICE) */}
+                        <div className="space-y-2 pt-2 border-t border-white/10">
+                            <div className="flex items-center justify-between ml-1">
+                                <div className="flex items-center gap-1.5">
+                                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-wider">Company GSTIN (B2B)</span>
+                                </div>
+                                <span className="text-[9px] text-blue-400 font-bold bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                                    Auto-Fetch
+                                </span>
+                            </div>
+
+                            <div className="space-y-2 bg-[#131A29] p-3 rounded-2xl border border-white/10">
+                                <div className="flex items-center gap-1.5">
+                                    <input
+                                        type="text"
+                                        maxLength={15}
+                                        placeholder="15-digit GSTIN (e.g. 27AAACT2727Q1ZW)"
+                                        value={bookingDetails.guestGstNumber || ''}
+                                        onChange={(e) => handleGstInputChange(e.target.value)}
+                                        className="w-full bg-[#0B1120] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white placeholder-gray-500 uppercase outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                    <button
+                                        type="button"
+                                        disabled={isFetchingGst || !bookingDetails.guestGstNumber}
+                                        onClick={() => handleGstLookup(bookingDetails.guestGstNumber)}
+                                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 shrink-0 flex items-center gap-1"
+                                    >
+                                        {isFetchingGst ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Fetch'}
+                                    </button>
+                                </div>
+
+                                {/* Auto-fetched Company Details Card */}
+                                {(bookingDetails.guestCompanyName || bookingDetails.guestGstNumber?.length === 15) && (
+                                    <div className="space-y-2 pt-2 border-t border-white/5 animate-in fade-in duration-300">
+                                        <div className="flex items-center justify-between flex-wrap gap-1 text-[10px]">
+                                            <span className="px-2 py-0.5 rounded-md bg-white/5 text-gray-300 border border-white/10 font-medium">
+                                                {gstLookupResult?.state || INDIAN_GST_STATE_CODES[bookingDetails.guestGstNumber?.slice(0, 2)] || 'India'}
+                                            </span>
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-md border font-bold text-[9px]",
+                                                gstSlabInfo.itcEligible 
+                                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                                                    : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                            )}>
+                                                {gstSlabInfo.itcEligible ? 'Full ITC Available' : 'No ITC Eligibility'}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Company Name</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Company Name (Auto-fetched)"
+                                                value={bookingDetails.guestCompanyName || ''}
+                                                onChange={(e) => setBookingDetails({ ...bookingDetails, guestCompanyName: e.target.value })}
+                                                className="w-full bg-[#0B1120] border border-white/10 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-white placeholder-gray-500 outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Registered Address</label>
+                                            <textarea
+                                                rows={2}
+                                                placeholder="Company Registered Address (Auto-fetched)"
+                                                value={bookingDetails.guestCompanyAddress || ''}
+                                                onChange={(e) => setBookingDetails({ ...bookingDetails, guestCompanyAddress: e.target.value })}
+                                                className="w-full bg-[#0B1120] border border-white/10 rounded-xl p-2 text-[11px] text-gray-200 placeholder-gray-500 resize-none outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {/* FINANCIAL BREAKDOWN */}
                         <div className="space-y-1.5 pt-2 border-t border-white/10 text-xs font-semibold">
                             <div className="flex items-center justify-between text-gray-400">
@@ -1336,9 +1484,25 @@ function NewBookingContent() {
                                 </div>
                             )}
                             {gstAmount > 0 && (
-                                <div className="flex items-center justify-between text-gray-400">
-                                    <span>GST ({pricingSettings.gstPercent}%)</span>
-                                    <span className="text-white font-mono">+₹{gstAmount.toLocaleString('en-IN')}</span>
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between text-gray-400">
+                                        <span className="flex items-center gap-1.5">
+                                            <span>GST ({appliedGstPercent}%)</span>
+                                            <span className={cn(
+                                                "text-[9px] px-1.5 py-0.2 rounded font-bold border",
+                                                gstSlabInfo.itcEligible 
+                                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                                                    : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                            )}>
+                                                {gstSlabInfo.itcEligible ? 'ITC Eligible' : 'No ITC'}
+                                            </span>
+                                        </span>
+                                        <span className="text-white font-mono">+₹{gstAmount.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10px] text-gray-500 pl-1">
+                                        <span>CGST {(appliedGstPercent / 2).toFixed(1)}% + SGST {(appliedGstPercent / 2).toFixed(1)}%</span>
+                                        <span className="font-mono">₹{(gstAmount / 2).toFixed(2)} ea</span>
+                                    </div>
                                 </div>
                             )}
                             {serviceChargeAmount > 0 && (
@@ -1438,6 +1602,52 @@ function NewBookingContent() {
                             </div>
                         </div>
                     </div>
+
+                    {/* B2B CORPORATE GST DETAILS */}
+                    {bookingDetails.guestGstNumber && (
+                        <div className="bg-[#0F172A] border border-blue-500/20 rounded-3xl p-6 shadow-xl space-y-4">
+                            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-400">
+                                        <Building2 className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-bold text-white tracking-tight">Corporate B2B Tax Details</h3>
+                                        <p className="text-[11px] text-gray-400">Invoice will be addressed to the company with registered GSTIN</p>
+                                    </div>
+                                </div>
+                                <span className={cn(
+                                    "px-3 py-1 rounded-full text-xs font-bold border",
+                                    gstSlabInfo.itcEligible 
+                                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                                        : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                )}>
+                                    {gstSlabInfo.itcEligible ? '18% GST • Full ITC Eligible' : '5% GST • No ITC Eligibility'}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Company / Entity</p>
+                                    <p className="font-bold text-blue-400 text-sm leading-tight truncate">{bookingDetails.guestCompanyName || 'Corporate Taxpayer'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">GSTIN</p>
+                                    <p className="font-mono font-bold text-white text-sm tracking-wider">{bookingDetails.guestGstNumber}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">State & Jurisdiction</p>
+                                    <p className="font-semibold text-gray-200">{INDIAN_GST_STATE_CODES[bookingDetails.guestGstNumber?.slice(0, 2)] || 'India'}</p>
+                                </div>
+                                {bookingDetails.guestCompanyAddress && (
+                                    <div className="sm:col-span-3 pt-2 border-t border-white/5">
+                                        <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Registered Office Address</p>
+                                        <p className="font-medium text-gray-300 text-xs leading-relaxed">{bookingDetails.guestCompanyAddress}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* STAY & ROOM DETAILS (Completely collision-free & responsive) */}
                     <div className="bg-[#0F172A] border border-white/10 rounded-3xl p-6 shadow-xl space-y-6">

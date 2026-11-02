@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import Avatar from '@/components/common/Avatar'
 import ImageLightboxModal, { LightboxImage } from '@/components/common/ImageLightboxModal'
-import { Maximize2, Eye, ZoomIn } from 'lucide-react'
+import { Maximize2, Eye, ZoomIn, Users, IdCard } from 'lucide-react'
 
 // ---- helpers ----
 function getInitials(name: string) {
@@ -421,7 +421,14 @@ export default function CheckInManagerPage() {
                                         <div className="flex items-center gap-2.5 min-w-0">
                                             <Avatar name={booking.guestName} size="sm" />
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-text-primary truncate">{booking.guestName}</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <p className="text-[13px] font-semibold text-text-primary truncate">{booking.guestName}</p>
+                                                    {booking.accompanyingGuests && booking.accompanyingGuests.length > 0 && (
+                                                        <span className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-semibold bg-[#4A9EFF]/10 text-[#4A9EFF] border border-[#4A9EFF]/20 rounded-md">
+                                                            <Users className="w-2.5 h-2.5" /> +{booking.accompanyingGuests.length}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-[10px] text-text-tertiary">{booking.resId}</p>
                                             </div>
                                         </div>
@@ -680,6 +687,78 @@ export default function CheckInManagerPage() {
                                     )}
                                 </div>
 
+                                {/* Accompanying Guests & ID Verification */}
+                                {activeGuest.accompanyingGuests && activeGuest.accompanyingGuests.length > 0 && (
+                                    <div className="p-3 bg-surface border border-border rounded-xl space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Users className="w-4 h-4 text-[#4A9EFF]" />
+                                                <p className="text-[12px] font-semibold text-text-primary">
+                                                    Accompanying Guests ({activeGuest.accompanyingGuests.length})
+                                                </p>
+                                            </div>
+                                            <span className="text-[10px] text-text-tertiary">
+                                                Total: {(activeGuest.accompanyingGuests.length || 0) + 1} Guests
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-2.5">
+                                            {activeGuest.accompanyingGuests.map((cg: any, idx: number) => {
+                                                const primaryCount = (activeGuest.idDocumentFront ? 1 : 0) + (activeGuest.idDocumentBack ? 1 : 0)
+                                                let priorWithProof = 0
+                                                for (let i = 0; i < idx; i++) {
+                                                    if (activeGuest.accompanyingGuests[i]?.idProof) priorWithProof++
+                                                }
+                                                const targetLightboxIndex = primaryCount + priorWithProof
+
+                                                return (
+                                                    <div key={idx} className="p-2.5 bg-surface-light border border-white/5 rounded-lg flex items-center justify-between gap-3">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="w-4 h-4 rounded-full bg-white/10 text-[9px] font-bold flex items-center justify-center text-text-secondary">
+                                                                    {idx + 2}
+                                                                </span>
+                                                                <p className="text-[12px] font-semibold text-text-primary truncate">
+                                                                    {cg.name || `Guest #${idx + 2}`}
+                                                                </p>
+                                                                {cg.age && (
+                                                                    <span className="text-[10px] text-text-tertiary">({cg.age} yrs)</span>
+                                                                )}
+                                                            </div>
+                                                            {cg.aadharNumber ? (
+                                                                <p className="text-[10px] text-[#4A9EFF] font-mono mt-0.5 ml-5">
+                                                                    Aadhaar: {cg.aadharNumber}
+                                                                </p>
+                                                            ) : (
+                                                                <p className="text-[10px] text-text-tertiary mt-0.5 ml-5">
+                                                                    No Aadhaar number
+                                                                </p>
+                                                            )}
+                                                        </div>
+
+                                                        {cg.idProof ? (
+                                                            <div
+                                                                onClick={() => setLightboxState({ isOpen: true, initialIndex: targetLightboxIndex })}
+                                                                className="relative w-14 h-11 rounded-md overflow-hidden border border-white/15 cursor-pointer hover:border-[#4A9EFF] transition-all group shrink-0 shadow-sm"
+                                                                title="Click to view full ID"
+                                                            >
+                                                                <img src={cg.idProof} alt={cg.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                    <Eye className="w-3.5 h-3.5 text-white" />
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] text-amber-500 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20 shrink-0">
+                                                                ID Missing
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Digital Signature placeholder */}
                                 <div>
                                     <p className="text-[12px] font-semibold text-text-primary mb-2">Digital Signature</p>
@@ -770,8 +849,14 @@ export default function CheckInManagerPage() {
                     isOpen={lightboxState.isOpen}
                     onClose={() => setLightboxState({ isOpen: false, initialIndex: 0 })}
                     images={[
-                        activeGuest.idDocumentFront ? { url: activeGuest.idDocumentFront, label: 'Front Document' } : null,
-                        activeGuest.idDocumentBack ? { url: activeGuest.idDocumentBack, label: 'Back Document' } : null,
+                        activeGuest.idDocumentFront ? { url: activeGuest.idDocumentFront, label: `Primary: ${activeGuest.guestName} (Front)` } : null,
+                        activeGuest.idDocumentBack ? { url: activeGuest.idDocumentBack, label: `Primary: ${activeGuest.guestName} (Back)` } : null,
+                        ...(activeGuest.accompanyingGuests || [])
+                            .filter((cg: any) => Boolean(cg.idProof))
+                            .map((cg: any, idx: number) => ({
+                                url: cg.idProof,
+                                label: `Guest: ${cg.name || 'Accompanying Guest'}${cg.aadharNumber ? ` (Aadhaar: ${cg.aadharNumber})` : ''}`
+                            }))
                     ].filter(Boolean) as LightboxImage[]}
                     initialIndex={lightboxState.initialIndex}
                     title={activeGuest.idType ? `${activeGuest.idType} Verification` : 'Identity Document'}

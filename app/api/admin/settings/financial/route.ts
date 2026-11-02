@@ -90,22 +90,41 @@ export async function GET(req: NextRequest) {
                 safeSettings.bankAccountNumber.slice(-4)
         }
 
-        // Retrieve managerPin directly from settings or raw document to guarantee fresh persistence
+        // Retrieve managerPin and GST details directly from settings or raw document to guarantee fresh persistence
         let managerPin = settings?.managerPin ? String(settings.managerPin).trim() : '1234'
-        if (managerPin === '1234') {
-            try {
-                const raw = await prisma.$runCommandRaw({
-                    find: 'property_settings',
-                    filter: { propertyId: { $oid: propertyId } }
-                }) as any
-                const doc = raw?.cursor?.firstBatch?.[0]
-                if (doc?.managerPin) managerPin = String(doc.managerPin).trim()
-            } catch {
-                // ignore
+        let rawDoc: any = null
+        try {
+            const findQuery = settings?.id 
+                ? { _id: { $oid: settings.id } } 
+                : { $or: [{ propertyId: { $oid: propertyId } }, { propertyId: propertyId }] }
+            const raw = await prisma.$runCommandRaw({
+                find: 'property_settings',
+                filter: findQuery
+            }) as any
+            rawDoc = raw?.cursor?.firstBatch?.[0]
+            if (rawDoc?.managerPin && managerPin === '1234') {
+                managerPin = String(rawDoc.managerPin).trim()
             }
+        } catch {
+            // ignore
         }
 
-        return NextResponse.json({ success: true, data: { ...safeSettings, managerPin } })
+        const gstLegalName = rawDoc?.gstLegalName || null
+        const gstTradeName = rawDoc?.gstTradeName || null
+        const gstAddress = rawDoc?.gstAddress || null
+        const gstState = rawDoc?.gstState || null
+
+        return NextResponse.json({ 
+            success: true, 
+            data: { 
+                ...safeSettings, 
+                managerPin,
+                gstLegalName,
+                gstTradeName,
+                gstAddress,
+                gstState
+            } 
+        })
     } catch (error) {
         return serverError(error, 'FINANCIAL_SETTINGS_GET')
     }
@@ -122,6 +141,7 @@ export async function POST(req: NextRequest) {
             propertyId: bodyPropertyId,
             // Tax
             gstPercent, serviceChargePercent, luxuryTaxPercent, gstNumber,
+            gstLegalName, gstTradeName, gstAddress, gstState,
             // Discount & POS Auth
             defaultDiscountPercent, discountLabel, managerPin,
             // Invoice
@@ -214,27 +234,58 @@ export async function POST(req: NextRequest) {
             create: { propertyId, ...DEFAULTS, ...data },
         })
 
-        // Ensure managerPin is directly persisted to raw document in MongoDB
-        if (managerPin !== undefined) {
-            const cleanPin = String(managerPin).trim()
+        // Ensure managerPin and GST details are directly persisted to raw document in MongoDB
+        const rawFieldsToUpdate: any = {}
+        if (managerPin !== undefined) rawFieldsToUpdate.managerPin = String(managerPin).trim()
+        if (gstLegalName !== undefined) rawFieldsToUpdate.gstLegalName = gstLegalName ? String(gstLegalName).trim() : null
+        if (gstTradeName !== undefined) rawFieldsToUpdate.gstTradeName = gstTradeName ? String(gstTradeName).trim() : null
+        if (gstAddress !== undefined) rawFieldsToUpdate.gstAddress = gstAddress ? String(gstAddress).trim() : null
+        if (gstState !== undefined) rawFieldsToUpdate.gstState = gstState ? String(gstState).trim() : null
+
+        if (Object.keys(rawFieldsToUpdate).length > 0) {
             try {
+                const updateQuery = settings?.id 
+                    ? { _id: { $oid: settings.id } } 
+                    : { propertyId: { $oid: propertyId } }
                 await prisma.$runCommandRaw({
                     update: 'property_settings',
                     updates: [
                         {
-                            q: { propertyId: { $oid: propertyId } },
-                            u: { $set: { managerPin: cleanPin } },
+                            q: updateQuery,
+                            u: { $set: rawFieldsToUpdate },
                             upsert: true
                         }
                     ]
                 })
             } catch (rawErr) {
-                console.error('Error updating managerPin via raw command:', rawErr)
+                console.error('Error updating raw property settings fields:', rawErr)
+            }
+        }
+
+        // Also update Property.address if gstAddress is provided
+        if (gstAddress) {
+            try {
+                await prisma.property.update({
+                    where: { id: propertyId },
+                    data: { address: String(gstAddress).trim() }
+                }).catch(() => {})
+            } catch {
+                // ignore
             }
         }
 
         const { razorpayKeySecret: _secret, ...safeSettings } = settings
-        return NextResponse.json({ success: true, data: { ...safeSettings, managerPin: managerPin !== undefined ? String(managerPin).trim() : undefined } })
+        return NextResponse.json({ 
+            success: true, 
+            data: { 
+                ...safeSettings, 
+                managerPin: managerPin !== undefined ? String(managerPin).trim() : undefined,
+                gstLegalName: gstLegalName !== undefined ? gstLegalName : undefined,
+                gstTradeName: gstTradeName !== undefined ? gstTradeName : undefined,
+                gstAddress: gstAddress !== undefined ? gstAddress : undefined,
+                gstState: gstState !== undefined ? gstState : undefined,
+            } 
+        })
     } catch (error) {
         return serverError(error, 'FINANCIAL_SETTINGS_POST')
     }

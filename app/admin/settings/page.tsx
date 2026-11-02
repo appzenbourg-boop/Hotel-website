@@ -7,10 +7,11 @@ import {
   Database, Globe, ChevronRight, ChevronLeft, Loader2,
   Calendar, Check, CheckCircle2, Bell, Zap, ShieldAlert, ClipboardList,
   Star, Crown, BedDouble, Users, CreditCard, Eye, EyeOff, AlertCircle, X, MessageSquare, UtensilsCrossed,
-  MonitorSmartphone, ShoppingBag, PartyPopper, UserCog, CalendarDays, RotateCcw, CheckSquare, Square, Sparkles, Lock,
-  Search, BarChart3, FileSpreadsheet, Megaphone, Upload, Clock, ShieldCheck
+  MonitorSmartphone, ShoppingBag, PartyPopper, UserCog, CalendarDays, RotateCcw, CheckSquare, Square, Lock,
+  Search, BarChart3, FileSpreadsheet, Megaphone, Upload, Clock, ShieldCheck, FileText
 } from 'lucide-react'
 import { cn, validateGSTIN } from '@/lib/utils'
+import { INDIAN_GST_STATE_CODES } from '@/lib/gst-helper'
 import { toast } from 'sonner'
 import { getAdminContext } from '@/lib/admin-context'
 import Switch from '@/components/ui/Switch'
@@ -335,6 +336,10 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
   const [s, setS] = useState({
     gstPercent: 18, serviceChargePercent: 0, luxuryTaxPercent: 0,
     gstNumber: '',
+    gstLegalName: '',
+    gstTradeName: '',
+    gstAddress: '',
+    gstState: '',
     defaultDiscountPercent: 0, discountLabel: 'Discount',
     managerPin: '1234',
     invoicePrefix: 'INV', invoiceFooter: '',
@@ -349,6 +354,56 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
   const [showAccountNumber, setShowAccountNumber] = useState(false)
   const [showManagerPin, setShowManagerPin] = useState(false)
   const [maskedAccount, setMaskedAccount] = useState('')
+  const [isFetchingGst, setIsFetchingGst] = useState(false)
+  const [gstLookupResult, setGstLookupResult] = useState<any>(null)
+
+  const handleGstLookup = async (gstinToLookup?: string) => {
+    const clean = (gstinToLookup ?? s.gstNumber ?? '').trim().toUpperCase().replace(/\s+/g, '')
+    if (!clean) return
+    if (clean.length !== 15) {
+      toast.error(`GSTIN must be 15 characters (currently ${clean.length})`)
+      return
+    }
+    const val = validateGSTIN(clean)
+    if (!val.isValid) {
+      toast.error(val.message)
+      return
+    }
+
+    setIsFetchingGst(true)
+    try {
+      const res = await fetch(`/api/admin/gst-lookup?gstin=${clean}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const d = json.data
+        const detectedState = d.state || INDIAN_GST_STATE_CODES[clean.slice(0, 2)] || 'India'
+        setS(prev => ({
+          ...prev,
+          gstNumber: clean,
+          gstLegalName: d.companyName || prev.gstLegalName,
+          gstTradeName: d.tradeName || d.companyName || prev.gstTradeName,
+          gstAddress: d.companyAddress || prev.gstAddress,
+          gstState: detectedState,
+        }))
+        setGstLookupResult(d)
+        toast.success(`Hotel GSTIN Verified: ${d.companyName || clean}`)
+      } else {
+        toast.error(json.error || 'Failed to fetch GST business details')
+      }
+    } catch {
+      toast.error('Network error while looking up GSTIN')
+    } finally {
+      setIsFetchingGst(false)
+    }
+  }
+
+  const handleGstInputChange = (val: string) => {
+    const clean = val.toUpperCase().replace(/\s+/g, '')
+    setS(prev => ({ ...prev, gstNumber: clean }))
+    if (clean.length === 15) {
+      handleGstLookup(clean)
+    }
+  }
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -365,6 +420,10 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             serviceChargePercent: d.serviceChargePercent ?? 0,
             luxuryTaxPercent: d.luxuryTaxPercent ?? 0,
             gstNumber: d.gstNumber ?? '',
+            gstLegalName: d.gstLegalName ?? '',
+            gstTradeName: d.gstTradeName ?? '',
+            gstAddress: d.gstAddress ?? '',
+            gstState: d.gstState ?? '',
             defaultDiscountPercent: d.defaultDiscountPercent ?? 0,
             discountLabel: d.discountLabel ?? 'Discount',
             managerPin: d.managerPin ?? '1234',
@@ -380,6 +439,15 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
             upiId: d.upiId ?? '',
             razorpayKeyId: d.razorpayKeyId ?? ''
           }))
+          if (d.gstNumber && (d.gstLegalName || d.gstAddress)) {
+            setGstLookupResult({
+              companyName: d.gstLegalName,
+              tradeName: d.gstTradeName,
+              companyAddress: d.gstAddress,
+              state: d.gstState,
+              gstin: d.gstNumber
+            })
+          }
           if (d.bankAccountNumberMasked) setMaskedAccount(d.bankAccountNumberMasked)
         }
       })
@@ -497,28 +565,146 @@ function FinancialView({ propertyId }: { propertyId: string | null | undefined }
       <div className="bg-surface border border-border rounded-2xl p-6 space-y-4">
         <h3 className="text-base font-semibold text-text-primary">Invoice & Operations</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5 md:col-span-2 bg-surface-light border border-border rounded-xl p-3.5">
-            <label className={lc}>Hotel GST Number (GSTIN)</label>
-            <p className="text-[11px] text-text-tertiary">Official 15-character GSTIN displayed on all hotel tax invoices</p>
-            <div className="relative mt-1">
+          <div className="space-y-3.5 md:col-span-2 bg-surface-light border border-border rounded-2xl p-4.5 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <label className="text-xs font-bold text-text-primary flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-blue-500" />
+                  <span>Hotel GST Number (GSTIN)</span>
+                </label>
+                <p className="text-[11px] text-text-tertiary mt-0.5">Official 15-character GSTIN displayed on all hotel tax invoices and bills</p>
+              </div>
+              <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                Auto-Fetch Business Registry
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
               <input
                 type="text"
                 placeholder="e.g. 22AAAAA0000A1Z5"
+                maxLength={15}
                 value={s.gstNumber}
-                onChange={e => setS(p => ({ ...p, gstNumber: e.target.value.toUpperCase() }))}
-                className={cn(ic, "font-mono uppercase tracking-wide")}
+                onChange={e => handleGstInputChange(e.target.value)}
+                className={cn(ic, "font-mono font-bold uppercase tracking-wider text-sm flex-1")}
               />
+              <button
+                type="button"
+                disabled={isFetchingGst || !s.gstNumber || s.gstNumber.length < 15}
+                onClick={() => handleGstLookup(s.gstNumber)}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 shrink-0 flex items-center gap-1.5 cursor-pointer"
+              >
+                {isFetchingGst ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Fetching...</span>
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="w-4 h-4" />
+                    <span>Fetch Details</span>
+                  </>
+                )}
+              </button>
             </div>
+
             {(() => {
               if (!s.gstNumber) return null
               const v = validateGSTIN(s.gstNumber)
+              const stateName = INDIAN_GST_STATE_CODES[s.gstNumber.slice(0, 2)] || s.gstState || 'India'
               return (
-                <div className={cn("text-xs font-semibold flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg border", v.isValid ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-400")}>
-                  {v.isValid ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />}
-                  <span>{v.message}</span>
+                <div className={cn(
+                  "text-xs font-semibold flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl border transition-all",
+                  v.isValid 
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                    : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+                )}>
+                  <div className="flex items-center gap-2">
+                    {v.isValid ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />}
+                    <span>{v.message}</span>
+                  </div>
+                  {v.isValid && (
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                      State: {stateName} ({s.gstNumber.slice(0, 2)})
+                    </span>
+                  )}
                 </div>
               )
             })()}
+
+            {/* Auto-Fetched Business Details Dossier */}
+            {(s.gstLegalName || s.gstTradeName || s.gstAddress || (s.gstNumber && s.gstNumber.length === 15)) && (
+              <div className="mt-3.5 pt-3.5 border-t border-border/80 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">
+                      Verified Taxpayer Profile
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400">
+                      Active Business
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {s.gstNumber.length >= 12 && (
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400">
+                        PAN: {s.gstNumber.slice(2, 12)}
+                      </span>
+                    )}
+                    {s.gstNumber.length >= 2 && (
+                      <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                        {INDIAN_GST_STATE_CODES[s.gstNumber.slice(0, 2)] || s.gstState || 'India'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
+                      Legal Registered Business Name
+                    </label>
+                    <input
+                      type="text"
+                      value={s.gstLegalName}
+                      onChange={e => setS(prev => ({ ...prev, gstLegalName: e.target.value }))}
+                      placeholder="e.g. Zenbourg Hospitality Private Limited"
+                      className={cn(ic, "text-xs font-semibold")}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
+                      Trade / Commercial Name
+                    </label>
+                    <input
+                      type="text"
+                      value={s.gstTradeName}
+                      onChange={e => setS(prev => ({ ...prev, gstTradeName: e.target.value }))}
+                      placeholder="e.g. Hotel Zenbourg"
+                      className={cn(ic, "text-xs font-semibold")}
+                    />
+                  </div>
+
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[10px] font-bold text-text-secondary uppercase tracking-wider">
+                      Official Registered Business Address
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={s.gstAddress}
+                      onChange={e => setS(prev => ({ ...prev, gstAddress: e.target.value }))}
+                      placeholder="Principal Place of Business (Building, Street, City, State, PIN)"
+                      className={cn(ic, "text-xs resize-none")}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[10px] text-blue-400 bg-blue-500/10 px-3 py-2 rounded-xl border border-blue-500/20">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>This official business name and registered address will appear at the top of all guest Tax Invoices and PDF receipts.</span>
+                </div>
+              </div>
+            )}
           </div>
           <div className="space-y-1.5"><label className={lc}>Invoice Prefix</label><p className="text-[11px] text-text-tertiary">e.g. INV, ZB, HTL</p><input type="text" value={s.invoicePrefix} onChange={e => setS(p => ({ ...p, invoicePrefix: e.target.value }))} className={ic} /></div>
           <div className="space-y-1.5"><label className={lc}>Invoice Footer Note</label><p className="text-[11px] text-text-tertiary">Appears at the bottom of every invoice</p><input type="text" value={s.invoiceFooter} onChange={e => setS(p => ({ ...p, invoiceFooter: e.target.value }))} className={ic} /></div>
@@ -754,6 +940,77 @@ const LEGACY_PLAN_MAP: Record<string, string> = {
 
 const PLAN_ORDER = ['BASE', 'STARTER', 'STANDARD', 'ENTERPRISE']
 
+const FEATURE_LABEL_MAP: Record<string, string> = {
+  BASIC_OPS: 'Core PMS & Reservations',
+  DIGITAL_CHECKIN: 'Digital Check-in & Check-out',
+  FRONT_DESK: 'Front Desk Terminal',
+  STAFF_MANAGEMENT: 'Staff App & Management',
+  HOUSEKEEPING_DISPATCH: 'Housekeeping & Maintenance Dispatch',
+  MARKETING: 'Marketing Tools',
+  LOYALTY: 'Loyalty Module',
+  IOT_CONTROLS: 'IoT Room Controls',
+  ANALYTICS: 'Advanced Analytics',
+  FB_SPA: 'F&B and Spa Integration',
+  UPSELL_ENGINE: 'Upsell Engine',
+  MULTILANG_PORTAL: 'Multi-language Guest Portal',
+  MULTI_PROPERTY: 'Multi-property Super Admin',
+  CUSTOM_INTEGRATIONS: 'Custom Integrations',
+  WHITE_LABEL: 'White-label Guest Portal',
+  DEDICATED_SUPPORT: 'Dedicated Success Manager',
+  SLA_UPTIME: 'SLA-backed Uptime',
+}
+
+const DEFAULT_SETTINGS_PLANS: PlanDef[] = [
+  {
+    plan: 'BASE',
+    displayName: 'Base',
+    tagline: 'For independent properties getting started',
+    description: 'Core PMS, reservations, front desk terminal. Digital check-in and check-out. Up to 30 rooms.',
+    originalPrice: 15000,
+    discountedPrice: 9999,
+    discountPercent: 33,
+    maxRooms: 30,
+    maxStaff: 15,
+    features: ['Core PMS & Reservations', 'Front Desk Terminal', 'Digital Check-in & Check-out', 'Up to 30 rooms'],
+  },
+  {
+    plan: 'STARTER',
+    displayName: 'Starter',
+    tagline: 'Ideal for Growth-stage hotels and boutique resorts',
+    description: 'Everything in Base, plus: Staff app, housekeeping and maintenance dispatch. Marketing tools and loyalty module. Up to 75 rooms.',
+    originalPrice: 30000,
+    discountedPrice: 14999,
+    discountPercent: 46,
+    maxRooms: 75,
+    maxStaff: 40,
+    features: ['Everything in Base', 'Staff app, housekeeping & maintenance dispatch', 'Marketing tools & loyalty module', 'Up to 75 rooms'],
+  },
+  {
+    plan: 'STANDARD',
+    displayName: 'Standard',
+    tagline: 'Full-service hotels seeking maximum performance',
+    description: 'Everything in Starter, plus: IoT room controls and advanced analytics. F&B and spa integration, upsell engine. Multi-language Guest Portal. Up to 150 rooms.',
+    originalPrice: 55000,
+    discountedPrice: 29999,
+    discountPercent: 45,
+    maxRooms: 150,
+    maxStaff: 100,
+    features: ['Everything in Starter', 'IoT room controls & advanced analytics', 'F&B and spa integration, upsell engine', 'Multi-language Guest Portal', 'Up to 150 rooms'],
+  },
+  {
+    plan: 'ENTERPRISE',
+    displayName: 'Enterprise',
+    tagline: 'Multi-property groups and luxury brands',
+    description: 'Everything in Standard, plus: Multi-property super admin and custom integrations. Dedicated success manager, white-label Guest Portal. SLA-backed uptime, unlimited rooms.',
+    originalPrice: 0,
+    discountedPrice: 0,
+    discountPercent: 0,
+    maxRooms: 0,
+    maxStaff: 0,
+    features: ['Everything in Standard', 'Multi-property super admin & custom integrations', 'Dedicated success manager', 'White-label Guest Portal', 'SLA-backed uptime, unlimited rooms', 'Custom pricing'],
+  },
+]
+
 function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayActive, planExpiresAt, onUpgrade, onCancelAutopay }: {
   propertyId: string | null | undefined
   currentPlan: string
@@ -788,8 +1045,8 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
     setLoading(true)
     fetch('/api/admin/subscription-plans')
       .then(r => r.json())
-      .then(j => { if (j.success && j.data) setPlans(j.data) })
-      .catch(() => { })
+      .then(j => { if (j?.success && Array.isArray(j?.data) && j.data.length > 0) setPlans(j.data); else if (Array.isArray(j) && j.length > 0) setPlans(j); else setPlans(DEFAULT_SETTINGS_PLANS) })
+      .catch(() => { setPlans(DEFAULT_SETTINGS_PLANS) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -896,13 +1153,14 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
 
   if (loading) return <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
 
-  const normalizedPlan = LEGACY_PLAN_MAP[currentPlan] ?? currentPlan
-  const sortedPlans = [...plans].sort((a, b) => {
+  const normalizedPlan = LEGACY_PLAN_MAP[currentPlan] ?? currentPlan ?? 'BASE'
+  const safePlans = Array.isArray(plans) && plans.length > 0 ? plans : DEFAULT_SETTINGS_PLANS
+  const sortedPlans = [...safePlans].sort((a, b) => {
     const ai = PLAN_ORDER.indexOf(a.plan)
     const bi = PLAN_ORDER.indexOf(b.plan)
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
   })
-  const activePlan = sortedPlans.find(p => p.plan === normalizedPlan) ?? sortedPlans[0]
+  const activePlan = sortedPlans.find(p => p?.plan === normalizedPlan) ?? sortedPlans[0]
 
   const PLAN_ICONS: Record<string, any> = { BASE: Star, STARTER: Zap, STANDARD: Crown, ENTERPRISE: Star }
   const PLAN_COLORS: Record<string, string> = { BASE: 'text-text-secondary', STARTER: 'text-amber-500', STANDARD: 'text-[#4A9EFF]', ENTERPRISE: 'text-purple-400' }
@@ -910,7 +1168,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
   return (
     <div className="space-y-6">
       {/* Current plan banner */}
-      {activePlan && (
+      {activePlan && activePlan.plan && (
         <div className="bg-primary/10 border border-primary/30 rounded-2xl p-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {(() => { const Icon = PLAN_ICONS[activePlan.plan] ?? Star; return <Icon className={cn('w-5 h-5', PLAN_COLORS[activePlan.plan] ?? 'text-primary')} /> })()}
@@ -949,7 +1207,7 @@ function SubscriptionView({ propertyId, currentPlan, isTrialActive, isAutopayAct
                 {plan.plan !== 'ENTERPRISE' ? <p className="text-2xl font-bold text-text-primary">₹{(plan.discountedPrice ?? 0).toLocaleString()}<span className="text-xs text-text-tertiary">/-mo</span></p> : <p className="text-lg font-bold text-text-primary">Custom Multi-Hotel</p>}
               </div>
               <div className="space-y-1.5 mb-5 flex-1 text-xs text-text-secondary">
-                {(plan.features ?? []).map((f: string, i: number) => <div key={i} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-primary" /><span>{f}</span></div>)}
+                {(Array.isArray(plan.features) ? plan.features : []).map((f: string, i: number) => <div key={i} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" /><span>{FEATURE_LABEL_MAP[f] ?? f}</span></div>)}
               </div>
               {isActive ? <span className="text-xs text-primary font-semibold font-bold">Current Plan</span> : plan.plan === 'ENTERPRISE' ? (
                 <Button onClick={() => setCustomModal(true)} variant="secondary" className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10">Request Custom Pricing</Button>
@@ -2419,6 +2677,7 @@ function AirbnbModal({
   onClose: () => void
 }) {
   const [airbnbUrl, setAirbnbUrl] = useState('')
+  const [selectedRoomId, setSelectedRoomId] = useState('')
   const [localRooms, setLocalRooms] = useState<any[]>(initialRooms || [])
   const [localMappings, setLocalMappings] = useState<Record<string, string>>({})
   const [loadingRooms, setLoadingRooms] = useState(false)
@@ -2433,18 +2692,22 @@ function AirbnbModal({
       const res = await fetch(`/api/admin/settings/integrations/airbnb?propertyId=${propertyId}`)
       const d = await res.json()
       if (d.success && d.data) {
-        setLocalRooms(d.data.rooms || [])
+        const rooms = d.data.rooms || []
+        setLocalRooms(rooms)
+        if (rooms.length > 0 && !selectedRoomId) {
+          setSelectedRoomId(rooms[0].id)
+        }
         const initial: Record<string, string> = {}
-          ; (d.data.rooms || []).forEach((r: any) => {
-            const match = (d.data.mappings || []).find((m: any) => m.roomId === r.id)
-            initial[r.id] = match ? match.otaRoomId : ''
-          })
+        rooms.forEach((r: any) => {
+          const match = (d.data.mappings || []).find((m: any) => m.roomId === r.id)
+          initial[r.id] = match ? match.otaRoomId : ''
+        })
         setLocalMappings(initial)
       }
     } catch { } finally {
       setLoadingRooms(false)
     }
-  }, [propertyId])
+  }, [propertyId, selectedRoomId])
 
   useEffect(() => {
     loadData()
@@ -2458,13 +2721,14 @@ function AirbnbModal({
     }
 
     setImporting(true)
-    const toastId = toast.loading('Detecting Airbnb rooms and syncing calendar...')
+    const toastId = toast.loading('Connecting room and syncing Airbnb calendar...')
     try {
       const res = await fetch('/api/admin/rooms/import-airbnb', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: airbnbUrl.trim(),
+          roomId: selectedRoomId === 'NEW' ? undefined : selectedRoomId,
           otaChannel: 'AIRBNB',
           propertyId
         })
@@ -2472,16 +2736,16 @@ function AirbnbModal({
       const d = await res.json()
       if (d.success) {
         toast.success(
-          `Airbnb Connected! Imported "${d.data.room?.type || 'Room'}" and synced ${d.data.syncReport?.created || 0} booking(s) to your calendar!`,
+          `Airbnb Connected! Synced ${d.data.syncReport?.created || 0} booking(s) directly to Room ${d.data.room?.roomNumber}!`,
           { id: toastId, duration: 6000 }
         )
         setAirbnbUrl('')
         loadData()
       } else {
-        toast.error(d.error || 'Failed to auto-detect Airbnb listing', { id: toastId })
+        toast.error(d.error || 'Failed to connect Airbnb listing', { id: toastId })
       }
     } catch {
-      toast.error('Connection error during Airbnb auto-import', { id: toastId })
+      toast.error('Connection error during Airbnb sync', { id: toastId })
     } finally {
       setImporting(false)
     }
@@ -2538,67 +2802,91 @@ function AirbnbModal({
 
         <div>
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <Globe className="w-5 h-5 text-rose-500" /> Airbnb 1-Time Auto Connection
+            <Globe className="w-5 h-5 text-rose-500" /> 2-Way Airbnb Calendar Channel Manager
           </h3>
           <p className="text-xs text-text-secondary mt-1 leading-relaxed">
-            Simply paste your Airbnb <span className="font-bold text-white">Listing URL or iCal Calendar Export Link</span> below. The system will automatically detect your rooms, build them into your website database, and sync all Airbnb bookings to your calendar!
+            Link your hotel rooms directly to your Airbnb listings. Bookings on Airbnb will block your PMS calendar, and your direct website bookings will automatically block dates on Airbnb!
           </p>
         </div>
 
-        {/* 1-Time Link Import Form */}
+        {/* Room Mapping & Connect Form */}
         <form onSubmit={handleAutoImport} className="p-5 bg-rose-500/5 border border-rose-500/20 rounded-2xl space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-rose-400 uppercase tracking-wider block">
-              Airbnb Listing URL or Export Calendar iCal Link *
-            </label>
-            <input
-              required
-              type="text"
-              value={airbnbUrl}
-              onChange={e => setAirbnbUrl(e.target.value)}
-              placeholder="https://www.airbnb.com/rooms/12345678 or https://www.airbnb.com/calendar/ical/12345678.ics"
-              className="w-full bg-[#101922] border border-white/[0.15] focus:border-rose-500 rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-rose-400 uppercase tracking-wider block">
+                1. Select Your Hotel Room *
+              </label>
+              <select
+                value={selectedRoomId}
+                onChange={e => setSelectedRoomId(e.target.value)}
+                className="w-full bg-[#101922] border border-white/[0.15] focus:border-rose-500 rounded-xl px-3.5 py-3 text-xs text-white outline-none cursor-pointer"
+              >
+                {localRooms.map(r => (
+                  <option key={r.id} value={r.id}>
+                    Room {r.roomNumber} ({r.type || r.category}) {localMappings[r.id] ? '• (Connected)' : '• (Available)'}
+                  </option>
+                ))}
+                <option value="NEW">+ Create as a New Room</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-rose-400 uppercase tracking-wider block">
+                2. Paste Airbnb Export Calendar Link *
+              </label>
+              <input
+                required
+                type="text"
+                value={airbnbUrl}
+                onChange={e => setAirbnbUrl(e.target.value)}
+                placeholder="https://www.airbnb.com/calendar/ical/...ics"
+                className="w-full bg-[#101922] border border-white/[0.15] focus:border-rose-500 rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner placeholder:text-gray-600"
+              />
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={importing || !airbnbUrl.trim()}
-            className="w-full py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20"
+            className="w-full py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20 cursor-pointer"
           >
             {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
-            {importing ? 'Auto-Detecting & Syncing...' : 'Connect & Auto-Import Airbnb Listing'}
+            {importing ? 'Connecting & Syncing...' : 'Link This Room & Sync Bookings'}
           </button>
         </form>
 
         {/* Registered Mapped Rooms */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Connected Airbnb Rooms ({localRooms.filter(r => localMappings[r.id]).length})</h4>
+            <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider">
+              Hotel Rooms & 2-Way Sync ({localRooms.filter(r => localMappings[r.id]).length} of {localRooms.length} Connected)
+            </h4>
             {localRooms.some(r => localMappings[r.id]) && (
               <button
                 type="button"
                 disabled={syncing}
                 onClick={handleSync}
-                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5" />}
-                Sync Calendar Now
+                Sync All Rooms Now
               </button>
             )}
           </div>
 
-          <div className="max-h-[30vh] overflow-y-auto space-y-2 pr-1 custom-scrollbar border border-white/[0.05] rounded-xl p-3 bg-black/20">
+          <div className="max-h-[35vh] overflow-y-auto space-y-2 pr-1 custom-scrollbar border border-white/[0.05] rounded-xl p-3 bg-black/20">
             {loadingRooms ? (
               <div className="flex items-center justify-center py-6 gap-2 text-xs text-text-tertiary">
                 <Loader2 className="w-4 h-4 animate-spin text-rose-500" /> Loading connected rooms...
               </div>
             ) : localRooms.length === 0 ? (
-              <p className="text-center py-6 text-xs text-text-tertiary">No Airbnb listings imported yet. Paste your link above to auto-connect!</p>
+              <p className="text-center py-6 text-xs text-text-tertiary">No hotel rooms found. Add rooms in Room Management first.</p>
             ) : (
               localRooms.map(room => {
                 const isMapped = !!localMappings[room.id]
-                const exportUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/properties/${room.propertyId || 'default'}/rooms/${room.id}/ical` : ''
+                const exportUrl = typeof window !== 'undefined' 
+                  ? `${window.location.origin}/api/properties/${propertyId}/rooms/${room.id}/ical` 
+                  : ''
                 return (
                   <div key={room.id} className="p-3 bg-surface-light border border-white/[0.08] rounded-xl space-y-2">
                     <div className="flex items-center justify-between">
@@ -2607,21 +2895,41 @@ function AirbnbModal({
                         <span className="text-[10px] text-gray-400 ml-2">({room.type || room.category})</span>
                       </div>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isMapped ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-gray-500/15 text-gray-400'}`}>
-                        {isMapped ? 'Active Sync' : 'Not Connected'}
+                        {isMapped ? 'Active 2-Way Sync' : 'Not Connected'}
                       </span>
                     </div>
-                    {isMapped && (
-                      <div className="flex items-center justify-between bg-black/40 p-2 rounded-lg border border-white/5 text-[10px]">
-                        <span className="text-gray-400 truncate max-w-[240px]" title={exportUrl}>Zenbourg iCal Export: {exportUrl}</span>
+
+                    {isMapped ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between bg-black/40 p-2 rounded-lg border border-white/5 text-[10px]">
+                          <div className="truncate max-w-[280px]">
+                            <span className="text-gray-400 font-bold block">Zenbourg Export Link (Paste into Airbnb):</span>
+                            <span className="text-emerald-400/90 font-mono text-[9px] truncate">{exportUrl}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(exportUrl)
+                              toast.success(`Copied Room ${room.roomNumber} Export Link! Paste into Airbnb "Import Calendar".`)
+                            }}
+                            className="px-2.5 py-1.5 bg-[#4A9EFF]/20 hover:bg-[#4A9EFF]/30 text-[#4A9EFF] font-bold rounded-lg uppercase tracking-wider shrink-0 ml-2 cursor-pointer transition-colors"
+                          >
+                            Copy Link for Airbnb
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between bg-black/20 p-2 rounded-lg text-[10px]">
+                        <span className="text-gray-500">No Airbnb calendar connected yet</span>
                         <button
                           type="button"
                           onClick={() => {
-                            navigator.clipboard.writeText(exportUrl)
-                            toast.success('Zenbourg Export iCal Link copied! Paste this into Airbnb Import Calendar.')
+                            setSelectedRoomId(room.id)
+                            toast.info(`Selected Room ${room.roomNumber}. Paste your Airbnb link above and click Link Room!`)
                           }}
-                          className="px-2.5 py-1 bg-[#4A9EFF]/20 hover:bg-[#4A9EFF]/30 text-[#4A9EFF] font-bold rounded uppercase tracking-wider shrink-0 ml-2"
+                          className="text-rose-400 hover:text-rose-300 font-bold underline cursor-pointer"
                         >
-                          Copy Link for Airbnb
+                          Select this room
                         </button>
                       </div>
                     )}
@@ -2637,7 +2945,7 @@ function AirbnbModal({
             <button
               disabled={disconnecting}
               onClick={handleDisconnect}
-              className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider text-left border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50"
+              className="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider text-left border border-red-500/20 hover:border-red-500/30 px-4 py-2 rounded-xl bg-red-500/5 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
             >
               {disconnecting ? 'Disconnecting...' : 'Disconnect Airbnb Channel'}
             </button>
@@ -2645,7 +2953,7 @@ function AirbnbModal({
 
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+            className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
           >
             Close
           </button>
@@ -2677,6 +2985,7 @@ function OtaConnectionModal({
 
   // iCal import states (for Booking.com & Agoda)
   const [icalUrl, setIcalUrl] = useState('')
+  const [selectedRoomId, setSelectedRoomId] = useState('')
   const [importing, setImporting] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
@@ -2715,6 +3024,7 @@ function OtaConnectionModal({
           setLocalMappings(initial)
           if (d.data.rooms.length > 0) {
             setSimRoomId(d.data.rooms[0].id)
+            setSelectedRoomId(d.data.rooms[0].id)
           }
         }
       } catch {
@@ -2740,15 +3050,16 @@ function OtaConnectionModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: icalUrl.trim(),
+          roomId: selectedRoomId === 'NEW' ? undefined : selectedRoomId,
           otaChannel: otaChannel,
           propertyId
         })
       })
       const d = await res.json()
       if (d.success) {
-        const roomNum = d.data?.room?.roomNumber || 'New Room'
+        const roomNum = d.data?.room?.roomNumber || 'Room'
         const eventsCount = d.data?.detectedEventsCount || 0
-        toast.success(`${ota.name} connected! Room ${roomNum} created. ${eventsCount} calendar events detected.`, { id: toastId, duration: 5000 })
+        toast.success(`${ota.name} connected to Room ${roomNum}! ${eventsCount} calendar events detected.`, { id: toastId, duration: 5000 })
         onClose()
       } else {
         toast.error(d.error || `Failed to connect ${ota.name}`, { id: toastId })
@@ -2930,27 +3241,47 @@ function OtaConnectionModal({
 
           {/* iCal URL Input & Import */}
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-white uppercase tracking-wider block">
-                {ota.name} iCal Export URL *
-              </label>
-              <input
-                type="text"
-                value={icalUrl}
-                onChange={e => setIcalUrl(e.target.value)}
-                placeholder={icalHelp.placeholder}
-                className="w-full bg-[#0d1117] border border-white/[0.15] focus:border-primary rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block">
+                  1. Select Hotel Room *
+                </label>
+                <select
+                  value={selectedRoomId}
+                  onChange={e => setSelectedRoomId(e.target.value)}
+                  className="w-full bg-[#0d1117] border border-white/[0.15] focus:border-primary rounded-xl px-3.5 py-3 text-xs text-white outline-none cursor-pointer"
+                >
+                  {rooms.map(r => (
+                    <option key={r.id} value={r.id}>
+                      Room {r.roomNumber} ({r.type || r.category}) {localMappings[r.id] ? '• (Connected)' : '• (Available)'}
+                    </option>
+                  ))}
+                  <option value="NEW">+ Create as a New Room</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block">
+                  2. {ota.name} iCal Export URL *
+                </label>
+                <input
+                  type="text"
+                  value={icalUrl}
+                  onChange={e => setIcalUrl(e.target.value)}
+                  placeholder={icalHelp.placeholder}
+                  className="w-full bg-[#0d1117] border border-white/[0.15] focus:border-primary rounded-xl px-3.5 py-3 text-xs text-white outline-none transition-colors shadow-inner placeholder:text-gray-600"
+                />
+              </div>
             </div>
 
             <button
               type="button"
               disabled={importing || !icalUrl.trim()}
               onClick={handleIcalImport}
-              className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+              className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 cursor-pointer"
             >
               {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
-              {importing ? 'Auto-Detecting & Syncing...' : `Connect & Auto-Import ${ota.name} Listing`}
+              {importing ? 'Connecting & Syncing...' : `Link Room & Sync ${ota.name} Bookings`}
             </button>
           </div>
 

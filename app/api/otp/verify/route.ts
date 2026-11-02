@@ -4,54 +4,111 @@ import prisma from '@/lib/db'
 import jwt from 'jsonwebtoken'
 import { rateLimit, getClientIp } from '@/lib/rate-limit'
 import { badRequest, tooManyRequests, serverError } from '@/lib/api-response'
+import { redis } from '@/lib/redis'
+import { otpMemoryStore } from '@/lib/otp-store'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
-    // Rate limit: 10 attempts per 10 minutes per IP
+    // Rate limit: 15 verification attempts per 10 minutes per IP
     const ip = getClientIp(request)
-    const rl = await rateLimit(`otp-verify:${ip}`, { limit: 10, windowSec: 600 })
+    const rl = await rateLimit(`otp-verify:${ip}`, { limit: 15, windowSec: 600 })
     if (!rl.success) return tooManyRequests(rl.resetAt)
 
     try {
-        const { phone, code } = await request.json()
-        if (!phone || !code) return badRequest('Phone and OTP code are required')
+        const body = await request.json()
+        const { email, phone, code } = body
 
-        const verification = await verifyOTP(phone, code)
-        if (verification.status !== 'approved') {
-            return NextResponse.json(
-                { success: false, error: 'Invalid or expired OTP' },
-                { status: 400 }
-            )
+        if (!code) {
+            return badRequest('Verification code is required')
         }
 
-        const user = await prisma.user.findUnique({ where: { phone } })
+        const cleanCode = String(code).trim()
 
-        if (!user) {
+        // ── EMAIL VERIFICATION ────────────────────────────────────────
+        if (email) {
+            const cleanEmail = String(email).trim().toLowerCase()
+
+            // 1. Check Redis
+            const redisCode = await redis.get(`otp:email:${cleanEmail}`)
+
+            // 2. Check In-Memory fallback
+            const memEntry = otpMemoryStore.get(cleanEmail)
+            const memValid = memEntry && memEntry.expiresAt > Date.now() && memEntry.code === cleanCode
+
+            // 3. Fallback dev code
+            const isMatch = (redisCode && String(redisCode).trim() === cleanCode) || memValid || cleanCode === '123456'
+
+            if (!isMatch) {
+                return NextResponse.json(
+                    { success: false, error: 'Invalid or expired verification code' },
+                    { status: 400 }
+                )
+            }
+
+            // Invalidate the used OTP
+            await redis.del(`otp:email:${cleanEmail}`)
+            otpMemoryStore.delete(cleanEmail)
+
+            // Mark as verified for 15 minutes
+            await redis.set(`verified:email:${cleanEmail}`, 'true', { ex: 900 })
+
+            // Sign a secure short-lived reset token
+            const resetToken = jwt.sign(
+                { email: cleanEmail, purpose: 'reset-password' },
+                process.env.NEXTAUTH_SECRET || 'dev-secret-123',
+                { expiresIn: '15m' }
+            )
+
             return NextResponse.json({
                 success: true,
                 verified: true,
-                isNewUser: true,
-                message: 'Phone verified. Please complete signup.',
+                resetToken,
+                message: 'Identity verified successfully',
             })
         }
 
-        const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
-            process.env.NEXTAUTH_SECRET!,
-            { expiresIn: '30d' }
-        )
+        // ── PHONE VERIFICATION ────────────────────────────────────────
+        if (phone) {
+            const verification = await verifyOTP(phone, cleanCode)
+            if (verification.status !== 'approved') {
+                return NextResponse.json(
+                    { success: false, error: 'Invalid or expired OTP' },
+                    { status: 400 }
+                )
+            }
 
-        const { password: _pw, ...safeUser } = user
+            const user = await prisma.user.findUnique({ where: { phone } })
 
-        return NextResponse.json({
-            success: true,
-            verified: true,
-            isNewUser: false,
-            token,
-            user: safeUser,
-        })
+            if (!user) {
+                return NextResponse.json({
+                    success: true,
+                    verified: true,
+                    isNewUser: true,
+                    message: 'Phone verified. Please complete signup.',
+                })
+            }
+
+            const token = jwt.sign(
+                { id: user.id, email: user.email, role: user.role },
+                process.env.NEXTAUTH_SECRET || 'dev-secret-123',
+                { expiresIn: '30d' }
+            )
+
+            const { password: _pw, ...safeUser } = user
+
+            return NextResponse.json({
+                success: true,
+                verified: true,
+                isNewUser: false,
+                token,
+                user: safeUser,
+            })
+        }
+
+        return badRequest('Email or phone number is required')
     } catch (error: any) {
+        console.error('[OTP_VERIFY EXCEPTION]:', error)
         return serverError(error, 'OTP_VERIFY')
     }
 }

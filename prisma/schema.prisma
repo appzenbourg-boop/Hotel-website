@@ -81,6 +81,8 @@ model Guest {
   pinCode         String?
   dateOfBirth     DateTime?
   gstNumber       String?   // Guest / Corporate GSTIN (e.g. 27ABCDE1234F1ZH)
+  companyName     String?   // Corporate / Company Name
+  companyAddress  String?   // Corporate / Company Address
 
   checkInStatus      CheckInStatus @default(PENDING)
   checkInCompletedAt DateTime?
@@ -308,7 +310,9 @@ model Booking {
   discountPercent    Float?   // Discount %
   discountAmount     Float?   // Discount amount
   finalAmount        Float?   // totalAmount after all taxes & discounts
-  guestGstNumber     String?  // Guest GSTIN for B2B tax invoice
+  guestGstNumber      String?  // Guest GSTIN for B2B tax invoice
+  guestCompanyName    String?  // B2B Company / Entity Name
+  guestCompanyAddress String?  // B2B Company Registered Address
 
   // Meal plan
   mealPlan            String?  // EP, CP, MAP, AP

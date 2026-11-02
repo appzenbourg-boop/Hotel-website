@@ -18,7 +18,6 @@ import {
   Lock,
   ShoppingBag,
   Clock,
-  Sparkles,
   User,
   Users,
   CheckCircle2,
@@ -26,92 +25,11 @@ import {
   Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { buildContextUrl } from '@/lib/admin-context'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-// Default culinary items if property menu is empty
-const DEFAULT_MENU_ITEMS = [
-  {
-    id: 'def-1',
-    name: 'Truffle Parmesan Fries',
-    category: 'Starters',
-    price: 450,
-    description: 'Crispy skin-on potato fries tossed in black truffle oil, rosemary and aged parmesan.',
-    image: 'https://images.unsplash.com/photo-1576107232684-1279f3908594?w=500&q=80'
-  },
-  {
-    id: 'def-2',
-    name: 'Crispy Calamari Rings',
-    category: 'Starters',
-    price: 620,
-    description: 'Tender squid rings golden-fried with garlic herb crust, served with citrus aioli.',
-    image: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=500&q=80'
-  },
-  {
-    id: 'def-3',
-    name: 'Paneer Tikka Angara',
-    category: 'Starters',
-    price: 480,
-    description: 'Clay-oven charred cottage cheese cubes marinated in smoked hung curd and royal spices.',
-    image: 'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=500&q=80'
-  },
-  {
-    id: 'def-4',
-    name: 'Grilled Atlantic Salmon',
-    category: 'Mains',
-    price: 1250,
-    description: 'Pan-seared Norwegian salmon served with saffron velouté, asparagus and mashed potatoes.',
-    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=500&q=80'
-  },
-  {
-    id: 'def-5',
-    name: 'Wood-Fired Margherita',
-    category: 'Mains',
-    price: 680,
-    description: 'San Marzano tomato base, fresh buffalo mozzarella, virgin olive oil and organic basil.',
-    image: 'https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=500&q=80'
-  },
-  {
-    id: 'def-6',
-    name: 'Royal Dal Makhani & Naan',
-    category: 'Mains',
-    price: 550,
-    description: 'Slow-simmered black lentils in white butter and cream, accompanied by warm garlic naan.',
-    image: 'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500&q=80'
-  },
-  {
-    id: 'def-7',
-    name: 'Classic Tiramisu',
-    category: 'Desserts',
-    price: 420,
-    description: 'Savoiardi ladyfingers soaked in espresso and coffee liqueur, layered with mascarpone cream.',
-    image: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=500&q=80'
-  },
-  {
-    id: 'def-8',
-    name: 'Belgian Chocolate Lava',
-    category: 'Desserts',
-    price: 460,
-    description: 'Warm dark chocolate cake with a molten center, served with Madagascan vanilla bean gelato.',
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=500&q=80'
-  },
-  {
-    id: 'def-9',
-    name: 'Signature Cold Brew',
-    category: 'Drinks',
-    price: 280,
-    description: '18-hour slow steeped single-origin Arabica cold brew served over handcrafted ice crystal.',
-    image: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=500&q=80'
-  },
-  {
-    id: 'def-10',
-    name: 'Passion Fruit Mint Cooler',
-    category: 'Drinks',
-    price: 350,
-    description: 'Fresh passion fruit puree, hand-muddled spearmint, lime juice and sparkling soda.',
-    image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80'
-  }
-]
+
 
 export default function CreateOrderPage() {
   const router = useRouter()
@@ -119,8 +37,10 @@ export default function CreateOrderPage() {
   const urlTable = searchParams.get('table') || 'T-01'
 
   const { data: session } = useSession()
-  const { data: menuData, isLoading: isMenuLoading } = useSWR('/api/admin/content/menu', fetcher)
-  const { data: tablesData } = useSWR('/api/admin/pos/tables', fetcher)
+  const menuUrl = typeof window !== 'undefined' ? buildContextUrl('/api/admin/content/menu') : '/api/admin/content/menu'
+  const { data: menuData, isLoading: isMenuLoading } = useSWR(menuUrl, fetcher)
+  const tablesUrl = typeof window !== 'undefined' ? buildContextUrl('/api/admin/pos/tables') : '/api/admin/pos/tables'
+  const { data: tablesData } = useSWR(tablesUrl, fetcher)
   
   const [selectedTable, setSelectedTable] = useState(urlTable)
   const [serverName, setServerName] = useState(session?.user?.name || 'Chef Julian')
@@ -129,6 +49,7 @@ export default function CreateOrderPage() {
   const [cart, setCart] = useState<{ [key: string]: any }>({})
   const [guestCount, setGuestCount] = useState(2)
   const [orderType, setOrderType] = useState('Dine In')
+  const [takeawayCustomer, setTakeawayCustomer] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [mobileCartOpen, setMobileCartOpen] = useState(false)
 
@@ -156,26 +77,70 @@ export default function CreateOrderPage() {
     }
   }, [session])
 
-  // Normalize menu items with high quality fallback
+  // Normalize menu items exclusively from database - strictly zero dummy data
   const menuItems = useMemo(() => {
-    if (menuData?.menuItems && menuData.menuItems.length > 0) {
+    if (menuData?.menuItems && Array.isArray(menuData.menuItems)) {
       return menuData.menuItems.map((item: any) => ({
         id: item.id,
         name: item.name,
-        category: item.category === 'Beverages' ? 'Drinks' : item.category || 'Mains',
-        price: item.price,
+        category: item.category || 'Mains',
+        price: typeof item.price === 'number' ? item.price : parseFloat(item.price) || 0,
         description: item.description || '',
-        image: item.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80'
+        image: item.images?.[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80',
+        isVeg: item.isVeg,
+        isAvailable: item.isAvailable !== false
       }))
     }
-    return DEFAULT_MENU_ITEMS
+    return []
   }, [menuData])
+
+  // Dynamically extract unique categories present in the active menu
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    menuItems.forEach((item: any) => {
+      if (item.category && item.category.trim()) {
+        set.add(item.category.trim())
+      }
+    })
+    const dynamicCats = Array.from(set)
+    const knownOrder = ['Breakfast', 'Starters', 'Appetizers', 'Main Course', 'Mains', 'Desserts', 'Beverages', 'Drinks']
+    dynamicCats.sort((a, b) => {
+      const idxA = knownOrder.findIndex(k => k.toLowerCase() === a.toLowerCase())
+      const idxB = knownOrder.findIndex(k => k.toLowerCase() === b.toLowerCase())
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB
+      if (idxA !== -1) return -1
+      if (idxB !== -1) return 1
+      return a.localeCompare(b)
+    })
+    return ['All Items', ...dynamicCats]
+  }, [menuItems])
+
+  useEffect(() => {
+    if (selectedCategory !== 'All Items' && !categories.includes(selectedCategory)) {
+      setSelectedCategory('All Items')
+    }
+  }, [categories, selectedCategory])
 
   const filteredMenuItems = useMemo(() => {
     return menuItems.filter((item: any) => {
-      const matchesCategory = selectedCategory === 'All Items' || item.category.toLowerCase() === selectedCategory.toLowerCase()
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            item.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const itemCat = (item.category || '').toLowerCase().trim()
+      const selCat = selectedCategory.toLowerCase().trim()
+      
+      let matchesCategory = selCat === 'all items' || itemCat === selCat
+      if (!matchesCategory) {
+        if ((selCat === 'mains' || selCat === 'main course') && (itemCat === 'mains' || itemCat === 'main course')) {
+          matchesCategory = true
+        } else if ((selCat === 'starters' || selCat === 'appetizers') && (itemCat === 'starters' || itemCat === 'appetizers')) {
+          matchesCategory = true
+        } else if ((selCat === 'drinks' || selCat === 'beverages') && (itemCat === 'drinks' || itemCat === 'beverages')) {
+          matchesCategory = true
+        }
+      }
+
+      const matchesSearch = !searchQuery.trim() || 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
+
       return matchesCategory && matchesSearch
     })
   }, [menuItems, selectedCategory, searchQuery])
@@ -315,19 +280,39 @@ export default function CreateOrderPage() {
     setIsSending(true)
 
     try {
+      const isTakeaway = orderType === 'Takeaway'
+      const assignedTable = isTakeaway ? 'Takeaway' : selectedTable
+      const guestName = isTakeaway
+        ? (takeawayCustomer.trim() ? `Takeaway: ${takeawayCustomer.trim()}` : 'Takeaway Customer')
+        : `Guest of ${assignedTable}`
+
       const payload = {
-        table: selectedTable,
-        guestName: `Guest of ${selectedTable}`,
+        table: assignedTable,
+        guestName,
         status: 'PREPARING',
-        tags: [orderType.toUpperCase()],
-        items: cartArray.map(item => ({
-          course: item.category === 'Starters' ? 'COURSE 1: STARTERS' : item.category === 'Desserts' ? 'COURSE 3: DESSERTS' : 'COURSE 2: MAINS',
-          name: item.name,
-          description: item.notes ? `${item.description} (Note: ${item.notes})` : item.description,
-          quantity: item.quantity,
-          price: item.price,
-          image: item.image
-        })),
+        tags: [isTakeaway ? 'TAKEAWAY' : 'DINE_IN'],
+        items: cartArray.map(item => {
+          let course = 'COURSE 2: MAINS'
+          const c = (item.category || '').toLowerCase()
+          if (c.includes('starter') || c.includes('appetiz') || c.includes('soup') || c.includes('salad')) {
+            course = 'COURSE 1: STARTERS'
+          } else if (c.includes('dessert') || c.includes('sweet') || c.includes('ice cream')) {
+            course = 'COURSE 3: DESSERTS'
+          } else if (c.includes('drink') || c.includes('beverag') || c.includes('bar') || c.includes('cocktail') || c.includes('mocktail')) {
+            course = 'BEVERAGES & DRINKS'
+          } else if (c.includes('breakfast')) {
+            course = 'BREAKFAST'
+          }
+
+          return {
+            course,
+            name: item.name,
+            description: item.notes ? `${item.description} (Note: ${item.notes})` : item.description,
+            quantity: item.quantity,
+            price: item.price,
+            image: item.image
+          }
+        }),
         subtotal,
         discount: currentDiscountAmount,
         discountReason: discountInfo.reason,
@@ -342,14 +327,16 @@ export default function CreateOrderPage() {
       })
 
       if (res.ok) {
-        // Mark table as OCCUPIED in tables list if table exists
-        const matchedTable = tablesData?.find?.((t: any) => t.tableId === selectedTable)
-        if (matchedTable?.id && matchedTable.status !== 'OCCUPIED') {
-          await fetch('/api/admin/pos/tables', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: matchedTable.id, status: 'OCCUPIED' })
-          }).catch(() => {})
+        // Mark table as OCCUPIED in tables list if table exists AND order is not takeaway
+        if (!isTakeaway) {
+          const matchedTable = tablesData?.find?.((t: any) => t.tableId === selectedTable)
+          if (matchedTable?.id && matchedTable.status !== 'OCCUPIED') {
+            await fetch('/api/admin/pos/tables', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: matchedTable.id, status: 'OCCUPIED' })
+            }).catch(() => {})
+          }
         }
         router.push('/admin/pos')
       } else {
@@ -400,52 +387,107 @@ export default function CreateOrderPage() {
         </div>
       </div>
 
-      {/* Table & Guest Meta Controls */}
-      <div className="p-4 md:p-5 border-b border-border grid grid-cols-2 gap-3 bg-surface-light/60">
-        {/* Table Selector */}
-        <div className="bg-surface border border-border p-3 rounded-2xl flex flex-col justify-between shadow-xs">
-          <span className="text-[10px] text-text-tertiary font-black tracking-widest uppercase mb-1">Assigned Table</span>
-          <select
-            value={selectedTable}
-            onChange={e => setSelectedTable(e.target.value)}
-            className="w-full bg-transparent font-black text-sm text-text-primary outline-none border-none cursor-pointer"
-          >
-            {Array.isArray(tablesData) && tablesData.length > 0 ? (
-              tablesData.map((t: any) => (
-                <option key={t.id} value={t.tableId} className="bg-surface text-text-primary">
-                  {t.tableId} {t.status === 'READY' ? '• Available' : `• ${t.status}`}
-                </option>
-              ))
-            ) : (
-              ['T-01', 'T-02', 'T-03', 'T-04', 'T-05', 'T-06', 'T-07', 'T-08', 'Bar-01', 'Rooftop-01'].map(tbl => (
-                <option key={tbl} value={tbl} className="bg-surface text-text-primary">
-                  Table {tbl}
-                </option>
-              ))
+      {/* Order Mode Toggle: Dine In vs Takeaway */}
+      <div className="p-3 bg-surface-light border-b border-border">
+        <div className="flex p-1 bg-surface rounded-xl border border-border">
+          <button
+            type="button"
+            onClick={() => {
+              setOrderType('Dine In')
+              if (selectedTable === 'Takeaway') setSelectedTable(urlTable || 'T-01')
+            }}
+            className={cn(
+              "flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+              orderType === 'Dine In'
+                ? "bg-[#2563EB] text-white shadow-sm"
+                : "text-text-secondary hover:text-text-primary"
             )}
-          </select>
-        </div>
-
-        {/* Guest Count */}
-        <div className="bg-surface border border-border p-3 rounded-2xl flex flex-col justify-between shadow-xs">
-          <span className="text-[10px] text-text-tertiary font-black tracking-widest uppercase mb-1">Guest Pax</span>
-          <div className="flex items-center justify-between">
-            <button 
-              onClick={() => setGuestCount(g => Math.max(1, g - 1))} 
-              className="w-7 h-7 rounded-lg bg-surface-light hover:bg-surface border border-border flex items-center justify-center text-text-secondary hover:text-text-primary"
-            >
-              <Minus className="w-3 h-3" />
-            </button>
-            <span className="text-base font-black text-text-primary">{guestCount}</span>
-            <button 
-              onClick={() => setGuestCount(g => g + 1)} 
-              className="w-7 h-7 rounded-lg bg-surface-light hover:bg-surface border border-border flex items-center justify-center text-text-secondary hover:text-text-primary"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          </div>
+          >
+            <UtensilsCrossed className="w-3.5 h-3.5" /> Dine In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setOrderType('Takeaway')
+              setSelectedTable('Takeaway')
+            }}
+            className={cn(
+              "flex-1 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5",
+              orderType === 'Takeaway'
+                ? "bg-amber-600 text-white shadow-sm"
+                : "text-text-secondary hover:text-text-primary"
+            )}
+          >
+            <ShoppingBag className="w-3.5 h-3.5" /> Takeaway
+          </button>
         </div>
       </div>
+
+      {/* Table & Guest Meta Controls: ONLY SHOWN FOR DINE IN */}
+      {orderType === 'Dine In' ? (
+        <div className="p-4 md:p-5 border-b border-border grid grid-cols-2 gap-3 bg-surface-light/60 animate-in fade-in duration-150">
+          {/* Table Selector */}
+          <div className="bg-surface border border-border p-3 rounded-2xl flex flex-col justify-between shadow-xs">
+            <span className="text-[10px] text-text-tertiary font-black tracking-widest uppercase mb-1">Assigned Table</span>
+            <select
+              value={selectedTable}
+              onChange={e => setSelectedTable(e.target.value)}
+              className="w-full bg-transparent font-black text-sm text-text-primary outline-none border-none cursor-pointer"
+            >
+              {Array.isArray(tablesData) && tablesData.length > 0 ? (
+                tablesData.map((t: any) => (
+                  <option key={t.id} value={t.tableId} className="bg-surface text-text-primary">
+                    {t.tableId} {t.status === 'READY' ? '• Available' : `• ${t.status}`}
+                  </option>
+                ))
+              ) : (
+                ['T-01', 'T-02', 'T-03', 'T-04', 'T-05', 'T-06', 'T-07', 'T-08', 'Bar-01', 'Rooftop-01'].map(tbl => (
+                  <option key={tbl} value={tbl} className="bg-surface text-text-primary">
+                    Table {tbl}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          {/* Guest Count */}
+          <div className="bg-surface border border-border p-3 rounded-2xl flex flex-col justify-between shadow-xs">
+            <span className="text-[10px] text-text-tertiary font-black tracking-widest uppercase mb-1">Guest Pax</span>
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => setGuestCount(g => Math.max(1, g - 1))} 
+                className="w-7 h-7 rounded-lg bg-surface-light hover:bg-surface border border-border flex items-center justify-center text-text-secondary hover:text-text-primary"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="text-base font-black text-text-primary">{guestCount}</span>
+              <button 
+                onClick={() => setGuestCount(g => g + 1)} 
+                className="w-7 h-7 rounded-lg bg-surface-light hover:bg-surface border border-border flex items-center justify-center text-text-secondary hover:text-text-primary"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Takeaway Mode — Table selection is intentionally not rendered */
+        <div className="p-4 border-b border-border bg-amber-500/10 space-y-2 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+              <ShoppingBag className="w-3.5 h-3.5 text-amber-400" /> Takeaway / Parcel Order
+            </span>
+            <span className="text-[10px] text-text-tertiary font-bold">Direct Counter Delivery</span>
+          </div>
+          <input
+            type="text"
+            placeholder="Customer Name / Token / Mobile (Optional)"
+            value={takeawayCustomer}
+            onChange={e => setTakeawayCustomer(e.target.value)}
+            className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-amber-500 transition-colors"
+          />
+        </div>
+      )}
 
       {/* Cart Item List */}
       <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-3 custom-scrollbar">
@@ -587,7 +629,9 @@ export default function CreateOrderPage() {
                 <UtensilsCrossed className="w-6 h-6 text-primary" />
                 POS Food & Drink Terminal
               </h1>
-              <p className="text-xs text-text-tertiary mt-0.5">Table {selectedTable} • Tap dishes to add to live order ticket</p>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                {orderType === 'Takeaway' ? 'Takeaway / Parcel Order' : `Table ${selectedTable}`} • Tap dishes to add to live order ticket
+              </p>
             </div>
 
             {/* Mobile Cart Trigger on Top */}
@@ -608,7 +652,7 @@ export default function CreateOrderPage() {
 
           {/* Categories Selector */}
           <div className="flex gap-2 overflow-x-auto pb-3 custom-scrollbar">
-            {['All Items', 'Starters', 'Mains', 'Desserts', 'Drinks'].map(cat => (
+            {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -639,11 +683,41 @@ export default function CreateOrderPage() {
 
         {/* Menu Grid */}
         <div className="flex-1 p-4 md:p-8 pt-2 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 content-start pb-28 lg:pb-8">
-          {filteredMenuItems.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-20 text-text-tertiary">
+          {isMenuLoading ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-24 text-text-tertiary">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mb-3" />
+              <p className="text-sm font-bold text-text-primary">Loading Menu Dishes...</p>
+              <p className="text-xs text-text-tertiary mt-1">Fetching live dishes from database</p>
+            </div>
+          ) : menuItems.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-20 px-6 text-center border-2 border-dashed border-border rounded-3xl bg-surface/40">
+              <div className="w-16 h-16 rounded-3xl bg-surface-light border border-border flex items-center justify-center mb-4 text-primary">
+                <UtensilsCrossed className="w-8 h-8 opacity-60" />
+              </div>
+              <h3 className="text-base font-bold text-text-primary mb-1">No Menu Items Found</h3>
+              <p className="text-xs text-text-secondary max-w-md mb-5">
+                No culinary dishes have been added to this hotel&apos;s menu yet. Add items in Menu Management to start taking live POS orders.
+              </p>
+              <button
+                onClick={() => router.push('/admin/content/menu')}
+                className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold transition-all shadow-md shadow-primary/20 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Go to Menu Management
+              </button>
+            </div>
+          ) : filteredMenuItems.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-text-tertiary text-center">
               <UtensilsCrossed className="w-12 h-12 mb-3 opacity-20" />
-              <p className="text-sm font-bold text-text-primary">No dishes match your query</p>
-              <p className="text-xs text-text-tertiary mt-1">Try selecting a different category or clearing search</p>
+              <p className="text-sm font-bold text-text-primary">No dishes match your filter</p>
+              <p className="text-xs text-text-tertiary mt-1 mb-4">
+                {searchQuery ? `No results for "${searchQuery}" in ${selectedCategory}` : `No items in category "${selectedCategory}"`}
+              </p>
+              <button
+                onClick={() => { setSelectedCategory('All Items'); setSearchQuery('') }}
+                className="px-4 py-2 rounded-xl bg-surface border border-border text-xs font-bold text-text-primary hover:bg-surface-light transition-all"
+              >
+                Clear Filters
+              </button>
             </div>
           ) : (
             filteredMenuItems.map((item: any) => {
@@ -675,6 +749,14 @@ export default function CreateOrderPage() {
                     <span className="absolute bottom-2.5 left-2.5 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-black text-white uppercase tracking-wider">
                       {item.category}
                     </span>
+                    {item.isVeg !== undefined && (
+                      <span className={cn(
+                        "absolute top-2.5 left-2.5 w-5 h-5 rounded-md bg-black/70 backdrop-blur-md border flex items-center justify-center p-0.5",
+                        item.isVeg ? "border-emerald-500" : "border-rose-500"
+                      )}>
+                        <span className={cn("w-2 h-2 rounded-full", item.isVeg ? "bg-emerald-500" : "bg-rose-500")} />
+                      </span>
+                    )}
                   </div>
 
                   {/* Details */}
@@ -683,7 +765,9 @@ export default function CreateOrderPage() {
                       <h3 className="font-bold text-text-primary text-sm md:text-base leading-tight">{item.name}</h3>
                       <div className="text-sm md:text-base font-black text-primary whitespace-nowrap">₹{item.price.toFixed(2)}</div>
                     </div>
-                    <p className="text-[11px] text-text-tertiary line-clamp-2 mt-auto">{item.description}</p>
+                    {item.description && (
+                      <p className="text-[11px] text-text-tertiary line-clamp-2 mt-auto">{item.description}</p>
+                    )}
                     
                     <button 
                       onClick={(e) => {

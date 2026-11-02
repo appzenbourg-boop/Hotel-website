@@ -28,7 +28,10 @@ export interface TaxInvoicePDFOptions {
     guestPhone?: string
     guestEmail?: string
     guestGstNumber?: string
+    companyName?: string
+    companyAddress?: string
     guestAddress?: string
+    itcEligibility?: string
 
     // Stay Details
     checkIn: Date | string
@@ -118,11 +121,12 @@ export function generateTaxInvoicePDF(data: TaxInvoicePDFOptions) {
     // Guest Info Fields
     let yPos = startY + 6
     const guestFields: [string, string, boolean][] = [
-        ['Name', data.guestName || '—', false],
-        ['Mobile', data.guestPhone || '—', false],
-        ['Email', data.guestEmail || '—', false],
+        ['Guest Name', data.guestName || '—', false],
+        ...(data.companyName ? [['Company', data.companyName, true] as [string, string, boolean]] : []),
         ['Guest GSTIN', data.guestGstNumber || 'B2C / Retail', Boolean(data.guestGstNumber)],
-        ['Address', data.guestAddress || '—', false]
+        ['Mobile', data.guestPhone || '—', false],
+        ['Address', data.companyAddress || data.guestAddress || '—', false],
+        ...(data.itcEligibility ? [['ITC Status', data.itcEligibility, false] as [string, string, boolean]] : [])
     ]
 
     guestFields.forEach(([label, val, isGst]) => {
@@ -150,7 +154,8 @@ export function generateTaxInvoicePDF(data: TaxInvoicePDFOptions) {
 
     const stayFields: [string, string][] = [
         ['Check-in', checkInStr],
-        ['Check-out', checkOutStr],
+        ['Check-out (Std)', '11:00 AM'],
+        ['Departure', checkOutStr],
         ['Nights', `${data.nights}`],
         ['Pax', `${data.pax}`],
         ['Room Type', data.roomType || 'Standard'],

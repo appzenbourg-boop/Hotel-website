@@ -6,7 +6,7 @@ import {
     Plus, ChevronDown, ChevronRight, Building2, UserCircle, Users,
     Mail, MapPin, CheckCircle2, Zap, Star, Crown, Lock, Clock,
     Phone, Edit2, Save, X, Loader2, DollarSign, ShieldAlert, Send, RefreshCw,
-    Sliders, Search, Filter, Layers, Check, Key, ShieldCheck, Sparkles, ExternalLink
+    Sliders, Search, Filter, Layers, Check, Key, ShieldCheck, ExternalLink
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
@@ -95,24 +95,36 @@ export default function PropertiesPage() {
         upiId: ''
     })
 
-    const { data: properties = [], mutate, isValidating: loading } = useSWR<PropertyData[]>(
+    const { data: rawProperties, mutate, isValidating: loading } = useSWR<any>(
         '/api/admin/properties/hierarchy',
         fetcher,
         { revalidateOnFocus: true, dedupingInterval: 5000 }
     )
 
+    // Ensure properties is always a valid array
+    const properties: PropertyData[] = useMemo(() => {
+        if (Array.isArray(rawProperties)) return rawProperties
+        if (Array.isArray(rawProperties?.data)) return rawProperties.data
+        if (Array.isArray(rawProperties?.properties)) return rawProperties.properties
+        return []
+    }, [rawProperties])
+
     // Collect distinct chain names
     const chainsList = useMemo(() => {
         const chains = new Set<string>()
-        properties.forEach(p => {
-            if (p.chainName?.trim()) chains.add(p.chainName.trim())
-        })
+        if (Array.isArray(properties)) {
+            properties.forEach(p => {
+                if (p?.chainName?.trim()) chains.add(p.chainName.trim())
+            })
+        }
         return Array.from(chains)
     }, [properties])
 
     // Filter properties based on search and chain
     const filteredProperties = useMemo(() => {
+        if (!Array.isArray(properties)) return []
         return properties.filter(p => {
+            if (!p) return false
             if (selectedChain !== 'ALL') {
                 if (selectedChain === 'INDEPENDENT') {
                     if (p.chainName) return false
@@ -122,11 +134,13 @@ export default function PropertiesPage() {
             }
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase()
-                const matchName = p.name.toLowerCase().includes(q)
-                const matchCity = p.address.toLowerCase().includes(q)
-                const matchEmail = p.email.toLowerCase().includes(q)
-                const matchChain = p.chainName?.toLowerCase().includes(q)
-                const matchOwner = p.owners.some(o => o.name.toLowerCase().includes(q) || o.email.toLowerCase().includes(q))
+                const matchName = (p.name || '').toLowerCase().includes(q)
+                const matchCity = (p.address || '').toLowerCase().includes(q)
+                const matchEmail = (p.email || '').toLowerCase().includes(q)
+                const matchChain = (p.chainName || '').toLowerCase().includes(q)
+                const matchOwner = Array.isArray(p.owners)
+                    ? p.owners.some(o => (o.name || '').toLowerCase().includes(q) || (o.email || '').toLowerCase().includes(q))
+                    : false
                 if (!matchName && !matchCity && !matchEmail && !matchChain && !matchOwner) return false
             }
             return true
@@ -135,10 +149,11 @@ export default function PropertiesPage() {
 
     // Total stats
     const stats = useMemo(() => {
+        if (!Array.isArray(properties)) return { totalHotels: 0, totalChains: 0, totalRooms: 0, activeSub: 0 }
         const totalHotels = properties.length
         const totalChains = chainsList.length
-        const totalRooms = properties.reduce((acc, p) => acc + (p._count?.rooms || 0), 0)
-        const activeSub = properties.filter(p => p.plan !== 'BASE').length
+        const totalRooms = properties.reduce((acc, p) => acc + (p?._count?.rooms || 0), 0)
+        const activeSub = properties.filter(p => p?.plan !== 'BASE').length
         return { totalHotels, totalChains, totalRooms, activeSub }
     }, [properties, chainsList])
 
@@ -540,13 +555,13 @@ export default function PropertiesPage() {
                                             <UserCircle className="w-3.5 h-3.5 text-[#4A9EFF]" /> Hotel Owners & Administrators
                                         </h4>
 
-                                        {property.owners.length === 0 ? (
+                                        {(!property.owners || property.owners.length === 0) ? (
                                             <div className="p-4 rounded-xl border border-dashed border-border text-center text-xs text-text-tertiary">
                                                 No owner account assigned yet.
                                             </div>
                                         ) : (
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                {property.owners.map(owner => (
+                                                {(property.owners || []).map(owner => (
                                                     <div key={owner.id} className="p-3 bg-surface rounded-xl border border-border flex items-center justify-between gap-3">
                                                         <div className="flex items-center gap-3 min-w-0">
                                                             <Avatar name={owner.name} size="sm" />
@@ -681,7 +696,7 @@ export default function PropertiesPage() {
                         <div className="p-4 rounded-2xl bg-black/30 border border-border/80 space-y-3">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-border/40 pb-2.5">
                                 <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider flex items-center gap-1.5">
-                                    <Sparkles className="w-3.5 h-3.5 text-amber-400" /> 1-Click Feature Presets
+                                    <Sliders className="w-3.5 h-3.5 text-[#4A9EFF]" /> 1-Click Feature Presets
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <button

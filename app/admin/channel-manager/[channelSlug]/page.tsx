@@ -182,7 +182,7 @@ export default function ChannelSubPage() {
                                                     disabled={isSaving[mapping.room.id]}
                                                     className={cn(
                                                         "w-10 h-5 rounded-full relative transition-colors disabled:opacity-50",
-                                                        mapping.isActive ? "bg-green-500" : "bg-black/30 border border-border"
+                                                        mapping.isActive ? "bg-green-500" : "bg-slate-300 dark:bg-black/30 border border-border"
                                                     )}
                                                 >
                                                     <div className={cn(
@@ -192,7 +192,7 @@ export default function ChannelSubPage() {
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="bg-black/20 p-2.5 rounded-lg border border-border/50 flex items-center justify-between">
+                                        <div className="bg-surface-light p-2.5 rounded-lg border border-border flex items-center justify-between">
                                             <span className="text-[11px] text-text-secondary">OTA Listing ID:</span>
                                             <span className="text-xs font-mono font-bold text-[#4A9EFF]">{mapping.otaRoomId}</span>
                                         </div>
@@ -225,7 +225,7 @@ export default function ChannelSubPage() {
                                                 <h3 className="font-bold text-text-primary text-base leading-none mb-1">{room.roomNumber}</h3>
                                                 <p className="text-[11px] text-text-tertiary font-medium uppercase tracking-wider">{room.type}</p>
                                             </div>
-                                            <span className="text-[10px] font-bold text-text-tertiary bg-black/20 border border-border px-2 py-1 rounded">
+                                            <span className="text-[10px] font-bold text-text-tertiary bg-surface-light border border-border px-2 py-1 rounded">
                                                 UNMAPPED
                                             </span>
                                         </div>

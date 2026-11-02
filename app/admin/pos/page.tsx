@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   Utensils, LayoutGrid, BellRing, UtensilsCrossed, ReceiptText, LogOut,
   Edit3, CheckCircle2, Printer, CreditCard, AlertTriangle, User, Plus,
-  Search, ArrowLeft, Clock, ChefHat, Sparkles, X, Trash2
+  Search, ArrowLeft, Clock, ChefHat, X, Trash2, ShoppingBag
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -279,7 +279,13 @@ export default function POSDashboard() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="text-base font-black text-text-primary flex items-center gap-2">
-                        {order.table}
+                        {order.table?.toLowerCase().includes('takeaway') || order.tags?.includes('TAKEAWAY') ? (
+                          <span className="flex items-center gap-1.5 text-amber-400">
+                            <ShoppingBag className="w-4 h-4" /> Takeaway
+                          </span>
+                        ) : (
+                          order.table
+                        )}
                         <span className="text-[10px] font-bold text-text-tertiary">#{order.orderNumber}</span>
                       </div>
                       <div className="text-xs text-text-secondary font-medium mt-0.5">
@@ -333,7 +339,15 @@ export default function POSDashboard() {
                 </button>
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <h1 className="text-2xl font-black text-text-primary tracking-tight">{selectedOrder.table}</h1>
+                    <h1 className="text-2xl font-black text-text-primary tracking-tight flex items-center gap-2">
+                      {selectedOrder.table?.toLowerCase().includes('takeaway') || selectedOrder.tags?.includes('TAKEAWAY') ? (
+                        <span className="flex items-center gap-1.5 text-amber-400">
+                          <ShoppingBag className="w-6 h-6" /> Takeaway Order
+                        </span>
+                      ) : (
+                        selectedOrder.table
+                      )}
+                    </h1>
                     <span className="text-xs font-bold text-text-tertiary px-2 py-0.5 rounded bg-white/5 border border-border">
                       #{selectedOrder.orderNumber}
                     </span>

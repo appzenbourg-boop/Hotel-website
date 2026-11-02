@@ -459,7 +459,7 @@ export default function InventoryDashboard() {
           </div>
         </div>
 
-        {/* AI smart reorder assistance */}
+        {/* Automated restock recommendations */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 text-white rounded-3xl p-8 flex flex-col justify-between shadow-xl shadow-slate-900/15 relative overflow-hidden group border border-slate-800">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Package className="w-32 h-32 transform rotate-12 text-white" />
@@ -468,7 +468,7 @@ export default function InventoryDashboard() {
             <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center mb-6 border border-white/15">
               <Package className="w-5 h-5 text-blue-400" />
             </div>
-            <h2 className="text-xl font-black text-white mb-3">Smart Reorder Assistance</h2>
+            <h2 className="text-xl font-black text-white mb-3">Automated Restock Recommendations</h2>
             <p className="text-sm text-slate-300 leading-relaxed mb-8">
               {lowItems.length > 0 ? (
                 <>

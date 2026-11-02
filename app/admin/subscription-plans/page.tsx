@@ -7,9 +7,8 @@ import {
     Users, BedDouble, Percent, IndianRupee,
     ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import Button from '@/components/ui/Button'
-import Input from '@/components/ui/Input'
 
 // ─── Plan metadata ────────────────────────────────────────────────────────────
 const PLAN_META: Record<string, {
@@ -22,7 +21,8 @@ const PLAN_META: Record<string, {
     BASE:       { icon: Building2, color: 'text-text-secondary',  bg: 'bg-slate-500/10',  border: 'border-slate-500/20' },
     STARTER:    { icon: Zap,       color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',  badge: 'Popular' },
     STANDARD:   { icon: Star,      color: 'text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-500/20', badge: 'Best Value' },
-    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' } }
+    ENTERPRISE: { icon: Crown,     color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' }
+}
 
 const ALL_FEATURES = [
     { id: 'BASIC_OPS', label: 'Core PMS & Reservations' },
@@ -58,6 +58,57 @@ interface Plan {
     features: string[]
 }
 
+const DEFAULT_PLANS: Plan[] = [
+    {
+        plan: 'BASE',
+        displayName: 'Base',
+        tagline: 'For independent properties getting started',
+        description: 'Core PMS, reservations, front desk terminal. Digital check-in and check-out. Up to 30 rooms.',
+        originalPrice: 15000,
+        discountedPrice: 9999,
+        discountPercent: 33,
+        maxRooms: 30,
+        maxStaff: 15,
+        features: ['BASIC_OPS', 'DIGITAL_CHECKIN', 'FRONT_DESK', 'Core PMS & Reservations', 'Front Desk Terminal', 'Digital Check-in & Check-out', 'Up to 30 rooms'],
+    },
+    {
+        plan: 'STARTER',
+        displayName: 'Starter',
+        tagline: 'Ideal for Growth-stage hotels and boutique resorts',
+        description: 'Everything in Base, plus: Staff app, housekeeping and maintenance dispatch. Marketing tools and loyalty module. Up to 75 rooms.',
+        originalPrice: 30000,
+        discountedPrice: 14999,
+        discountPercent: 46,
+        maxRooms: 75,
+        maxStaff: 40,
+        features: ['BASIC_OPS', 'DIGITAL_CHECKIN', 'FRONT_DESK', 'STAFF_MANAGEMENT', 'HOUSEKEEPING_DISPATCH', 'MARKETING', 'LOYALTY', 'Staff app, housekeeping & maintenance dispatch', 'Marketing tools & loyalty module', 'Up to 75 rooms'],
+    },
+    {
+        plan: 'STANDARD',
+        displayName: 'Standard',
+        tagline: 'Full-service hotels seeking maximum performance',
+        description: 'Everything in Starter, plus: IoT room controls and advanced analytics. F&B and spa integration, upsell engine. Multi-language Guest Portal. Up to 150 rooms.',
+        originalPrice: 55000,
+        discountedPrice: 29999,
+        discountPercent: 45,
+        maxRooms: 150,
+        maxStaff: 100,
+        features: ['BASIC_OPS', 'DIGITAL_CHECKIN', 'FRONT_DESK', 'STAFF_MANAGEMENT', 'HOUSEKEEPING_DISPATCH', 'MARKETING', 'LOYALTY', 'IOT_CONTROLS', 'ANALYTICS', 'FB_SPA', 'UPSELL_ENGINE', 'MULTILANG_PORTAL', 'IoT room controls & advanced analytics', 'F&B and spa integration, upsell engine', 'Multi-language Guest Portal', 'Up to 150 rooms'],
+    },
+    {
+        plan: 'ENTERPRISE',
+        displayName: 'Enterprise',
+        tagline: 'Multi-property groups and luxury brands',
+        description: 'Everything in Standard, plus: Multi-property super admin and custom integrations. Dedicated success manager, white-label Guest Portal. SLA-backed uptime, unlimited rooms.',
+        originalPrice: 0,
+        discountedPrice: 0,
+        discountPercent: 0,
+        maxRooms: 0,
+        maxStaff: 0,
+        features: ['BASIC_OPS', 'DIGITAL_CHECKIN', 'FRONT_DESK', 'STAFF_MANAGEMENT', 'HOUSEKEEPING_DISPATCH', 'MARKETING', 'LOYALTY', 'IOT_CONTROLS', 'ANALYTICS', 'FB_SPA', 'UPSELL_ENGINE', 'MULTILANG_PORTAL', 'MULTI_PROPERTY', 'CUSTOM_INTEGRATIONS', 'WHITE_LABEL', 'DEDICATED_SUPPORT', 'SLA_UPTIME', 'Multi-property super admin & custom integrations', 'Dedicated success manager', 'White-label Guest Portal', 'SLA-backed uptime, unlimited rooms', 'Custom pricing'],
+    },
+]
+
 export default function SubscriptionPlansPage() {
     const [plans, setPlans] = useState<Plan[]>([])
     const [loading, setLoading] = useState(true)
@@ -69,9 +120,15 @@ export default function SubscriptionPlansPage() {
         try {
             const res = await fetch('/api/admin/subscription-plans')
             const json = await res.json()
-            if (json.success) setPlans(json.data)
+            if (json?.success && Array.isArray(json?.data) && json.data.length > 0) {
+                setPlans(json.data)
+            } else if (Array.isArray(json) && json.length > 0) {
+                setPlans(json)
+            } else {
+                setPlans(DEFAULT_PLANS)
+            }
         } catch {
-            toast.error('Failed to load plans')
+            setPlans(DEFAULT_PLANS)
         } finally {
             setLoading(false)
         }
@@ -86,7 +143,8 @@ export default function SubscriptionPlansPage() {
             const res = await fetch('/api/admin/subscription-plans', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingPlan) })
+                body: JSON.stringify(editingPlan)
+            })
             const json = await res.json()
             if (json.success) {
                 toast.success(`${editingPlan.displayName} plan updated`)
@@ -104,12 +162,14 @@ export default function SubscriptionPlansPage() {
 
     const toggleFeature = (featureId: string) => {
         if (!editingPlan) return
-        const has = editingPlan.features.includes(featureId)
+        const feats = Array.isArray(editingPlan.features) ? editingPlan.features : []
+        const has = feats.includes(featureId)
         setEditingPlan({
             ...editingPlan,
             features: has
-                ? editingPlan.features.filter(f => f !== featureId)
-                : [...editingPlan.features, featureId] })
+                ? feats.filter(f => f !== featureId)
+                : [...feats, featureId]
+        })
     }
 
     if (loading) {
@@ -119,6 +179,8 @@ export default function SubscriptionPlansPage() {
             </div>
         )
     }
+
+    const displayPlans = Array.isArray(plans) && plans.length > 0 ? plans : DEFAULT_PLANS
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
@@ -133,12 +195,16 @@ export default function SubscriptionPlansPage() {
 
             {/* Plans Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                {plans.map((plan) => {
+                {displayPlans.map((plan) => {
                     const meta = PLAN_META[plan.plan] ?? PLAN_META.BASE
                     const Icon = meta.icon
                     const isEditing = editingPlan?.plan === plan.plan
                     const current = isEditing ? editingPlan! : plan
-                    const savings = current.originalPrice - current.discountedPrice
+                    const origPrice = current.originalPrice ?? 0
+                    const discPrice = current.discountedPrice ?? 0
+                    const discPct = current.discountPercent ?? 0
+                    const savings = Math.max(0, origPrice - discPrice)
+                    const features = Array.isArray(current.features) ? current.features : []
 
                     return (
                         <div
@@ -182,7 +248,7 @@ export default function SubscriptionPlansPage() {
                                                         </label>
                                                         <input
                                                             type="number"
-                                                            value={current.originalPrice}
+                                                            value={origPrice}
                                                             onChange={e => setEditingPlan({ ...current, originalPrice: parseFloat(e.target.value) || 0 })}
                                                             className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:ring-1 focus:ring-primary outline-none"
                                                         />
@@ -193,11 +259,11 @@ export default function SubscriptionPlansPage() {
                                                         </label>
                                                         <input
                                                             type="number"
-                                                            value={current.discountedPrice}
+                                                            value={discPrice}
                                                             onChange={e => {
                                                                 const dp = parseFloat(e.target.value) || 0
-                                                                const pct = current.originalPrice > 0
-                                                                    ? Math.round(((current.originalPrice - dp) / current.originalPrice) * 100)
+                                                                const pct = origPrice > 0
+                                                                    ? Math.round(((origPrice - dp) / origPrice) * 100)
                                                                     : 0
                                                                 setEditingPlan({ ...current, discountedPrice: dp, discountPercent: pct })
                                                             }}
@@ -212,10 +278,10 @@ export default function SubscriptionPlansPage() {
                                                             type="number"
                                                             min={0}
                                                             max={100}
-                                                            value={current.discountPercent}
+                                                            value={discPct}
                                                             onChange={e => {
                                                                 const pct = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0))
-                                                                const dp = Math.round(current.originalPrice * (1 - pct / 100))
+                                                                const dp = Math.round(origPrice * (1 - pct / 100))
                                                                 setEditingPlan({ ...current, discountPercent: pct, discountedPrice: dp })
                                                             }}
                                                             className="w-full bg-surface-light border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:ring-1 focus:ring-primary outline-none"
@@ -226,17 +292,17 @@ export default function SubscriptionPlansPage() {
                                                 <div>
                                                     <div className="flex items-baseline gap-2">
                                                         <span className="text-2xl font-bold text-text-primary">
-                                                            ₹{current.discountedPrice.toLocaleString('en-IN')}
+                                                            ₹{discPrice.toLocaleString('en-IN')}
                                                         </span>
                                                         <span className="text-xs text-text-tertiary">/month</span>
                                                     </div>
-                                                    {current.originalPrice > current.discountedPrice && (
+                                                    {origPrice > discPrice && (
                                                         <div className="flex items-center gap-2 mt-1">
                                                             <span className="text-sm text-text-tertiary line-through">
-                                                                ₹{current.originalPrice.toLocaleString('en-IN')}
+                                                                ₹{origPrice.toLocaleString('en-IN')}
                                                             </span>
                                                             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
-                                                                {current.discountPercent}% OFF
+                                                                {discPct}% OFF
                                                             </span>
                                                         </div>
                                                     )}
@@ -262,14 +328,14 @@ export default function SubscriptionPlansPage() {
                                             <input
                                                 type="number"
                                                 min={0}
-                                                value={current.maxRooms}
+                                                value={current.maxRooms ?? 0}
                                                 onChange={e => setEditingPlan({ ...current, maxRooms: parseInt(e.target.value) || 0 })}
                                                 className="w-full bg-transparent text-text-primary text-sm font-bold outline-none"
                                                 placeholder="0 = unlimited"
                                             />
                                         ) : (
                                             <span className="text-sm font-bold text-text-primary">
-                                                {current.maxRooms === 0 ? 'Unlimited' : `Up to ${current.maxRooms}`}
+                                                {(current.maxRooms ?? 0) === 0 ? 'Unlimited' : `Up to ${current.maxRooms}`}
                                             </span>
                                         )}
                                     </div>
@@ -282,14 +348,14 @@ export default function SubscriptionPlansPage() {
                                             <input
                                                 type="number"
                                                 min={0}
-                                                value={current.maxStaff}
+                                                value={current.maxStaff ?? 0}
                                                 onChange={e => setEditingPlan({ ...current, maxStaff: parseInt(e.target.value) || 0 })}
                                                 className="w-full bg-transparent text-text-primary text-sm font-bold outline-none"
                                                 placeholder="0 = unlimited"
                                             />
                                         ) : (
                                             <span className="text-sm font-bold text-text-primary">
-                                                {current.maxStaff === 0 ? 'Unlimited' : `Up to ${current.maxStaff}`}
+                                                {(current.maxStaff ?? 0) === 0 ? 'Unlimited' : `Up to ${current.maxStaff}`}
                                             </span>
                                         )}
                                     </div>
@@ -300,7 +366,7 @@ export default function SubscriptionPlansPage() {
                             <div className="p-6 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider">
-                                        Features ({current.features.length})
+                                        Features ({features.length})
                                     </span>
                                     <button
                                         onClick={() => setExpandedFeatures(expandedFeatures === plan.plan ? null : plan.plan)}
@@ -320,12 +386,12 @@ export default function SubscriptionPlansPage() {
                                                     onClick={() => toggleFeature(f.id)}
                                                     className={cn(
                                                         'w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0',
-                                                        current.features.includes(f.id)
+                                                        features.includes(f.id)
                                                             ? 'bg-primary border-primary'
                                                             : 'border-border group-hover:border-primary/50'
                                                     )}
                                                 >
-                                                    {current.features.includes(f.id) && (
+                                                    {features.includes(f.id) && (
                                                         <CheckCircle2 className="w-3 h-3 text-text-primary" />
                                                     )}
                                                 </div>
@@ -337,10 +403,10 @@ export default function SubscriptionPlansPage() {
                                     </div>
                                 ) : (
                                     <div className="space-y-1.5">
-                                        {(expandedFeatures === plan.plan ? current.features : current.features.slice(0, 4)).map(fId => {
-                                            const feat = ALL_FEATURES.find(f => f.id === fId)
+                                        {(expandedFeatures === plan.plan ? features : features.slice(0, 4)).map((fId, idx) => {
+                                            const feat = ALL_FEATURES.find(f => f.id === fId || f.label === fId)
                                             return (
-                                                <div key={fId} className="flex items-center gap-2">
+                                                <div key={idx} className="flex items-center gap-2">
                                                     <CheckCircle2 className={cn('w-3.5 h-3.5 shrink-0', meta.color)} />
                                                     <span className="text-[11px] text-text-secondary">
                                                         {feat?.label ?? fId}
@@ -348,12 +414,12 @@ export default function SubscriptionPlansPage() {
                                                 </div>
                                             )
                                         })}
-                                        {current.features.length > 4 && expandedFeatures !== plan.plan && (
+                                        {features.length > 4 && expandedFeatures !== plan.plan && (
                                             <button
                                                 onClick={() => setExpandedFeatures(plan.plan)}
                                                 className="text-[10px] text-primary hover:text-primary/80 font-bold mt-1"
                                             >
-                                                +{current.features.length - 4} more features
+                                                +{features.length - 4} more features
                                             </button>
                                         )}
                                     </div>

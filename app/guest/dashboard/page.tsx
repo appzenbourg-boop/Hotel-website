@@ -1,5 +1,5 @@
 'use client'
-import { Utensils, LogOut, Bell, Wifi, Phone, ConciergeBell, ClipboardList, Loader2, Sparkles, Droplets, ArrowUpRight, CalendarPlus, ChevronRight } from 'lucide-react'
+import { Utensils, LogOut, Bell, Wifi, Phone, ConciergeBell, ClipboardList, Loader2, Crown, Zap, Droplets, ArrowUpRight, CalendarPlus, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { format } from 'date-fns'
@@ -87,7 +87,7 @@ export default function GuestDashboardPage() {
                                             onClick={() => setShowUpgradeModal(true)}
                                             className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/10 hover:from-amber-500/30 hover:to-amber-600/20 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-amber-500/10 group/btn"
                                         >
-                                            <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover/btn:rotate-12 transition-transform" />
+                                            <Crown className="w-3.5 h-3.5 text-amber-400 group-hover/btn:scale-110 transition-transform" />
                                             <span>Upgrade Room</span>
                                         </button>
                                     </div>
@@ -179,7 +179,7 @@ export default function GuestDashboardPage() {
                 {booking && (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
                         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-[#4A9EFF]" /> Quick Services
+                            <Zap className="w-5 h-5 text-[#4A9EFF]" /> Quick Services
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
                             <Link href={`/guest/services?category=DINING&roomId=${booking.roomId}`} className="p-5 bg-white/[0.02] border border-white/[0.08] backdrop-blur-md rounded-3xl hover:bg-white/[0.06] hover:border-[#4A9EFF]/40 hover:-translate-y-1 transition-all group flex flex-col items-center justify-center gap-3 shadow-xl">

@@ -55,19 +55,87 @@ const getStatusStyle = (status: string) => {
     }
 }
 
-const getElapsedTime = (timeStr: string) => {
-    const start = new Date(timeStr)
-    const now = new Date()
-    const mins = differenceInMinutes(now, start)
-    const secs = differenceInSeconds(now, start) % 60
-    return `${mins}m ${secs}s`
-}
+const getServiceTimingInfo = (req: any, now: Date) => {
+    const status = req.status
+    const slaLimit = req.slaLimit || 30
+    const start = req.createdAt ? new Date(req.createdAt) : (req.requestTime ? new Date(req.requestTime) : new Date())
 
-const getSLAPrecent = (timeStr: string, limit: number) => {
-    const start = new Date(timeStr)
-    const now = new Date()
-    const mins = differenceInMinutes(now, start)
-    return Math.min(100, (mins / (limit || 30)) * 100)
+    // 1. COMPLETED: Timer MUST be stopped at completedAt / updatedAt
+    if (status === 'COMPLETED') {
+        const endTime = req.completedAt 
+            ? new Date(req.completedAt) 
+            : (req.updatedAt ? new Date(req.updatedAt) : start)
+        const diffMins = Math.max(0, differenceInMinutes(endTime, start))
+        const diffSecs = Math.max(0, differenceInSeconds(endTime, start) % 60)
+
+        let durationText = ''
+        if (diffMins === 0 && diffSecs < 60) {
+            durationText = `${diffSecs}s`
+        } else if (diffMins < 60) {
+            durationText = diffSecs > 0 ? `${diffMins}m ${diffSecs}s` : `${diffMins}m`
+        } else {
+            const hrs = Math.floor(diffMins / 60)
+            const remMins = diffMins % 60
+            durationText = `${hrs}h ${remMins}m`
+        }
+
+        return {
+            text: `Done in ${durationText}`,
+            icon: CheckCircle2,
+            style: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        }
+    }
+
+    // 2. CANCELLED / REJECTED: Timer is stopped at updatedAt
+    if (status === 'CANCELLED' || status === 'REJECTED') {
+        const endTime = req.updatedAt ? new Date(req.updatedAt) : start
+        const diffMins = Math.max(0, differenceInMinutes(endTime, start))
+        let durationText = `${diffMins}m`
+        if (diffMins >= 60) {
+            durationText = `${Math.floor(diffMins / 60)}h ${diffMins % 60}m`
+        }
+
+        return {
+            text: `Cancelled (${durationText})`,
+            icon: AlertCircle,
+            style: 'bg-gray-500/10 text-text-tertiary border-gray-500/20'
+        }
+    }
+
+    // 3. Active tasks (PENDING, ACCEPTED, IN_PROGRESS, OVERDUE): Live SLA calculation
+    const diffMins = Math.max(0, differenceInMinutes(now, start))
+    const diffSecs = Math.max(0, differenceInSeconds(now, start) % 60)
+    const isOverdue = status === 'OVERDUE' || diffMins >= slaLimit
+    const isBreaching = !isOverdue && (diffMins / slaLimit) > 0.75
+
+    let activeText = `${diffMins}m ${diffSecs}s`
+    if (diffMins >= 60) {
+        const hrs = Math.floor(diffMins / 60)
+        const remMins = diffMins % 60
+        activeText = `${hrs}h ${remMins}m ${diffSecs}s`
+    }
+
+    if (isOverdue) {
+        return {
+            text: `${activeText} · Overdue`,
+            icon: AlertTriangle,
+            style: 'bg-rose-500/15 text-rose-400 border-rose-500/30 animate-pulse'
+        }
+    }
+
+    if (isBreaching) {
+        return {
+            text: activeText,
+            icon: Clock,
+            style: 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+        }
+    }
+
+    return {
+        text: activeText,
+        icon: Clock,
+        style: 'bg-surface/10 text-[#1db954] border-[#1db954]/20'
+    }
 }
 
 const SkeletonRow = () => (
@@ -190,11 +258,27 @@ export default function ServicesPage() {
         fetcher
     );
 
-    const stats = useMemo(() => ({
-        pending: requests.filter((r: any) => r.status === 'PENDING').length,
-        active: requests.filter((r: any) => ['ACCEPTED', 'IN_PROGRESS'].includes(r.status)).length,
-        overdue: requests.filter((r: any) => r.status === 'OVERDUE').length
-    }), [requests]);
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const stats = useMemo(() => {
+        const currentTime = new Date();
+        return {
+            pending: requests.filter((r: any) => r.status === 'PENDING').length,
+            active: requests.filter((r: any) => ['ACCEPTED', 'IN_PROGRESS'].includes(r.status)).length,
+            overdue: requests.filter((r: any) => {
+                if (['COMPLETED', 'CANCELLED', 'REJECTED'].includes(r.status)) return false;
+                if (r.status === 'OVERDUE') return true;
+                const start = r.createdAt ? new Date(r.createdAt) : (r.requestTime ? new Date(r.requestTime) : null);
+                if (!start) return false;
+                return differenceInMinutes(currentTime, start) >= (r.slaLimit || 30);
+            }).length
+        };
+    }, [requests]);
 
     const handleNewRequest = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -370,7 +454,18 @@ export default function ServicesPage() {
                                         </td>
                                         <td className="px-6 py-5"><span className="text-lg font-bold text-text-primary">{req.room}</span></td>
                                         <td className="px-6 py-5 text-[14px] font-bold text-text-secondary">{req.guest}</td>
-                                        <td className="px-6 py-5"><div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold border", req.status === 'OVERDUE' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' : getSLAPrecent(req.requestTime, req.slaLimit) > 75 ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-surface/10 text-[#1db954] border-[#1db954]/20')}><Clock className="w-3.5 h-3.5" />{getElapsedTime(req.requestTime)}</div></td>
+                                        <td className="px-6 py-5">
+                                            {(() => {
+                                                const timing = getServiceTimingInfo(req, now);
+                                                const TimingIcon = timing.icon;
+                                                return (
+                                                    <div className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[12px] font-bold border transition-colors", timing.style)}>
+                                                        <TimingIcon className="w-3.5 h-3.5 shrink-0" />
+                                                        <span>{timing.text}</span>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
                                         <td className="px-6 py-5">{req.assignedTo ? (<div className="flex items-center gap-3"><div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center overflow-hidden border border-blue-500/30">{req.assignedTo.photo ? <img src={req.assignedTo.photo} alt="" className="w-full h-full object-cover" /> : <User className="w-4 h-4 text-blue-400" />}</div><span className="text-[13px] font-bold text-text-secondary">{req.assignedTo.name || 'Staff Member'}</span></div>) : (<div className="flex items-center gap-3 text-gray-600"><div className="w-8 h-8 rounded-full bg-surface-light border border-border flex items-center justify-center"><Users className="w-4 h-4" /></div><span className="text-[13px] font-medium">Unassigned</span></div>)}</td>
                                         <td className="px-4 py-5 text-right pr-10"><span className={cn('px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] rounded-full border', getStatusStyle(req.status))}>{req.status === 'ACCEPTED' ? 'OPEN' : req.status.replace('_', ' ')}</span></td>
                                     </tr>

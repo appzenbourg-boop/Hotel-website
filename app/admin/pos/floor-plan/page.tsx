@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { useRouter } from 'next/navigation'
 import {
   Utensils, LayoutGrid, BellRing, UtensilsCrossed, ReceiptText, LogOut,
-  Plus, Calendar, Shield, Users, Activity, Sparkles, User, Trash2, X, ChevronRight, PhoneCall, ArrowRightLeft
+  Plus, Calendar, Shield, Users, Activity, User, Trash2, X, ChevronRight, PhoneCall, ArrowRightLeft
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buildContextUrl, getAdminContext } from '@/lib/admin-context'

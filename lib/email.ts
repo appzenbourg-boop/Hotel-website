@@ -52,7 +52,8 @@ async function sendWithNodemailer(payload: EmailPayload): Promise<boolean> {
     try {
         let nodemailer: any
         try {
-            nodemailer = await (new Function('m', 'return import(m)'))('nodemailer')
+            const imported = await (new Function('m', 'return import(m)'))('nodemailer')
+            nodemailer = imported?.default || imported
         } catch {
             console.warn('[EMAIL] nodemailer package not installed. Run: npm install nodemailer')
             return logMockEmail(payload)
@@ -60,20 +61,21 @@ async function sendWithNodemailer(payload: EmailPayload): Promise<boolean> {
 
         const host = process.env.SMTP_HOST || 'smtp.gmail.com'
         const port = parseInt(process.env.SMTP_PORT || '465')
-        const user = process.env.SMTP_USER
-        const pass = process.env.SMTP_PASS
+        const user = (process.env.SMTP_USER || 'otivatech@gmail.com').trim()
+        const rawPass = (process.env.SMTP_PASS || 'puwt jcqy clym ulqe').replace(/['"]+/g, '').trim()
+        const pass = rawPass.includes(' ') && rawPass.length === 19 ? rawPass.replace(/\s+/g, '') : rawPass
 
         const transporter = nodemailer.createTransport({
             host,
             port,
-            secure: port === 465,
+            secure: port === 465 || process.env.SMTP_SECURE === 'true',
             auth: {
                 user,
                 pass,
             },
         })
 
-        const fromAddress = payload.from || process.env.EMAIL_FROM || `Zenbourg Hotel <${user}>`
+        const fromAddress = payload.from || process.env.EMAIL_FROM || `"Zenbourg Hotels" <${user}>`
         const recipient = Array.isArray(payload.to) ? payload.to.join(',') : payload.to
 
         await transporter.sendMail({
@@ -142,19 +144,39 @@ export async function sendBookingConfirmation(opts: {
 
 export async function sendPasswordResetOTP(opts: {
     to: string
-    name: string
-    otp: string
+    name?: string
+    code?: string
+    otp?: string
 }) {
+    const verificationCode = opts.code || opts.otp || '000000'
     return sendEmail({
         to: opts.to,
-        subject: 'Password Reset OTP – Zenbourg',
+        subject: `${verificationCode} is your Zenbourg Security Verification Code`,
         html: `
-      <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
-        <h2 style="color:#4A9EFF">Password Reset</h2>
-        <p>Hi ${opts.name},</p>
-        <p>Your OTP for password reset is:</p>
-        <div style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#4A9EFF;margin:24px 0">${opts.otp}</div>
-        <p style="color:#666;font-size:13px">This OTP expires in 10 minutes.</p>
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:540px;margin:auto;padding:32px;background:#0B0F19;color:#F8FAFC;border-radius:24px;border:1px solid #1E293B;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5)">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="display:inline-block;padding:8px 16px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:9999px;margin-bottom:12px">
+            <span style="font-size:12px;font-weight:800;letter-spacing:3px;color:#60A5FA;text-transform:uppercase">ZENBOURG HOTELS</span>
+          </div>
+          <h2 style="color:#ffffff;margin:8px 0 0 0;font-size:24px;font-weight:800;letter-spacing:-0.5px">Password Reset Request</h2>
+          <p style="color:#94A3B8;font-size:14px;margin-top:6px">Identity Verification Protocol</p>
+        </div>
+
+        <div style="background:#131C2E;border-radius:18px;padding:24px;margin-bottom:24px;border:1px solid #1E293B">
+          <p style="font-size:15px;color:#E2E8F0;margin-top:0">Hello ${opts.name || 'Valued User'},</p>
+          <p style="color:#94A3B8;line-height:1.6;font-size:14px;margin-bottom:0">We received a request to recover your account credentials. Please use the following 6-digit one-time security code to verify your identity:</p>
+        </div>
+
+        <div style="text-align:center;margin:32px 0">
+          <div style="display:inline-block;background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9));border:2px solid #3B82F6;border-radius:16px;padding:18px 36px;box-shadow:0 10px 25px -5px rgba(59,130,246,0.3)">
+            <span style="font-family:'Courier New',Courier,monospace;font-size:36px;font-weight:900;letter-spacing:10px;color:#93C5FD;display:block;margin-left:10px">${verificationCode}</span>
+          </div>
+          <p style="color:#64748B;font-size:12px;margin-top:12px">⏱️ This code will expire in <strong>10 minutes</strong>.</p>
+        </div>
+
+        <div style="border-top:1px solid #1E293B;padding-top:20px;text-align:center">
+          <p style="color:#64748B;font-size:12px;line-height:1.5;margin:0">If you did not request this code, someone may have entered your email by mistake. Your account remains secure and no changes have been made.</p>
+        </div>
       </div>`,
     })
 }
@@ -199,21 +221,37 @@ export async function sendMarketingBlast(opts: {
     to: string
     guestName: string
     hotelName: string
-    promoCode: string
+    promoCode?: string
+    subject?: string
     message?: string
 }) {
     return sendEmail({
         to: opts.to,
-        subject: `Exclusive Offer from ${opts.hotelName}`,
+        subject: opts.subject || `Exclusive Offer from ${opts.hotelName}`,
         html: `
-      <div style="font-family:sans-serif;max-width:600px;margin:auto;padding:24px">
-        <h2 style="color:#4A9EFF">A Special Offer Just for You</h2>
-        <p>Dear ${opts.guestName},</p>
-        <p>${opts.message || `Use code <strong>${opts.promoCode}</strong> for 20% off your next stay at ${opts.hotelName}.`}</p>
-        <div style="background:#f0f7ff;border-radius:8px;padding:16px;margin:16px 0;text-align:center">
-          <span style="font-size:24px;font-weight:bold;letter-spacing:4px;color:#4A9EFF">${opts.promoCode}</span>
+      <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:auto;padding:32px;background:#0B1120;color:#F8FAFC;border-radius:20px;border:1px solid #1E293B">
+        <div style="text-align:center;margin-bottom:24px">
+          <h1 style="color:#4A9EFF;margin:0;font-size:26px;font-weight:800;letter-spacing:-0.5px">${opts.hotelName}</h1>
+          <p style="color:#94A3B8;font-size:12px;text-transform:uppercase;letter-spacing:2px;margin-top:6px">Guest Privilege &amp; Exclusive Offer</p>
         </div>
-        <p style="color:#666;font-size:13px">Offer valid for 30 days. Terms and conditions apply.</p>
+        
+        <div style="background:#131D31;border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid #1E293B">
+          <p style="font-size:16px;color:#F1F5F9;margin-top:0;font-weight:600">Dear ${opts.guestName},</p>
+          <div style="color:#CBD5E1;line-height:1.7;font-size:14px;white-space:pre-line">
+            ${opts.message || `We are delighted to extend a special privilege on your upcoming reservation at ${opts.hotelName}. Use promotional code below during check-in or online booking.`}
+          </div>
+          
+          ${opts.promoCode ? `
+          <div style="background:linear-gradient(135deg,rgba(59,130,246,0.15),rgba(99,102,241,0.15));border:1.5px dashed #3B82F6;border-radius:14px;padding:18px;margin:24px 0;text-align:center">
+            <span style="font-size:11px;font-weight:bold;color:#93C5FD;text-transform:uppercase;letter-spacing:1.5px;display:block;margin-bottom:6px">Your Promo Code</span>
+            <span style="font-size:28px;font-weight:900;letter-spacing:6px;color:#60A5FA;font-family:monospace">${opts.promoCode}</span>
+          </div>
+          ` : ''}
+        </div>
+
+        <div style="text-align:center;padding-top:12px;border-top:1px solid #1E293B">
+          <p style="color:#64748B;font-size:11px;margin:0">Sent with warm regards from <strong>${opts.hotelName}</strong>.</p>
+        </div>
       </div>`,
     })
 }
@@ -354,4 +392,6 @@ export async function sendTrialExpiredEmail(opts: {
       </div>`,
     })
 }
+
+
 

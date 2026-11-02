@@ -501,7 +501,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-[9px] font-black text-text-secondary uppercase tracking-widest">Occupied</p>
-                <p className="text-sm font-extrabold text-purple-400">{occupancySummary?.occupiedCount ?? 0}</p>
+                <p className="text-sm font-extrabold text-red-400">{occupancySummary?.occupiedCount ?? 0}</p>
               </div>
               <div>
                 <p className="text-[9px] font-black text-text-secondary uppercase tracking-widest">Available</p>
@@ -517,17 +517,25 @@ export default function AdminDashboard() {
                   onClick={() => router.push('/admin/occupancy')}
                   className={cn(
                     "p-2 rounded-xl border text-left cursor-pointer transition-all active:scale-95",
-                    room.isOccupied ? "bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50" :
-                    room.isMaintenance ? "bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50" :
-                    "bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50"
+                    room.isOccupied ? "bg-red-500/10 border-red-500/30 hover:border-red-500/50" :
+                    room.isOutOfOrder ? "bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50" :
+                    room.isService ? "bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50" :
+                    "bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50",
+                    room.isCheckoutTomorrow && "ring-2 ring-amber-400 animate-pulse shadow-sm"
                   )}
                 >
                   <div className="flex items-center justify-between mb-0.5">
                     <span className="text-[11px] font-extrabold text-text-primary">R-{room.roomNumber}</span>
-                    <div className={cn("w-1.5 h-1.5 rounded-full", room.isOccupied ? "bg-purple-400" : room.isMaintenance ? "bg-amber-400" : "bg-emerald-400")} />
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      room.isCheckoutTomorrow ? "bg-amber-400 animate-ping" :
+                      room.isOccupied ? "bg-red-400" :
+                      room.isOutOfOrder ? "bg-purple-400" :
+                      room.isService ? "bg-amber-400" : "bg-emerald-400"
+                    )} />
                   </div>
                   <p className="text-[9px] font-bold truncate text-text-secondary">
-                    {room.isOccupied ? (room.currentBooking?.guestName ?? 'Occupied') : room.isMaintenance ? 'Service' : 'Available'}
+                    {room.isCheckoutTomorrow ? '⚡ Kal Out' : room.isOccupied ? (room.currentBooking?.guestName ?? 'Occupied') : room.isOutOfOrder ? 'Out of Order' : room.isService ? 'Cleaning' : 'Available'}
                   </p>
                 </div>
               )) : (

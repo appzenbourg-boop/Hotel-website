@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
         if (!session) return unauthorized()
 
         const body = await req.json()
-        const { name, email, phone, idType, idNumber, address, dateOfBirth, gstNumber, city, state, country, pinCode } = body
+        const { name, email, phone, idType, idNumber, address, dateOfBirth, gstNumber, companyName, companyAddress, city, state, country, pinCode } = body
 
         if (!name || !phone) return badRequest('Name and phone are required')
 
@@ -172,6 +172,8 @@ export async function POST(req: NextRequest) {
         }
 
         const cleanGst = gstNumber ? gstNumber.trim().toUpperCase() : null
+        const cleanCompanyName = companyName ? String(companyName).trim() : null
+        const cleanCompanyAddress = companyAddress ? String(companyAddress).trim() : null
 
         const guest = await (prisma as any).guest.upsert({
             where: { phone },
@@ -186,6 +188,8 @@ export async function POST(req: NextRequest) {
                 country: country ?? undefined,
                 pinCode: pinCode ?? undefined,
                 gstNumber: cleanGst ?? undefined,
+                companyName: cleanCompanyName ?? undefined,
+                companyAddress: cleanCompanyAddress ?? undefined,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
                 ...(propertyId ? { createdByPropertyId: propertyId } : {}),
             },
@@ -201,6 +205,8 @@ export async function POST(req: NextRequest) {
                 country: country ?? null,
                 pinCode: pinCode ?? null,
                 gstNumber: cleanGst,
+                companyName: cleanCompanyName,
+                companyAddress: cleanCompanyAddress,
                 dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
                 checkInStatus: 'PENDING',
                 createdByPropertyId: propertyId ?? null,

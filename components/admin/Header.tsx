@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { 
   Bell, Search, LogOut, User, Settings, Camera, Sun, Moon,
   Globe, PartyPopper, ShieldCheck, FileSpreadsheet, Layers,
-  ShoppingBag, Users, Percent, Activity, Building2, Sparkles,
+  ShoppingBag, Users, Percent, Activity, Building2,
   UtensilsCrossed, CalendarDays, BedDouble, CreditCard, BarChart3,
   CornerDownLeft, TrendingUp, CheckCircle2, FileText, ArrowRight, Flame
 } from 'lucide-react'
@@ -156,7 +156,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       category: 'Rooms & HK',
       categoryColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
       keywords: ['housekeeping', 'services', 'cleaning tasks', 'repairs', 'maintenance', 'dispatch', 'room cleaning'],
-      icon: Sparkles
+      icon: Layers
     },
     {
       label: 'Hotel Amenities Showcase',
@@ -165,7 +165,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       category: 'Rooms & HK',
       categoryColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
       keywords: ['amenities', 'facilities', 'pool', 'gym', 'spa', 'wifi', 'content amenities'],
-      icon: Sparkles
+      icon: Building2
     },
     {
       label: 'Hotel Policies & Rules',

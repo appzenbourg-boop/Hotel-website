@@ -30,12 +30,16 @@ export interface InvoiceModalProps {
 
 export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
   const [hotelGstNumber, setHotelGstNumber] = useState<string>('')
+  const [hotelGstLegalName, setHotelGstLegalName] = useState<string>('')
+  const [hotelGstAddress, setHotelGstAddress] = useState<string>('')
 
   useEffect(() => {
     fetch('/api/admin/settings/financial')
       .then(res => res.json())
       .then(j => {
         if (j.data?.gstNumber) setHotelGstNumber(j.data.gstNumber)
+        if (j.data?.gstTradeName || j.data?.gstLegalName) setHotelGstLegalName(j.data.gstTradeName || j.data.gstLegalName)
+        if (j.data?.gstAddress) setHotelGstAddress(j.data.gstAddress)
       })
       .catch(() => {})
   }, [])
@@ -58,13 +62,20 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
   const ltPct      = booking.luxuryTaxPercent ?? 0
   const discPct    = booking.discountPercent  ?? 0
   const invoiceNo  = `INV-${booking.id?.slice(-6).toUpperCase() ?? '000000'}`
-  const hotelName  = booking.property?.name ?? 'Hotel'
+  const hotelName  = hotelGstLegalName || booking.property?.name || 'Hotel'
+  const hotelAddress = hotelGstAddress || booking.property?.address || 'Hotel Address, City, 123456'
 
   const guestName  = booking.guest?.name || guest?.name || 'Guest'
   const guestPhone = booking.guest?.phone || guest?.phone || '—'
   const guestEmail = booking.guest?.email || guest?.email || '—'
   const guestGst   = booking.guestGstNumber || booking.guest?.gstNumber || guest?.gstNumber || ''
-  const guestAddress = booking.guest?.address || guest?.address || '—'
+  const companyName = booking.guestCompanyName || booking.guest?.companyName || guest?.companyName || ''
+  const companyAddress = booking.guestCompanyAddress || booking.guest?.companyAddress || guest?.companyAddress || ''
+  const guestAddress = companyAddress || booking.guest?.address || guest?.address || '—'
+
+  const perNightRate = nights > 0 ? (base / nights) : base
+  const isItcEligible = perNightRate > 7500
+  const itcText = isItcEligible ? 'Full ITC Eligible (Tariff > ₹7,500/nt)' : 'No ITC Eligibility (Tariff ≤ ₹7,500/nt)'
 
   const roomNo     = booking.room?.roomNumber ?? booking.roomNumber ?? '—'
   const roomType   = booking.room?.type ?? booking.roomType ?? ''
@@ -104,7 +115,17 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
         })
       }
 
-      if (extraCharges > 0) {
+      if (Array.isArray(booking.extraAddons) && booking.extraAddons.length > 0) {
+        booking.extraAddons.forEach((addon: any) => {
+          items.push({
+            date: format(new Date(booking.checkOut || booking.checkIn), 'dd-MMM-yyyy'),
+            roomNo: String(roomNo),
+            description: addon.name || 'Extra Service / Add-on',
+            hsnCode: '996331',
+            amount: (addon.price || 0) * (addon.qty || 1),
+          })
+        })
+      } else if (extraCharges > 0) {
         items.push({
           date: format(new Date(booking.checkIn), 'dd-MMM-yyyy'),
           roomNo: String(roomNo),
@@ -159,7 +180,7 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
         billDate: new Date(),
         isB2B: Boolean(guestGst),
         hotelName,
-        hotelAddress: booking.property?.address || 'Hotel Address, City, 123456',
+        hotelAddress,
         hotelPhone: booking.property?.phone || '9876543210',
         hotelEmail: booking.property?.email || 'hotel@example.com',
         hotelGstNumber: hotelGstNumber || undefined,
@@ -167,7 +188,10 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
         guestPhone: guestPhone !== '—' ? guestPhone : undefined,
         guestEmail: guestEmail !== '—' ? guestEmail : undefined,
         guestGstNumber: guestGst || undefined,
+        companyName: companyName || undefined,
+        companyAddress: companyAddress || undefined,
         guestAddress: guestAddress !== '—' ? guestAddress : undefined,
+        itcEligibility: guestGst ? itcText : undefined,
         checkIn: booking.checkIn,
         checkOut: booking.checkOut,
         nights,
@@ -200,7 +224,7 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-black uppercase tracking-tight">{hotelName}</h2>
-                <p className="text-[#F2C4A7] text-xs mt-0.5">{booking.property?.address || 'Hotel Address, City, 123456'}</p>
+                <p className="text-[#F2C4A7] text-xs mt-0.5">{hotelAddress}</p>
                 <p className="text-[#F2C4A7] text-xs mt-0.5">Phone: {booking.property?.phone || '9876543210'} | Email: {booking.property?.email || 'hotel@example.com'}</p>
                 {hotelGstNumber && (
                   <span className="inline-block mt-2 px-2 py-0.5 bg-white/20 backdrop-blur-md rounded text-[10px] font-mono font-bold tracking-wider text-white">
@@ -222,15 +246,23 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
               <div>
                 <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Guest Info</p>
                 {[
-                  ['Name',          guestName],
+                  ['Guest Name',    guestName],
+                  ...(companyName ? [['Company', companyName]] : []),
+                  ['Guest GSTIN',   guestGst || 'B2C / Retail'],
                   ['Mobile',        guestPhone],
                   ['Email',         guestEmail],
-                  ['Guest GSTIN',   guestGst || 'B2C / Retail'],
                   ['Address',       guestAddress],
+                  ...(guestGst ? [['ITC Eligibility', itcText]] : []),
                 ].map(([l, v]) => (
                   <div key={l} className="flex justify-between text-xs mb-1.5 gap-2">
                     <span className="text-slate-500 shrink-0">{l}</span>
-                    <span className={cn("font-semibold text-right truncate", l === 'Guest GSTIN' && guestGst ? 'text-blue-600 font-mono font-bold' : 'text-slate-800')}>{v}</span>
+                    <span className={cn(
+                      "font-semibold text-right truncate", 
+                      l === 'Company' ? 'text-blue-700 font-bold' :
+                      l === 'Guest GSTIN' && guestGst ? 'text-blue-600 font-mono font-bold' : 
+                      l === 'ITC Eligibility' ? (isItcEligible ? 'text-emerald-600 font-bold' : 'text-amber-600 font-bold') :
+                      'text-slate-800'
+                    )}>{v}</span>
                   </div>
                 ))}
               </div>
@@ -238,7 +270,8 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
                 <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Stay Details</p>
                 {[
                   ['Check-in',  format(new Date(booking.checkIn),  'dd MMM yyyy HH:mm')],
-                  ['Check-out', format(new Date(booking.checkOut), 'dd MMM yyyy HH:mm')],
+                  ['Check-out (Standard)', '11:00 AM'],
+                  ['Departure Time', booking.actualCheckOut ? format(new Date(booking.actualCheckOut), 'dd MMM yyyy hh:mm a') : format(new Date(booking.checkOut), 'dd MMM yyyy 11:00 AM')],
                   ['Nights',    String(nights)],
                   ['Pax',       String(booking.numberOfGuests || 1)],
                   ['Room Type', roomType],
@@ -296,7 +329,21 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
                     </tr>
                   )}
 
-                  {extraCharges > 0 && (
+                  {Array.isArray(booking.extraAddons) && booking.extraAddons.length > 0 ? (
+                    booking.extraAddons.map((addon: any, idx: number) => (
+                      <tr key={idx} className="bg-white">
+                        <td className="px-3 py-2 text-xs text-slate-700">{format(new Date(booking.checkOut || booking.checkIn), 'dd-MMM-yyyy')}</td>
+                        <td className="px-3 py-2 text-xs text-slate-700">{roomNo}</td>
+                        <td className="px-3 py-2 text-xs text-slate-700 font-medium">
+                          {addon.name || 'Extra Service / Add-on'}
+                          {addon.qty > 1 && <span className="text-[10px] text-slate-500 ml-1">× {addon.qty}</span>}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-700">996331</td>
+                        <td className="px-3 py-2 text-xs font-mono text-slate-800 text-right">₹{addon.price?.toLocaleString()}</td>
+                        <td className="px-3 py-2 text-xs font-mono font-bold text-slate-800 text-right">{((addon.price || 0) * (addon.qty || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      </tr>
+                    ))
+                  ) : extraCharges > 0 ? (
                     <tr className="bg-white">
                       <td className="px-3 py-2 text-xs text-slate-700">{format(new Date(booking.checkIn), 'dd-MMM-yyyy')}</td>
                       <td className="px-3 py-2 text-xs text-slate-700">{roomNo}</td>
@@ -305,7 +352,7 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
                       <td className="px-3 py-2 text-xs font-mono text-slate-800 text-right">—</td>
                       <td className="px-3 py-2 text-xs font-mono font-bold text-slate-800 text-right">{extraCharges.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                     </tr>
-                  )}
+                  ) : null}
                   
                   {cgstAmt > 0 && (
                     <tr className="bg-slate-50">

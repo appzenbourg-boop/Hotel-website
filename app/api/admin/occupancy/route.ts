@@ -47,12 +47,21 @@ export async function GET(request: NextRequest) {
 
         // Fetch active bookings (Checked In or Active Reservation)
         const now = new Date()
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const startOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+        const startOfDayAfterTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2)
+
         const activeBookings = await prisma.booking.findMany({
             where: {
                 roomId: { in: roomIds },
-                status: { in: ['CHECKED_IN', 'RESERVED'] },
-                checkIn: { lte: now },
-                checkOut: { gte: now }
+                OR: [
+                    { status: 'CHECKED_IN' },
+                    {
+                        status: 'RESERVED',
+                        checkIn: { lte: now },
+                        checkOut: { gte: now }
+                    }
+                ]
             },
             select: {
                 id: true,
@@ -63,6 +72,14 @@ export async function GET(request: NextRequest) {
                 numberOfGuests: true,
                 source: true,
                 guestId: true,
+                baseAmount: true,
+                finalAmount: true,
+                totalAmount: true,
+                paidAmount: true,
+                paymentStatus: true,
+                guestGstNumber: true,
+                guestCompanyName: true,
+                specialRequests: true,
             }
         })
 
@@ -70,13 +87,17 @@ export async function GET(request: NextRequest) {
         const guestIds = [...new Set(activeBookings.map(b => b.guestId))]
         const guests = await prisma.guest.findMany({
             where: { id: { in: guestIds } },
-            select: { id: true, name: true, phone: true, email: true }
+            select: { id: true, name: true, phone: true, email: true, address: true, companyName: true }
         })
         const guestMap = new Map(guests.map(g => [g.id, g]))
 
         const activeBookingMap = new Map()
         activeBookings.forEach(b => {
             const guest = guestMap.get(b.guestId)
+            const checkOutDate = new Date(b.checkOut)
+            const isCheckoutToday = checkOutDate >= startOfToday && checkOutDate < startOfTomorrow
+            const isCheckoutTomorrow = checkOutDate >= startOfTomorrow && checkOutDate < startOfDayAfterTomorrow
+
             activeBookingMap.set(b.roomId, {
                 id: b.id,
                 status: b.status,
@@ -86,7 +107,16 @@ export async function GET(request: NextRequest) {
                 source: b.source,
                 guestName: guest?.name ?? 'Guest',
                 guestPhone: guest?.phone ?? '',
-                guestEmail: guest?.email ?? ''
+                guestEmail: guest?.email ?? '',
+                guestAddress: guest?.address ?? '',
+                companyName: b.guestCompanyName || guest?.companyName || '',
+                baseAmount: b.baseAmount,
+                totalAmount: b.finalAmount ?? b.totalAmount ?? 0,
+                paidAmount: b.paidAmount ?? 0,
+                paymentStatus: b.paymentStatus ?? 'PENDING',
+                isCheckoutToday,
+                isCheckoutTomorrow,
+                specialRequests: b.specialRequests ?? ''
             })
         })
 
@@ -104,6 +134,7 @@ export async function GET(request: NextRequest) {
         let readyCount = 0
         let serviceCount = 0
         let outOfOrderCount = 0
+        let checkoutTomorrowCount = 0
 
         const occupancyRooms = rooms.map(room => {
             const currentBooking = activeBookingMap.get(room.id)
@@ -112,7 +143,13 @@ export async function GET(request: NextRequest) {
             const isOutOfOrder = room.status === 'MAINTENANCE' || room.status === 'BLOCKED'
             const isReady = !isOccupied && !isService && !isOutOfOrder
 
-            if (isOccupied) occupiedCount++
+            const isCheckoutTomorrow = Boolean(currentBooking?.isCheckoutTomorrow)
+            const isCheckoutToday = Boolean(currentBooking?.isCheckoutToday)
+
+            if (isOccupied) {
+                occupiedCount++
+                if (isCheckoutTomorrow) checkoutTomorrowCount++
+            }
             else if (isService) serviceCount++
             else if (isOutOfOrder) outOfOrderCount++
             else readyCount++
@@ -123,6 +160,8 @@ export async function GET(request: NextRequest) {
                 isService,
                 isOutOfOrder,
                 isReady,
+                isCheckoutTomorrow,
+                isCheckoutToday,
                 // Legacy compat
                 isMaintenance: isService || isOutOfOrder,
                 currentBooking: currentBooking ?? null
@@ -139,6 +178,7 @@ export async function GET(request: NextRequest) {
                 readyCount,
                 serviceCount,
                 outOfOrderCount,
+                checkoutTomorrowCount,
                 occupancyRate,
                 // Legacy compat
                 availableCount: readyCount,

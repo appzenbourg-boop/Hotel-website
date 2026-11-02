@@ -21,7 +21,7 @@ export default function OperationalSOPPage() {
         {
             title: 'Guest Privacy Shield',
             icon: Lock,
-            content: 'Room entry is prohibited without an active service token. All interactions are logged via the AI Communication Link.',
+            content: 'Room entry is prohibited without an active service token. All interactions are logged via the PMS Operations Audit Link.',
             priority: 'HIGH'
         },
         {
@@ -57,7 +57,7 @@ export default function OperationalSOPPage() {
                 </div>
             </div>
 
-            {/* AI Insight Banner */}
+            {/* Protocol Intelligence Banner */}
             <div className="p-8 bg-gradient-to-br from-purple-600/10 to-blue-600/10 rounded-[45px] border border-purple-500/10 relative overflow-hidden group shadow-2xl shadow-purple-600/5">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-3xl rounded-full translate-x-16 -translate-y-16"></div>
                 <div className="relative z-10 flex items-start gap-5">

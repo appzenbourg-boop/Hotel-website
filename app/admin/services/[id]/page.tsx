@@ -260,13 +260,18 @@ export default function ServiceDetailPage() {
     if (!detail) return null
 
     const timeStr = detail.createdAt
-    const completionTime = detail.completedAt ? new Date(detail.completedAt) : now
+    const isCompleted = detail.status === 'COMPLETED'
+    const isCancelled = detail.status === 'CANCELLED' || detail.status === 'REJECTED'
+    const completionTime = detail.completedAt
+        ? new Date(detail.completedAt)
+        : (isCompleted || isCancelled) && detail.updatedAt
+            ? new Date(detail.updatedAt)
+            : now
     const start = new Date(timeStr)
-    const diffMins = differenceInMinutes(completionTime, start)
-    const diffSecs = differenceInSeconds(completionTime, start) % 60
+    const diffMins = Math.max(0, differenceInMinutes(completionTime, start))
+    const diffSecs = Math.max(0, differenceInSeconds(completionTime, start) % 60)
     const slaLimit = detail.slaMinutes || 30
     const slaPercent = Math.min(100, (diffMins / slaLimit) * 100)
-    const isCompleted = detail.status === 'COMPLETED'
 
     return (
         <div className="flex flex-col min-h-screen bg-surface text-text-secondary pb-20">
@@ -355,27 +360,31 @@ export default function ServiceDetailPage() {
                             <div className="flex-1">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-2">
-                                        <Clock className={cn("w-4 h-4", isCompleted ? "text-emerald-500" : "text-orange-500")} />
+                                        {isCompleted ? (
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                        ) : (
+                                            <Clock className="w-4 h-4 text-orange-500" />
+                                        )}
                                         <span className="text-[11px] font-black text-text-primary uppercase tracking-widest">
-                                            {isCompleted ? 'Resolved Time' : 'SLA Timer'}
+                                            {isCompleted ? 'Resolved Duration' : 'SLA Timer'}
                                         </span>
                                     </div>
                                     <span className={cn("text-[10px] font-black uppercase tracking-widest", 
-                                        isCompleted ? "text-emerald-500" : 
+                                        isCompleted ? (diffMins <= slaLimit ? "text-emerald-500" : "text-emerald-400") : 
                                         slaPercent > 80 ? "text-rose-500" : "text-orange-400"
                                     )}>
-                                        {isCompleted ? 'Completed On Time' : slaPercent > 80 ? 'CRITICAL BREACH' : 'Approaching Breach'}
+                                        {isCompleted ? (diffMins <= slaLimit ? 'Completed Within SLA' : 'Completed (Resolved)') : slaPercent > 80 ? 'CRITICAL BREACH' : 'Approaching Breach'}
                                     </span>
                                 </div>
                                 <div className="h-3 bg-surface rounded-full overflow-hidden border border-border p-0.5">
                                     <div
-                                        className={cn("h-full rounded-full transition-all duration-1000", slaPercent > 80 ? "bg-rose-500" : "bg-orange-500")}
-                                        style={{ width: `${slaPercent}%` }}
+                                        className={cn("h-full rounded-full transition-all duration-1000", isCompleted ? "bg-emerald-500" : slaPercent > 80 ? "bg-rose-500" : "bg-orange-500")}
+                                        style={{ width: `${isCompleted ? 100 : slaPercent}%` }}
                                     />
                                 </div>
                                 <p className="text-[11px] text-text-tertiary mt-3 font-bold">
-                                    Target resolution time: {slaLimit} minutes.
-                                    {detail.type === 'FOOD_ORDER' && " This includes time for cooking and staff transfer."}
+                                    {isCompleted ? `Task completed and resolved. Target SLA was ${slaLimit} minutes.` : `Target resolution time: ${slaLimit} minutes.`}
+                                    {detail.type === 'FOOD_ORDER' && !isCompleted && " This includes time for cooking and staff transfer."}
                                 </p>
                             </div>
                         </div>

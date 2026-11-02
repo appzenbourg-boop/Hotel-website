@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import useSWR from 'swr'
 import {
   Utensils, LayoutGrid, BellRing, UtensilsCrossed, ReceiptText, LogOut,
-  CreditCard, Banknote, Bed, AlertCircle, Sparkles, CheckCircle2,
+  CreditCard, Banknote, Bed, AlertCircle, CheckCircle2,
   Search, ArrowLeft, Printer, Download, Filter, Calendar, TrendingUp,
-  DollarSign, Check, X, Percent, QrCode, Smartphone, Plus
+  DollarSign, Check, X, Percent, QrCode, Smartphone, Plus, Layers
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,9 @@ export default function POSTransactionsPage() {
   const [roomNumber, setRoomNumber] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
+  const [splitCash, setSplitCash] = useState<string>('')
+  const [splitCard, setSplitCard] = useState<string>('')
+  const [splitUpi, setSplitUpi] = useState<string>('')
 
   // Active Rooms for Room Charge verification
   const [activeRooms, setActiveRooms] = useState<any[]>([])
@@ -247,6 +250,50 @@ export default function POSTransactionsPage() {
   const vat = postDiscountSubtotal * 0.07 // 7%
   const total = postDiscountSubtotal + serviceCharge + vat
 
+  // Split payment allocations
+  const splitCashVal = parseFloat(splitCash) || 0
+  const splitCardVal = parseFloat(splitCard) || 0
+  const splitUpiVal = parseFloat(splitUpi) || 0
+  const splitAllocated = splitCashVal + splitCardVal + splitUpiVal
+  const splitRemaining = Math.round((total - splitAllocated) * 100) / 100
+  const isSplitBalanced = Math.abs(total - splitAllocated) < 0.5 && splitAllocated > 0
+
+  const applySplitPreset = (mode: '50-50-cash-upi' | '50-50-cash-card' | '50-50-card-upi' | 'three-way') => {
+    if (total <= 0) return
+    if (mode === '50-50-cash-upi') {
+      const half = Math.round((total / 2) * 100) / 100
+      const otherHalf = Math.round((total - half) * 100) / 100
+      setSplitCash(half.toString())
+      setSplitUpi(otherHalf.toString())
+      setSplitCard('0')
+    } else if (mode === '50-50-cash-card') {
+      const half = Math.round((total / 2) * 100) / 100
+      const otherHalf = Math.round((total - half) * 100) / 100
+      setSplitCash(half.toString())
+      setSplitCard(otherHalf.toString())
+      setSplitUpi('0')
+    } else if (mode === '50-50-card-upi') {
+      const half = Math.round((total / 2) * 100) / 100
+      const otherHalf = Math.round((total - half) * 100) / 100
+      setSplitCard(half.toString())
+      setSplitUpi(otherHalf.toString())
+      setSplitCash('0')
+    } else if (mode === 'three-way') {
+      const oneThird = Math.round((total / 3) * 100) / 100
+      const remainder = Math.round((total - (oneThird * 2)) * 100) / 100
+      setSplitCash(oneThird.toString())
+      setSplitCard(oneThird.toString())
+      setSplitUpi(remainder.toString())
+    }
+  }
+
+  const fillRemainingTo = (target: 'cash' | 'card' | 'upi') => {
+    if (splitRemaining <= 0) return
+    if (target === 'cash') setSplitCash((splitCashVal + splitRemaining).toFixed(2))
+    if (target === 'card') setSplitCard((splitCardVal + splitRemaining).toFixed(2))
+    if (target === 'upi') setSplitUpi((splitUpiVal + splitRemaining).toFixed(2))
+  }
+
   const handleApplyDiscount = async () => {
     if (!authKey) {
       toast.error('Please enter Manager Authorization PIN')
@@ -295,7 +342,24 @@ export default function POSTransactionsPage() {
       toast.error('Cannot settle via Room Charge without a verified checked-in guest')
       return
     }
+
+    if (paymentMethod === 'Split / Multi-Pay') {
+      if (!isSplitBalanced) {
+        toast.error(`Please balance the split payment before settling. Remaining: ₹${splitRemaining.toFixed(2)}`)
+        return
+      }
+    }
+
     setIsProcessing(true)
+
+    const splitParts = []
+    if (splitCashVal > 0) splitParts.push(`Cash: ₹${splitCashVal.toFixed(2)}`)
+    if (splitCardVal > 0) splitParts.push(`Card: ₹${splitCardVal.toFixed(2)}`)
+    if (splitUpiVal > 0) splitParts.push(`UPI: ₹${splitUpiVal.toFixed(2)}`)
+
+    const finalPaymentMethod = paymentMethod === 'Split / Multi-Pay'
+      ? `Split (${splitParts.join(', ')})`
+      : paymentMethod
 
     try {
       const res = await fetch(`/api/admin/pos/orders/${selectedOrder.id}`, {
@@ -303,7 +367,7 @@ export default function POSTransactionsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'SERVED',
-          paymentMethod,
+          paymentMethod: finalPaymentMethod,
           roomNumber: paymentMethod === 'Room Charge' ? (verifiedBooking?.roomNumber || roomNumber) : undefined,
           bookingId: paymentMethod === 'Room Charge' ? verifiedBooking?.bookingId : undefined,
           discountAmt: appliedDiscountAmt,
@@ -316,7 +380,11 @@ export default function POSTransactionsPage() {
       if (res.ok) {
         setPaymentSuccess(true)
         mutate()
-        toast.success(paymentMethod === 'Room Charge' ? `Charged to Room ${verifiedBooking?.roomNumber} (${verifiedBooking?.guestName})` : 'Bill settled successfully')
+        toast.success(
+          paymentMethod === 'Room Charge'
+            ? `Charged to Room ${verifiedBooking?.roomNumber} (${verifiedBooking?.guestName})`
+            : `Bill settled via ${finalPaymentMethod}`
+        )
         setTimeout(() => {
           setPaymentSuccess(false)
           setSelectedOrderId(null)
@@ -533,7 +601,8 @@ export default function POSTransactionsPage() {
               { name: 'Credit / Debit Card', desc: 'Swipe, Chip or Contactless', icon: <CreditCard className="w-4 h-4 text-blue-400" /> },
               { name: 'Cash Payment', desc: 'Direct cash drawer receipt', icon: <Banknote className="w-4 h-4 text-emerald-400" /> },
               { name: 'UPI / QR Payment', desc: 'Instant GPay, PhonePe, Paytm', icon: <QrCode className="w-4 h-4 text-purple-400" /> },
-              { name: 'Room Charge', desc: 'Post to Hotel Guest Folio', icon: <Bed className="w-4 h-4 text-amber-400" /> }
+              { name: 'Split / Multi-Pay', desc: 'Split into Cash, Card & UPI', icon: <Layers className="w-4 h-4 text-amber-400" /> },
+              { name: 'Room Charge', desc: 'Post to Hotel Guest Folio', icon: <Bed className="w-4 h-4 text-cyan-400" /> }
             ].map(method => (
               <div
                 key={method.name}
@@ -555,6 +624,182 @@ export default function POSTransactionsPage() {
               </div>
             ))}
           </div>
+
+          {/* Split Payment Section */}
+          {paymentMethod === 'Split / Multi-Pay' && (
+            <div className="space-y-3.5 mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5" />
+                  Split Breakdown (Cash / Card / UPI)
+                </label>
+                <span className="text-[10px] font-mono text-amber-200/80">
+                  Due: ₹{total.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Quick Split Presets */}
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-bold text-text-tertiary">Quick 1-Click Splits:</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => applySplitPreset('50-50-cash-upi')}
+                    className="px-2 py-1.5 rounded-lg bg-surface hover:bg-white/10 border border-border text-[11px] font-bold text-text-secondary hover:text-white transition-colors text-left"
+                  >
+                    ⚡ 50% Cash + 50% UPI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applySplitPreset('50-50-cash-card')}
+                    className="px-2 py-1.5 rounded-lg bg-surface hover:bg-white/10 border border-border text-[11px] font-bold text-text-secondary hover:text-white transition-colors text-left"
+                  >
+                    ⚡ 50% Cash + 50% Card
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applySplitPreset('50-50-card-upi')}
+                    className="px-2 py-1.5 rounded-lg bg-surface hover:bg-white/10 border border-border text-[11px] font-bold text-text-secondary hover:text-white transition-colors text-left"
+                  >
+                    ⚡ 50% Card + 50% UPI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applySplitPreset('three-way')}
+                    className="px-2 py-1.5 rounded-lg bg-surface hover:bg-white/10 border border-border text-[11px] font-bold text-text-secondary hover:text-white transition-colors text-left"
+                  >
+                    ⚡ 1/3 Each (3-Way)
+                  </button>
+                </div>
+              </div>
+
+              {/* Amount Inputs */}
+              <div className="space-y-2 pt-1">
+                {/* Cash */}
+                <div className="p-2.5 rounded-xl bg-surface border border-border flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                      <Banknote className="w-3.5 h-3.5 text-emerald-400" />
+                    </div>
+                    <span className="text-xs font-bold text-text-primary">Cash</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-text-tertiary">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0.00"
+                      value={splitCash}
+                      onChange={e => setSplitCash(e.target.value)}
+                      className="w-24 bg-background border border-border rounded-lg px-2 py-1 text-xs font-mono font-bold text-right text-text-primary outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    {splitRemaining > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => fillRemainingTo('cash')}
+                        className="px-1.5 py-1 text-[9px] font-bold rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors"
+                        title="Add remaining balance to Cash"
+                      >
+                        +Fill
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card */}
+                <div className="p-2.5 rounded-xl bg-surface border border-border flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                      <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                    </div>
+                    <span className="text-xs font-bold text-text-primary">Card</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-text-tertiary">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0.00"
+                      value={splitCard}
+                      onChange={e => setSplitCard(e.target.value)}
+                      className="w-24 bg-background border border-border rounded-lg px-2 py-1 text-xs font-mono font-bold text-right text-text-primary outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    {splitRemaining > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => fillRemainingTo('card')}
+                        className="px-1.5 py-1 text-[9px] font-bold rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors"
+                        title="Add remaining balance to Card"
+                      >
+                        +Fill
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* UPI */}
+                <div className="p-2.5 rounded-xl bg-surface border border-border flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                      <QrCode className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <span className="text-xs font-bold text-text-primary">UPI / QR</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-text-tertiary">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0.00"
+                      value={splitUpi}
+                      onChange={e => setSplitUpi(e.target.value)}
+                      className="w-24 bg-background border border-border rounded-lg px-2 py-1 text-xs font-mono font-bold text-right text-text-primary outline-none focus:border-amber-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    {splitRemaining > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => fillRemainingTo('upi')}
+                        className="px-1.5 py-1 text-[9px] font-bold rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition-colors"
+                        title="Add remaining balance to UPI"
+                      >
+                        +Fill
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Allocation Balance Indicator */}
+              {isSplitBalanced ? (
+                <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Split Balanced (100% Allocated)
+                  </span>
+                  <span>₹{splitAllocated.toFixed(2)}</span>
+                </div>
+              ) : splitRemaining > 0 ? (
+                <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-amber-400" />
+                    Remaining to Allocate:
+                  </span>
+                  <span className="font-mono text-amber-200">₹{splitRemaining.toFixed(2)}</span>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-xs flex items-center justify-between font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-red-400" />
+                    Over-allocated:
+                  </span>
+                  <span className="font-mono text-red-200">+₹{Math.abs(splitRemaining).toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {paymentMethod === 'Room Charge' && (
             <div className="space-y-3 mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30">

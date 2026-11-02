@@ -22,6 +22,9 @@ const DEFAULT_PLANS = [
         maxRooms: 30,
         maxStaff: 15,
         features: [
+            'BASIC_OPS',
+            'DIGITAL_CHECKIN',
+            'FRONT_DESK',
             'Core PMS & Reservations',
             'Front Desk Terminal',
             'Digital Check-in & Check-out',
@@ -39,7 +42,13 @@ const DEFAULT_PLANS = [
         maxRooms: 75,
         maxStaff: 40,
         features: [
-            'Everything in Base',
+            'BASIC_OPS',
+            'DIGITAL_CHECKIN',
+            'FRONT_DESK',
+            'STAFF_MANAGEMENT',
+            'HOUSEKEEPING_DISPATCH',
+            'MARKETING',
+            'LOYALTY',
             'Staff app, housekeeping & maintenance dispatch',
             'Marketing tools & loyalty module',
             'Up to 75 rooms',
@@ -56,7 +65,18 @@ const DEFAULT_PLANS = [
         maxRooms: 150,
         maxStaff: 100,
         features: [
-            'Everything in Starter',
+            'BASIC_OPS',
+            'DIGITAL_CHECKIN',
+            'FRONT_DESK',
+            'STAFF_MANAGEMENT',
+            'HOUSEKEEPING_DISPATCH',
+            'MARKETING',
+            'LOYALTY',
+            'IOT_CONTROLS',
+            'ANALYTICS',
+            'FB_SPA',
+            'UPSELL_ENGINE',
+            'MULTILANG_PORTAL',
             'IoT room controls & advanced analytics',
             'F&B and spa integration, upsell engine',
             'Multi-language Guest Portal',
@@ -74,7 +94,23 @@ const DEFAULT_PLANS = [
         maxRooms: 0,
         maxStaff: 0,
         features: [
-            'Everything in Standard',
+            'BASIC_OPS',
+            'DIGITAL_CHECKIN',
+            'FRONT_DESK',
+            'STAFF_MANAGEMENT',
+            'HOUSEKEEPING_DISPATCH',
+            'MARKETING',
+            'LOYALTY',
+            'IOT_CONTROLS',
+            'ANALYTICS',
+            'FB_SPA',
+            'UPSELL_ENGINE',
+            'MULTILANG_PORTAL',
+            'MULTI_PROPERTY',
+            'CUSTOM_INTEGRATIONS',
+            'WHITE_LABEL',
+            'DEDICATED_SUPPORT',
+            'SLA_UPTIME',
             'Multi-property super admin & custom integrations',
             'Dedicated success manager',
             'White-label Guest Portal',
@@ -86,22 +122,31 @@ const DEFAULT_PLANS = [
 
 export async function GET(req: NextRequest) {
     try {
-        // Always migrate first to ensure DB has latest plan definitions
-        await migrateOldPlans()
+        let rawPlans: any[] = []
+        try {
+            if ((prisma as any).planDefinition) {
+                rawPlans = await (prisma as any).planDefinition.findMany({
+                    orderBy: { discountedPrice: 'asc' },
+                })
+                if (!rawPlans || rawPlans.length === 0) {
+                    await migrateOldPlans()
+                    rawPlans = await (prisma as any).planDefinition.findMany({
+                        orderBy: { discountedPrice: 'asc' },
+                    })
+                }
+            }
+        } catch (dbErr) {
+            console.warn('[PLANS_GET] Database lookup failed, falling back to DEFAULT_PLANS:', dbErr)
+            return NextResponse.json({ success: true, data: DEFAULT_PLANS })
+        }
 
-        const rawPlans = await (prisma as any).planDefinition.findMany({
-            orderBy: { discountedPrice: 'asc' },
-        })
-
-        // If still empty after migration, something is wrong
-        if (rawPlans.length === 0) {
+        if (!rawPlans || rawPlans.length === 0) {
             return NextResponse.json({ success: true, data: DEFAULT_PLANS })
         }
 
         const plans = rawPlans.map(normalizePlan)
         return NextResponse.json({ success: true, data: plans })
     } catch (error) {
-        // If DB read fails entirely, return hardcoded defaults so UI never breaks
         console.error('[PLANS_GET]', error)
         return NextResponse.json({ success: true, data: DEFAULT_PLANS })
     }
@@ -109,33 +154,37 @@ export async function GET(req: NextRequest) {
 
 /** Upsert all 4 plan definitions with latest data AND delete legacy plans */
 async function migrateOldPlans() {
-    // Delete legacy plan names that no longer exist
     try {
-        await (prisma as any).planDefinition.deleteMany({
-            where: { plan: { in: ['GOLD', 'PLATINUM', 'DIAMOND'] } }
-        })
-    } catch { /* ignore if already gone */ }
+        if (!(prisma as any).planDefinition) return
 
-    // Upsert the 4 correct plans
-    for (const def of DEFAULT_PLANS) {
+        // Delete legacy plan names that no longer exist
         try {
-            await (prisma as any).planDefinition.upsert({
-                where: { plan: def.plan },
-                update: {
-                    displayName:     def.displayName,
-                    tagline:         def.tagline,
-                    description:     def.description,
-                    originalPrice:   def.originalPrice,
-                    discountedPrice: def.discountedPrice,
-                    discountPercent: def.discountPercent,
-                    maxRooms:        def.maxRooms,
-                    maxStaff:        def.maxStaff,
-                    features:        def.features,
-                },
-                create: def,
+            await (prisma as any).planDefinition.deleteMany({
+                where: { plan: { in: ['GOLD', 'PLATINUM', 'DIAMOND'] } }
             })
-        } catch { /* skip individual failures */ }
-    }
+        } catch { /* ignore if already gone */ }
+
+        // Upsert the 4 correct plans
+        for (const def of DEFAULT_PLANS) {
+            try {
+                await (prisma as any).planDefinition.upsert({
+                    where: { plan: def.plan },
+                    update: {
+                        displayName:     def.displayName,
+                        tagline:         def.tagline,
+                        description:     def.description,
+                        originalPrice:   def.originalPrice,
+                        discountedPrice: def.discountedPrice,
+                        discountPercent: def.discountPercent,
+                        maxRooms:        def.maxRooms,
+                        maxStaff:        def.maxStaff,
+                        features:        def.features,
+                    },
+                    create: def,
+                })
+            } catch { /* skip individual failures */ }
+        }
+    } catch { /* ignore migration failures */ }
 }
 
 /** Normalize a plan record — fill nulls with safe defaults */
@@ -146,18 +195,18 @@ function normalizePlan(p: any) {
         displayName:     p.displayName     ?? def?.displayName     ?? p.plan,
         tagline:         p.tagline         ?? def?.tagline         ?? null,
         description:     p.description     ?? def?.description     ?? null,
-        originalPrice:   p.originalPrice   ?? def?.originalPrice   ?? 0,
-        discountedPrice: p.discountedPrice ?? def?.discountedPrice ?? p.price ?? 0,
-        discountPercent: p.discountPercent ?? def?.discountPercent ?? 0,
-        maxRooms:        p.maxRooms        ?? def?.maxRooms        ?? 30,
-        maxStaff:        p.maxStaff        ?? def?.maxStaff        ?? 10,
-        features:        p.features        ?? def?.features        ?? [],
+        originalPrice:   typeof p.originalPrice === 'number' ? p.originalPrice : (def?.originalPrice ?? 0),
+        discountedPrice: typeof p.discountedPrice === 'number' ? p.discountedPrice : (p.price ?? def?.discountedPrice ?? 0),
+        discountPercent: typeof p.discountPercent === 'number' ? p.discountPercent : (def?.discountPercent ?? 0),
+        maxRooms:        typeof p.maxRooms === 'number' ? p.maxRooms : (def?.maxRooms ?? 30),
+        maxStaff:        typeof p.maxStaff === 'number' ? p.maxStaff : (def?.maxStaff ?? 10),
+        features:        Array.isArray(p.features) ? p.features : (def?.features ?? []),
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
-        const authResult = await requireAuth(req, ['SUPER_ADMIN'])
+        const authResult = await requireAuth(req, ['SUPER_ADMIN', 'HOTEL_ADMIN'])
         if (authResult instanceof NextResponse) return authResult
 
         const body = await req.json()
@@ -192,7 +241,7 @@ export async function POST(req: NextRequest) {
                 discountPercent: discountPercent !== undefined ? parseFloat(discountPercent) : undefined,
                 maxRooms: maxRooms !== undefined ? parseInt(maxRooms) : undefined,
                 maxStaff: maxStaff !== undefined ? parseInt(maxStaff) : undefined,
-                features: features ?? undefined,
+                features: Array.isArray(features) ? features : undefined,
             },
             create: {
                 plan,
@@ -204,7 +253,7 @@ export async function POST(req: NextRequest) {
                 discountPercent: parseFloat(discountPercent ?? 0),
                 maxRooms: parseInt(maxRooms ?? 30),
                 maxStaff: parseInt(maxStaff ?? 10),
-                features: features ?? [],
+                features: Array.isArray(features) ? features : [],
             },
         })
 

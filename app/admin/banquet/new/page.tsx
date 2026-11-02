@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { format, parseISO } from 'date-fns'
-import { Plus, Trash2, Save, ArrowLeft, CheckCircle2, Loader2, Building2, CalendarDays, Clock, Users, Sparkles, Printer, Download } from 'lucide-react'
+import { Plus, Trash2, Save, ArrowLeft, CheckCircle2, Loader2, Building2, CalendarDays, Clock, Users, FileText, Printer, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { buildContextUrl, getAdminContext } from '@/lib/admin-context'
@@ -488,7 +488,7 @@ function BanquetNewPageInner() {
 
             {/* Print Note */}
             <div className="flex items-center gap-2.5 text-[11px] text-text-tertiary bg-[#4A9EFF]/5 border border-[#4A9EFF]/15 rounded-xl px-3.5 py-2.5">
-              <Sparkles className="w-4 h-4 text-[#4A9EFF] shrink-0" />
+              <FileText className="w-4 h-4 text-[#4A9EFF] shrink-0" />
               <span>Official A4 quotation formats include hotel letterhead, customer billing info, terms, and authorized signature blocks.</span>
             </div>
 
@@ -747,7 +747,7 @@ function BanquetNewPageInner() {
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-white/10 bg-[#0B0F17]/90 backdrop-blur-md shadow-inner">
-          <table className="w-full text-xs min-w-[1100px]">
+          <table className="w-full text-xs min-w-[1260px]">
             <thead className="bg-[#121824] border-b border-white/10">
               <tr>
                 <th className="px-3 py-3 text-center text-[10px] font-black text-text-tertiary uppercase w-10">#</th>
@@ -756,14 +756,14 @@ function BanquetNewPageInner() {
                 <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase min-w-[130px]">Event Date</th>
                 <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase min-w-[180px]">Schedule (Start - End)</th>
                 <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase min-w-[140px]">Menu Card</th>
-                <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase w-24">Pax</th>
+                <th className="px-3 py-3 text-center text-[10px] font-black text-text-secondary uppercase min-w-[95px] w-24">Pax</th>
                 <th className="px-3 py-3 text-center text-[10px] font-black text-text-secondary uppercase w-20">Rent?</th>
                 <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase min-w-[110px]">Rate Type</th>
                 <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase min-w-[110px]">Hall Rent (₹)</th>
                 <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase min-w-[110px]">Per Plate (₹)</th>
                 <th className="px-3 py-3 text-center text-[10px] font-black text-text-secondary uppercase w-20" title="Check if plate rate absorbs hall rent">Inclusive?</th>
                 <th className="px-3 py-3 text-right text-[10px] font-black text-[#4A9EFF] uppercase min-w-[120px]">Event Amount (₹)</th>
-                <th className="px-3 py-3 text-left text-[10px] font-black text-text-secondary uppercase w-24">FP No.</th>
+                <th className="px-3 py-3 text-center text-[10px] font-black text-text-secondary uppercase min-w-[115px] w-28">FP No.</th>
                 <th className="px-2 py-3 text-center w-10"></th>
               </tr>
             </thead>
@@ -859,9 +859,10 @@ function BanquetNewPageInner() {
                     </td>
 
                     {/* Guaranteed Pax */}
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 min-w-[95px]">
                       <input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         min="1"
                         max={MAX_PAX}
                         value={ev.guaranteedPax}
@@ -870,7 +871,7 @@ function BanquetNewPageInner() {
                           updateEvent(idx, 'guaranteedPax', val)
                         }}
                         placeholder="Pax"
-                        className="w-full bg-[#141A23] hover:bg-[#1A2230] border border-white/10 rounded-xl px-2.5 py-2 text-xs font-bold text-white text-center outline-none focus:border-[#4A9EFF]"
+                        className="w-full min-w-[75px] bg-[#141A23] hover:bg-[#1A2230] border border-white/20 focus:border-[#4A9EFF] rounded-xl px-2 py-2 text-xs font-mono font-black text-white text-center outline-none placeholder:text-gray-500 shadow-inner"
                       />
                     </td>
 
@@ -903,7 +904,8 @@ function BanquetNewPageInner() {
                       <div className="relative">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-text-tertiary font-bold">₹</span>
                         <input
-                          type="number"
+                          type="text"
+                        inputMode="numeric"
                           min="0"
                           max={MAX_HALL_RENT}
                           value={ev.hallRent}
@@ -926,7 +928,8 @@ function BanquetNewPageInner() {
                       <div className="relative">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-text-tertiary font-bold">₹</span>
                         <input
-                          type="number"
+                          type="text"
+                        inputMode="numeric"
                           min="0"
                           max={MAX_PER_PLATE}
                           value={ev.perPlateRate}
@@ -959,13 +962,13 @@ function BanquetNewPageInner() {
                     </td>
 
                     {/* FP No. */}
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3 min-w-[115px]">
                       <input
                         value={ev.fpNumber}
                         maxLength={20}
                         onChange={e => updateEvent(idx, 'fpNumber', e.target.value.slice(0, 20))}
                         placeholder="FP#"
-                        className="w-full bg-[#141A23] hover:bg-[#1A2230] border border-white/10 rounded-xl px-2.5 py-2 text-xs text-white text-center outline-none focus:border-[#4A9EFF]"
+                        className="w-full min-w-[95px] bg-[#141A23] hover:bg-[#1A2230] border border-white/20 focus:border-[#4A9EFF] rounded-xl px-2.5 py-2 text-xs font-mono font-bold text-white text-center outline-none placeholder:text-gray-500 shadow-inner"
                       />
                     </td>
 

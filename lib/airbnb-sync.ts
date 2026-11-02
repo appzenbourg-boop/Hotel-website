@@ -36,7 +36,7 @@ export async function syncPropertyOta(propertyId: string, otaName: string = 'AIR
       },
     })
 
-    if (!connection || connection.status !== 'CONNECTED') {
+    if (!connection || connection.status === 'DISCONNECTED') {
       result.errors.push(`${displayName} connection is inactive or disconnected`)
       return result
     }
@@ -74,7 +74,7 @@ export async function syncPropertyOta(propertyId: string, otaName: string = 'AIR
 
     // 4. Synchronize each room mapping
     for (const mapping of mappings) {
-      const icalUrl = mapping.otaRoomId
+      const icalUrl = (mapping.otaRoomId || '').replace(/\s+/g, '')
       if (!icalUrl || !icalUrl.startsWith('http')) {
         result.errors.push(`Room ${mapping.room.roomNumber}: iCal URL is not set or invalid`)
         continue

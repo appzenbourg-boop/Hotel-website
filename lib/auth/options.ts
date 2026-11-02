@@ -211,6 +211,18 @@ export const authOptions: NextAuthOptions = {
             }
             return session
         },
+        async redirect({ url, baseUrl }) {
+            // If the URL is relative, return it directly so the browser stays on the current domain
+            if (url.startsWith('/')) return url
+            try {
+                const urlObj = new URL(url)
+                // If it belongs to baseUrl or otiva.in, allow it
+                if (urlObj.origin === baseUrl || urlObj.hostname.includes('otiva.in')) {
+                    return url
+                }
+            } catch {}
+            return url.startsWith('http') ? baseUrl : url
+        },
     },
     secret: process.env.NEXTAUTH_SECRET,
 }

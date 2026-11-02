@@ -29,14 +29,12 @@ export async function PATCH(
         if (!attendanceId) return badRequest('attendanceId is required')
 
         // Verify the attendance record belongs to this staff member
-        const existing = await prisma.attendance.findFirst({
-            where: { id: attendanceId, staffId: params.id },
-        })
-        if (!existing) {
-            return NextResponse.json(
-                { success: false, error: 'Attendance record not found for this staff member' },
-                { status: 404 }
-            )
+        const isAbsentId = attendanceId.startsWith('absent-')
+        let existing = null
+        if (!isAbsentId) {
+            existing = await prisma.attendance.findFirst({
+                where: { id: attendanceId, staffId: params.id },
+            })
         }
 
         const updateData: any = {}
@@ -46,10 +44,31 @@ export async function PATCH(
         if (status !== undefined)      updateData.status      = status
         if (notes !== undefined)       updateData.notes       = notes
 
-        const updated = await prisma.attendance.update({
-            where: { id: attendanceId },
-            data: updateData,
-        })
+        let updated: any
+        if (isAbsentId || !existing) {
+            const dateStr = body.date ? (typeof body.date === 'string' ? body.date.slice(0, 10) : new Date(body.date).toISOString().slice(0, 10)) : new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
+            const targetDate = new Date(`${dateStr}T00:00:00+05:30`)
+            updated = await prisma.attendance.upsert({
+                where: {
+                    staffId_date: {
+                        staffId: params.id,
+                        date: targetDate
+                    }
+                },
+                update: updateData,
+                create: {
+                    staffId: params.id,
+                    date: targetDate,
+                    status: status || 'PRESENT',
+                    ...updateData
+                }
+            })
+        } else {
+            updated = await prisma.attendance.update({
+                where: { id: attendanceId },
+                data: updateData,
+            })
+        }
 
         // Invalidate staff detail cache
         await redis.del(`admin:staff:detail:${params.id}`)

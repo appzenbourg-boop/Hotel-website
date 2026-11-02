@@ -25,18 +25,36 @@ export interface PricingBreakdown {
     finalAmount: number   // totalAmount - discount
 }
 
+import { getHotelGSTRate } from './gst-helper'
+
+export { getHotelGSTRate }
+
 /**
  * Calculate full pricing breakdown for a booking.
  * @param baseAmount  Room rate × nights (before any tax)
  * @param settings    Property-level tax/discount settings
  * @param overrideDiscountPercent  Optional manual discount override
+ * @param nights      Number of nights (used to calculate per-night rate for GST slab)
  */
 export function calculatePricing(
     baseAmount: number,
     settings: PricingSettings,
-    overrideDiscountPercent?: number
+    overrideDiscountPercent?: number,
+    nights: number = 1
 ): PricingBreakdown {
-    const gstPercent = settings.gstPercent ?? 0
+    // Determine effective GST % based on Indian Hotel GST Slabs
+    // <= ₹7,500/night: 5% GST (No ITC)
+    // > ₹7,500/night: 18% GST (Full ITC)
+    const effectiveNights = Math.max(1, nights)
+    const perNightRate = baseAmount / effectiveNights
+    const slabInfo = getHotelGSTRate(perNightRate)
+
+    // If settings explicitly set gstPercent to 0 (e.g. tax exempt), respect it; otherwise use the government hotel slab
+    let gstPercent = slabInfo.gstPercent
+    if (settings.gstPercent === 0) {
+        gstPercent = 0
+    }
+
     const serviceChargePercent = settings.serviceChargePercent ?? 0
     const luxuryTaxPercent = settings.luxuryTaxPercent ?? 0
     const discountPercent = overrideDiscountPercent ?? settings.defaultDiscountPercent ?? 0

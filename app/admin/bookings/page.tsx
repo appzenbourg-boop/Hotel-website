@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { startOfWeek, addDays, format, differenceInDays, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Star, Download, Loader2, Calendar, FileText, Printer, Banknote, CreditCard, Smartphone, Building2, HelpCircle, X, ArrowRight, UtensilsCrossed, Edit2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { ChevronLeft, ChevronRight, Plus, Star, Download, Loader2, Calendar, FileText, Printer, Banknote, CreditCard, Smartphone, Building2, HelpCircle, X, ArrowRight, UtensilsCrossed, Edit2, Clock } from 'lucide-react'
+import { cn, validateGSTIN, formatCurrency } from '@/lib/utils'
 import { toast } from 'sonner'
-import { CheckCircle2, LogOut, XCircle } from 'lucide-react'
+import { CheckCircle2, LogOut, XCircle, Layers, AlertCircle, QrCode } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { downloadCSV } from '@/lib/csv'
-import { formatCurrency } from '@/lib/utils'
 import { generateGuestDetailsPDFReport, GuestDetailsReportBooking } from '@/lib/guest-details-pdf'
 import { InvoiceModal } from '@/components/admin/InvoiceModal'
 import { generateTaxInvoicePDF, TaxInvoiceItem } from '@/lib/invoice-pdf-generator'
@@ -191,8 +190,11 @@ export default function BookingsPage() {
 
   // Checkout & Payment Modal State
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
-  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'CASH' | 'CARD' | 'ONLINE' | 'CORPORATE_CLEARANCE' | 'OTHER'>('CASH')
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'CASH' | 'CARD' | 'ONLINE' | 'SPLIT' | 'CORPORATE_CLEARANCE' | 'OTHER'>('CASH')
   const [checkoutPaidAmount, setCheckoutPaidAmount] = useState<string>('')
+  const [bSplitCash, setBSplitCash] = useState<string>('')
+  const [bSplitCard, setBSplitCard] = useState<string>('')
+  const [bSplitUpi, setBSplitUpi] = useState<string>('')
   const [checkoutNotes, setCheckoutNotes] = useState<string>('')
   const [checkoutPosOrders, setCheckoutPosOrders] = useState<any[]>([])
   const [checkoutPosLoading, setCheckoutPosLoading] = useState(false)
@@ -201,7 +203,52 @@ export default function BookingsPage() {
   const [checkoutDiscount, setCheckoutDiscount] = useState<string>('')
   const [checkoutDiscountLabel, setCheckoutDiscountLabel] = useState<string>('')
   const [checkoutGuestGst, setCheckoutGuestGst] = useState<string>('')
+  const [checkoutCompanyName, setCheckoutCompanyName] = useState<string>('')
+  const [checkoutCompanyAddress, setCheckoutCompanyAddress] = useState<string>('')
+  const [isFetchingCheckoutGst, setIsFetchingCheckoutGst] = useState<boolean>(false)
   const [checkoutOtherType, setCheckoutOtherType] = useState<string>('Bank Transfer / NEFT')
+  const [checkoutHalfDayLate, setCheckoutHalfDayLate] = useState<boolean>(false)
+  const [checkoutHalfDayAmount, setCheckoutHalfDayAmount] = useState<string>('')
+  const [checkoutLateReason, setCheckoutLateReason] = useState<string>('Late departure after 11:00 AM (Half Day Charge)')
+
+  const handleCheckoutGstLookup = async (gstinToLookup?: string) => {
+    const clean = (gstinToLookup ?? checkoutGuestGst).trim().toUpperCase().replace(/\s+/g, '')
+    if (!clean) return
+    if (clean.length !== 15) {
+      toast.error('GSTIN must be 15 characters')
+      return
+    }
+    const val = validateGSTIN(clean)
+    if (!val.isValid) {
+      toast.error(val.message)
+      return
+    }
+    setIsFetchingCheckoutGst(true)
+    try {
+      const res = await fetch(`/api/admin/gst-lookup?gstin=${clean}`)
+      const json = await res.json()
+      if (json.success && json.data) {
+        setCheckoutGuestGst(clean)
+        if (json.data.companyName) setCheckoutCompanyName(json.data.companyName)
+        if (json.data.companyAddress) setCheckoutCompanyAddress(json.data.companyAddress)
+        toast.success(`GSTIN Verified: ${json.data.companyName}`)
+      } else {
+        toast.error(json.error || 'Failed to fetch GST details')
+      }
+    } catch {
+      toast.error('Failed to look up GSTIN')
+    } finally {
+      setIsFetchingCheckoutGst(false)
+    }
+  }
+
+  const handleCheckoutGstChange = (val: string) => {
+    const clean = val.toUpperCase().replace(/\s+/g, '')
+    setCheckoutGuestGst(clean)
+    if (clean.length === 15) {
+      handleCheckoutGstLookup(clean)
+    }
+  }
 
   // Edit Meal Plan & Add-ons Modal State
   const [showMealPlanModal, setShowMealPlanModal] = useState(false)
@@ -415,6 +462,60 @@ export default function BookingsPage() {
     }
   }
 
+  const openCheckoutModal = useCallback((booking: any) => {
+    setSelectedBooking(booking)
+    const isComp = Boolean(booking.isComplimentary || booking.raw?.isComplimentary)
+    const total = isComp 
+      ? ((booking.mealPlanAmount || 0) + (booking.extraAddonsAmount || 0))
+      : (booking.finalAmount ?? booking.totalAmount ?? 0)
+    const rem = Math.max(0, total - (booking.paidAmount ?? 0))
+    setCheckoutPaidAmount(rem.toString())
+    setCheckoutPaymentMethod('CASH')
+    setBSplitCash('')
+    setBSplitCard('')
+    setBSplitUpi('')
+    setCheckoutNotes('')
+    setCheckoutExtraCharge('')
+    setCheckoutExtraChargeLabel('')
+    setCheckoutDiscount('')
+    setCheckoutDiscountLabel('')
+    setCheckoutGuestGst(booking.guestGstNumber || booking.raw?.guestGstNumber || booking.guest?.gstNumber || '')
+    setCheckoutCompanyName(booking.guestCompanyName || booking.raw?.guestCompanyName || booking.guest?.companyName || '')
+    setCheckoutCompanyAddress(booking.guestCompanyAddress || booking.raw?.guestCompanyAddress || booking.guest?.companyAddress || '')
+    setCheckoutOtherType('Bank Transfer / NEFT')
+    const nightlyRate = booking.room?.basePrice || (booking.nights ? booking.baseAmount / booking.nights : booking.baseAmount) || 2000
+    const defHalfDay = Math.round(nightlyRate * 0.5)
+    setCheckoutHalfDayLate(false)
+    setCheckoutHalfDayAmount(String(defHalfDay))
+    setCheckoutLateReason('Late Check-Out after 11:00 AM (Half Day Charge)')
+    setCheckoutPosOrders([])
+    setShowCheckoutModal(true)
+    fetchCheckoutPosOrders(booking)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || loading || bookings.length === 0) return
+    const params = new URLSearchParams(window.location.search)
+    const targetBookingId = params.get('checkoutBookingId') || params.get('checkoutId')
+    const searchGuest = params.get('search')
+    if (targetBookingId) {
+      const match = bookings.find((b: any) => b.id === targetBookingId)
+      if (match) {
+        if (match.status === 'CHECKED_IN') {
+          openCheckoutModal(match)
+        } else {
+          setSelectedBooking(match)
+        }
+      }
+    } else if (searchGuest) {
+      const match = bookings.find((b: any) => 
+        (b.guest && b.guest.toLowerCase().includes(searchGuest.toLowerCase())) ||
+        (b.guestPhone && b.guestPhone.includes(searchGuest))
+      )
+      if (match) setSelectedBooking(match)
+    }
+  }, [loading, bookings, openCheckoutModal])
+
   const handleConfirmCheckoutPayment = async () => {
     if (!selectedBooking) return
     setIsUpdating(true)
@@ -422,12 +523,34 @@ export default function BookingsPage() {
       const posTotal = checkoutPosOrders.reduce((s: number, o: any) => s + (o.total || 0), 0)
       const extraCharge = parseFloat(checkoutExtraCharge) || 0
       const discount = parseFloat(checkoutDiscount) || 0
-      const finalPaymentMethod = checkoutPaymentMethod === 'OTHER' && checkoutOtherType.trim()
-        ? `OTHER: ${checkoutOtherType.trim()}`
-        : checkoutPaymentMethod
-      const finalNotes = checkoutPaymentMethod === 'OTHER' && checkoutOtherType.trim()
-        ? (checkoutNotes ? `[${checkoutOtherType.trim()}] ${checkoutNotes}` : `[${checkoutOtherType.trim()}]`)
-        : checkoutNotes
+      let finalPaymentMethod: string = checkoutPaymentMethod
+      let finalNotes: string = checkoutNotes
+
+      if (checkoutPaymentMethod === 'SPLIT') {
+        const cVal = parseFloat(bSplitCash) || 0
+        const cardVal = parseFloat(bSplitCard) || 0
+        const upiVal = parseFloat(bSplitUpi) || 0
+        const splitSum = cVal + cardVal + upiVal
+        const targetPaid = parseFloat(checkoutPaidAmount) || 0
+
+        if (targetPaid > 0 && Math.abs(splitSum - targetPaid) > 1) {
+          toast.error(`Split payment total (₹${splitSum}) does not match amount to collect (₹${targetPaid})`)
+          setIsUpdating(false)
+          return
+        }
+
+        const breakdown = [
+          cVal > 0 ? `Cash: ₹${cVal.toLocaleString()}` : null,
+          cardVal > 0 ? `Card: ₹${cardVal.toLocaleString()}` : null,
+          upiVal > 0 ? `UPI: ₹${upiVal.toLocaleString()}` : null,
+        ].filter(Boolean).join(', ')
+
+        finalPaymentMethod = `Split (${breakdown})`
+        finalNotes = checkoutNotes ? `[Split: ${breakdown}] ${checkoutNotes}` : `[Split: ${breakdown}]`
+      } else if (checkoutPaymentMethod === 'OTHER' && checkoutOtherType.trim()) {
+        finalPaymentMethod = `OTHER: ${checkoutOtherType.trim()}`
+        finalNotes = checkoutNotes ? `[${checkoutOtherType.trim()}] ${checkoutNotes}` : `[${checkoutOtherType.trim()}]`
+      }
       const res = await fetch('/api/admin/bookings/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -440,7 +563,11 @@ export default function BookingsPage() {
           posCharges: posTotal,
           extraCharges: extraCharge,
           extraDiscount: discount,
-          guestGstNumber: checkoutGuestGst.trim().toUpperCase() || undefined
+          guestGstNumber: checkoutGuestGst.trim().toUpperCase() || undefined,
+          guestCompanyName: checkoutCompanyName.trim() || undefined,
+          guestCompanyAddress: checkoutCompanyAddress.trim() || undefined,
+          lateCheckoutCharge: checkoutHalfDayLate ? (parseFloat(checkoutHalfDayAmount) || 0) : 0,
+          lateCheckoutReason: checkoutHalfDayLate ? (checkoutLateReason || 'Late Check-Out after 11:00 AM (Half Day Charge)') : undefined
         })
       })
       if (res.ok) {
@@ -1162,25 +1289,7 @@ export default function BookingsPage() {
                   {selectedBooking.status === 'CHECKED_IN' && (
                     <button
                       disabled={isUpdating}
-                      onClick={() => {
-                        const isComp = Boolean(selectedBooking.isComplimentary || selectedBooking.raw?.isComplimentary)
-                        const total = isComp 
-                          ? ((selectedBooking.mealPlanAmount || 0) + (selectedBooking.extraAddonsAmount || 0))
-                          : (selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0)
-                        const rem = Math.max(0, total - (selectedBooking.paidAmount ?? 0))
-                        setCheckoutPaidAmount(rem.toString())
-                        setCheckoutPaymentMethod('CASH')
-                        setCheckoutNotes('')
-                        setCheckoutExtraCharge('')
-                        setCheckoutExtraChargeLabel('')
-                        setCheckoutDiscount('')
-                        setCheckoutDiscountLabel('')
-                        setCheckoutGuestGst(selectedBooking.guestGstNumber || selectedBooking.guest?.gstNumber || '')
-                        setCheckoutOtherType('Bank Transfer / NEFT')
-                        setCheckoutPosOrders([])
-                        setShowCheckoutModal(true)
-                        fetchCheckoutPosOrders(selectedBooking)
-                      }}
+                      onClick={() => openCheckoutModal(selectedBooking)}
                       className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#4A9EFF] hover:bg-surface text-text-primary text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 shadow-lg shadow-[#4A9EFF]/20"
                     >
                       <LogOut className="w-4 h-4" />
@@ -1540,6 +1649,7 @@ export default function BookingsPage() {
         const posTotal = checkoutPosOrders.reduce((s: number, o: any) => s + (o.total || 0), 0)
         const extraCharge = parseFloat(checkoutExtraCharge) || 0
         const discount = parseFloat(checkoutDiscount) || 0
+        const halfDayCharge = checkoutHalfDayLate ? (parseFloat(checkoutHalfDayAmount) || 0) : 0
         const roomTariff = isComp ? 0 : (selectedBooking.baseAmount || selectedBooking.totalAmount || 0)
         const roomGst = isComp ? 0 : (selectedBooking.gstAmount || 0)
         const mealPlanAmt = selectedBooking.mealPlanAmount || 0
@@ -1547,60 +1657,138 @@ export default function BookingsPage() {
         const baseInvoice = isComp 
           ? (mealPlanAmt + extraAddonsAmt)
           : (selectedBooking.finalAmount ?? selectedBooking.totalAmount ?? 0)
-        const grandTotal = Math.max(0, baseInvoice + posTotal + extraCharge - discount)
+        const grandTotal = Math.max(0, baseInvoice + posTotal + extraCharge + halfDayCharge - discount)
         const alreadyPaid = selectedBooking.paidAmount ?? 0
         const balanceDue = Math.max(0, grandTotal - alreadyPaid)
+        const targetAmountToCollect = parseFloat(checkoutPaidAmount) || balanceDue
+        const bSplitCashVal = parseFloat(bSplitCash) || 0
+        const bSplitCardVal = parseFloat(bSplitCard) || 0
+        const bSplitUpiVal = parseFloat(bSplitUpi) || 0
+        const bSplitAllocated = bSplitCashVal + bSplitCardVal + bSplitUpiVal
+        const bSplitRemaining = Math.max(0, targetAmountToCollect - bSplitAllocated)
+        const isBSplitBalanced = Math.abs(bSplitAllocated - targetAmountToCollect) < 1 && targetAmountToCollect > 0
+
+        const singleNightRate = selectedBooking.room?.basePrice || (selectedBooking.nights ? Math.round(selectedBooking.baseAmount / selectedBooking.nights) : selectedBooking.baseAmount) || 2000
+        const halfTariffPreset = Math.round(singleNightRate * 0.5)
+        const fullTariffPreset = singleNightRate
+
+        const handleToggleLateCheckout = (checked: boolean) => {
+          setCheckoutHalfDayLate(checked)
+          const newHalfAmt = checked ? (parseFloat(checkoutHalfDayAmount) || halfTariffPreset) : 0
+          if (checked && !checkoutHalfDayAmount) {
+            setCheckoutHalfDayAmount(String(halfTariffPreset))
+          }
+          const newGrand = Math.max(0, baseInvoice + posTotal + extraCharge + newHalfAmt - discount)
+          setCheckoutPaidAmount(Math.max(0, newGrand - alreadyPaid).toString())
+        }
+
+        const handleSetLateAmount = (val: string) => {
+          setCheckoutHalfDayAmount(val)
+          if (checkoutHalfDayLate) {
+            const newHalfAmt = parseFloat(val) || 0
+            const newGrand = Math.max(0, baseInvoice + posTotal + extraCharge + newHalfAmt - discount)
+            setCheckoutPaidAmount(Math.max(0, newGrand - alreadyPaid).toString())
+          }
+        }
+
+        const handleApplyBookingSplitPreset = (type: '50-50-cash-upi' | '50-50-cash-card' | '50-50-card-upi' | '33-33-33') => {
+          const tot = targetAmountToCollect
+          if (tot <= 0) return
+          if (type === '50-50-cash-upi') {
+            const half = Math.round((tot / 2) * 100) / 100
+            setBSplitCash(String(half))
+            setBSplitCard('0')
+            setBSplitUpi(String(Math.round((tot - half) * 100) / 100))
+          } else if (type === '50-50-cash-card') {
+            const half = Math.round((tot / 2) * 100) / 100
+            setBSplitCash(String(half))
+            setBSplitCard(String(Math.round((tot - half) * 100) / 100))
+            setBSplitUpi('0')
+          } else if (type === '50-50-card-upi') {
+            const half = Math.round((tot / 2) * 100) / 100
+            setBSplitCash('0')
+            setBSplitCard(String(half))
+            setBSplitUpi(String(Math.round((tot - half) * 100) / 100))
+          } else if (type === '33-33-33') {
+            const part = Math.floor(tot / 3)
+            const rem = tot - (part * 2)
+            setBSplitCash(String(part))
+            setBSplitCard(String(part))
+            setBSplitUpi(String(rem))
+          }
+        }
+
+        const fillBookingRemainingTo = (mode: 'cash' | 'card' | 'upi') => {
+          if (bSplitRemaining <= 0) return
+          if (mode === 'cash') setBSplitCash(String(Math.round((bSplitCashVal + bSplitRemaining) * 100) / 100))
+          if (mode === 'card') setBSplitCard(String(Math.round((bSplitCardVal + bSplitRemaining) * 100) / 100))
+          if (mode === 'upi') setBSplitUpi(String(Math.round((bSplitUpiVal + bSplitRemaining) * 100) / 100))
+        }
+
         return (
-        <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-surface border border-border/50 rounded-3xl w-full max-w-xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white dark:bg-[#0B1120] text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[92vh]">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/50 px-5 py-4">
-              <div>
-                <h2 className="text-xl font-bold text-text-primary tracking-tight flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-[#4A9EFF]" />
-                  Check-Out &amp; Payment Settlement
-                </h2>
-                <p className="text-xs text-text-secondary mt-0.5">
-                  Guest: <span className="text-text-primary font-bold">{selectedBooking.guest?.name || selectedBooking.guest}</span>
-                  &bull; Room <span className="text-[#4A9EFF] font-bold">{selectedBooking.room?.roomNumber || selectedBooking.room}</span>
-                  &bull; {selectedBooking.nights} Night{selectedBooking.nights !== 1 ? 's' : ''}
-                </p>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 px-6 py-4.5 bg-slate-50/80 dark:bg-slate-900/60 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-inner shrink-0">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                    Check-Out &amp; Payment Settlement
+                  </h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    Guest: <span className="text-slate-900 dark:text-white font-bold">{selectedBooking.guest?.name || selectedBooking.guest}</span>
+                    {' '}&bull; Room <span className="text-blue-600 dark:text-blue-400 font-bold">{selectedBooking.room?.roomNumber || selectedBooking.room}</span>
+                    {' '}&bull; {selectedBooking.nights} Night{selectedBooking.nights !== 1 ? 's' : ''}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setShowCheckoutModal(false)} className="p-1.5 hover:bg-white/10 rounded-full text-text-secondary hover:text-text-primary">
+              <button 
+                onClick={() => setShowCheckoutModal(false)} 
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="px-5 pb-5 space-y-4 max-h-[78vh] overflow-y-auto custom-scrollbar pt-4">
+            <div className="px-6 py-5 space-y-4 overflow-y-auto custom-scrollbar flex-1">
 
               {/* Room Charges Breakdown */}
               <div>
-                <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest mb-2">Room Charges</p>
-                <div className="border border-border/50 rounded-xl overflow-hidden bg-black/20">
-                  <table className="w-full text-left text-[11px]">
-                    <thead className="bg-[#4A9EFF]/10">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Room Charges &amp; Stay Breakdown</p>
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                    <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                    <span>Std Checkout: 11:00 AM</span>
+                  </div>
+                </div>
+                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-900/40">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       <tr>
-                        <th className="px-3 py-2 font-bold text-text-tertiary w-6">#</th>
-                        <th className="px-3 py-2 font-bold text-text-tertiary">Revenue Head</th>
-                        <th className="px-3 py-2 font-bold text-text-tertiary text-right">Amount</th>
+                        <th className="px-3.5 py-2.5 w-8">#</th>
+                        <th className="px-3.5 py-2.5">Revenue Head</th>
+                        <th className="px-3.5 py-2.5 text-right">Amount</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/30">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200 font-medium">
                       <tr>
-                        <td className="px-3 py-2 text-text-secondary">1</td>
-                        <td className="px-3 py-2 text-text-primary">
+                        <td className="px-3.5 py-2.5 text-slate-400">1</td>
+                        <td className="px-3.5 py-2.5">
                           <div className="flex items-center gap-2">
-                            <span>Room Tariff ({selectedBooking.nights}N)</span>
+                            <span className="font-semibold text-slate-900 dark:text-white">Room Tariff ({selectedBooking.nights}N)</span>
                             {isComp && (
-                              <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                                 Complimentary
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-right text-slate-900 dark:text-white">
                           {isComp ? (
-                            <span className="text-emerald-400 font-bold">&#8377;0</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">&#8377;0</span>
                           ) : (
                             <>&#8377;{roomTariff.toLocaleString()}</>
                           )}
@@ -1608,120 +1796,306 @@ export default function BookingsPage() {
                       </tr>
                       {!isComp && roomGst > 0 && (<>
                       <tr>
-                        <td className="px-3 py-2 text-text-secondary">2</td>
-                        <td className="px-3 py-2 text-text-primary">CGST {(selectedBooking.gstPercent || 0)/2}%</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{(roomGst/2).toLocaleString()}</td>
+                        <td className="px-3.5 py-2.5 text-slate-400">2</td>
+                        <td className="px-3.5 py-2.5">CGST {(selectedBooking.gstPercent || 0)/2}%</td>
+                        <td className="px-3.5 py-2.5 font-mono text-right text-slate-700 dark:text-slate-300">&#8377;{(roomGst/2).toLocaleString()}</td>
                       </tr>
                       <tr>
-                        <td className="px-3 py-2 text-text-secondary">3</td>
-                        <td className="px-3 py-2 text-text-primary">SGST {(selectedBooking.gstPercent || 0)/2}%</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{(roomGst/2).toLocaleString()}</td>
+                        <td className="px-3.5 py-2.5 text-slate-400">3</td>
+                        <td className="px-3.5 py-2.5">SGST {(selectedBooking.gstPercent || 0)/2}%</td>
+                        <td className="px-3.5 py-2.5 font-mono text-right text-slate-700 dark:text-slate-300">&#8377;{(roomGst/2).toLocaleString()}</td>
                       </tr>
                       </>)}
                       {mealPlanAmt > 0 && (
                       <tr>
-                        <td className="px-3 py-2 text-text-secondary">{!isComp && roomGst > 0 ? 4 : 2}</td>
-                        <td className="px-3 py-2 text-text-primary">Meal Plan ({selectedBooking.mealPlan})</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{mealPlanAmt.toLocaleString()}</td>
+                        <td className="px-3.5 py-2.5 text-slate-400">{!isComp && roomGst > 0 ? 4 : 2}</td>
+                        <td className="px-3.5 py-2.5">Meal Plan ({selectedBooking.mealPlan})</td>
+                        <td className="px-3.5 py-2.5 font-mono text-right text-slate-700 dark:text-slate-300">&#8377;{mealPlanAmt.toLocaleString()}</td>
                       </tr>)}
                       {extraAddonsAmt > 0 && (
                       <tr>
-                        <td className="px-3 py-2 text-text-secondary">3</td>
-                        <td className="px-3 py-2 text-text-primary">Extra Add-ons</td>
-                        <td className="px-3 py-2 text-text-primary font-mono text-right">&#8377;{extraAddonsAmt.toLocaleString()}</td>
+                        <td className="px-3.5 py-2.5 text-slate-400">{!isComp && roomGst > 0 ? 5 : 3}</td>
+                        <td className="px-3.5 py-2.5">Extra Add-ons</td>
+                        <td className="px-3.5 py-2.5 font-mono text-right text-slate-700 dark:text-slate-300">&#8377;{extraAddonsAmt.toLocaleString()}</td>
                       </tr>)}
+                      {checkoutHalfDayLate && halfDayCharge > 0 && (
+                      <tr className="bg-amber-500/10 font-semibold">
+                        <td className="px-3.5 py-2.5 text-amber-500 font-bold">
+                          <Clock className="w-3.5 h-3.5" />
+                        </td>
+                        <td className="px-3.5 py-2.5 text-amber-700 dark:text-amber-300">
+                          <div className="flex items-center gap-1.5">
+                            <span>Late Check-Out / Half-Day ({checkoutLateReason || 'Standard 11:00 AM Extended'})</span>
+                          </div>
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono font-black text-right text-amber-600 dark:text-amber-400">
+                          +&#8377;{halfDayCharge.toLocaleString()}
+                        </td>
+                      </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               </div>
 
+              {/* Late Check-Out / Half-Day Charge Section */}
+              <div className={cn(
+                "p-4 rounded-2xl border-2 transition-all",
+                checkoutHalfDayLate 
+                  ? "bg-amber-500/10 border-amber-500/40 shadow-sm" 
+                  : "bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800"
+              )}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={cn(
+                      "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                      checkoutHalfDayLate ? "bg-amber-500 text-slate-950 font-bold" : "bg-slate-200 dark:bg-slate-800 text-slate-500"
+                    )}>
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                          Late Check-Out / Half-Day Charge
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                          Standard Checkout: 11:00 AM
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Guest checking out after 11:00 AM (e.g. 4:00 PM)? Apply half-day room charge to bill &amp; tax invoice.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLateCheckout(!checkoutHalfDayLate)}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                      checkoutHalfDayLate ? "bg-amber-500" : "bg-slate-300 dark:bg-slate-700"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                        checkoutHalfDayLate ? "translate-x-5" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {checkoutHalfDayLate && (
+                  <div className="mt-3.5 pt-3 border-t border-amber-500/20 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {/* Quick Presets */}
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                        Quick Preset Amount (Tariff: &#8377;{singleNightRate.toLocaleString()}/nt)
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleSetLateAmount(String(halfTariffPreset))}
+                          className={cn(
+                            "px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                            checkoutHalfDayAmount === String(halfTariffPreset)
+                              ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
+                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-amber-400"
+                          )}
+                        >
+                          50% Tariff (&#8377;{halfTariffPreset.toLocaleString()})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetLateAmount(String(fullTariffPreset))}
+                          className={cn(
+                            "px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                            checkoutHalfDayAmount === String(fullTariffPreset)
+                              ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
+                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-amber-400"
+                          )}
+                        >
+                          Full Day (&#8377;{fullTariffPreset.toLocaleString()})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetLateAmount('500')}
+                          className={cn(
+                            "px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                            checkoutHalfDayAmount === '500'
+                              ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
+                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-amber-400"
+                          )}
+                        >
+                          &#8377;500 Flat
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetLateAmount('1000')}
+                          className={cn(
+                            "px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
+                            checkoutHalfDayAmount === '1000'
+                              ? "bg-amber-500 text-slate-950 border-amber-500 shadow-sm"
+                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-amber-400"
+                          )}
+                        >
+                          &#8377;1,000 Flat
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Input Row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                          Reason / Departure Note (Appears on Invoice)
+                        </label>
+                        <input
+                          type="text"
+                          value={checkoutLateReason}
+                          onChange={e => setCheckoutLateReason(e.target.value)}
+                          placeholder="e.g. Extended departure till 4:00 PM (Half-Day)"
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                          Amount (&#8377;)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2 text-xs font-bold text-amber-500">&#8377;</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={checkoutHalfDayAmount}
+                            onChange={e => handleSetLateAmount(e.target.value)}
+                            placeholder="0"
+                            className="w-full bg-white dark:bg-slate-900 border border-amber-400 dark:border-amber-500/60 rounded-xl pl-6 pr-3 py-2 text-xs font-mono font-black text-amber-600 dark:text-amber-400 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-500/20">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>This surcharge of &#8377;{(parseFloat(checkoutHalfDayAmount) || 0).toLocaleString()} will be printed as an official line item on the GST Tax Invoice.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* POS Food Orders */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest">Food &amp; Beverage (POS Orders)</p>
-                  {checkoutPosLoading && <span className="text-[9px] text-amber-400 animate-pulse">Fetching orders...</span>}
+                  <p className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Food &amp; Beverage (POS Orders)</p>
+                  {checkoutPosLoading && <span className="text-[10px] text-amber-500 font-bold animate-pulse">Fetching orders...</span>}
                 </div>
                 {checkoutPosOrders.length > 0 ? (
-                  <div className="border border-amber-500/30 rounded-xl overflow-hidden bg-black/20">
-                    <table className="w-full text-[11px]">
-                      <thead className="bg-amber-500/10">
+                  <div className="border border-amber-400/40 dark:border-amber-500/30 rounded-2xl overflow-hidden bg-amber-50/50 dark:bg-amber-950/20">
+                    <table className="w-full text-xs">
+                      <thead className="bg-amber-500/15 text-amber-800 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider">
                         <tr>
-                          <th className="px-3 py-2 font-bold text-text-tertiary text-left">Order #</th>
-                          <th className="px-3 py-2 font-bold text-text-tertiary text-left">Items</th>
-                          <th className="px-3 py-2 font-bold text-text-tertiary text-right">Amount</th>
+                          <th className="px-3.5 py-2 text-left">Order #</th>
+                          <th className="px-3.5 py-2 text-left">Items</th>
+                          <th className="px-3.5 py-2 text-right">Amount</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border/30">
+                      <tbody className="divide-y divide-amber-200/50 dark:divide-amber-500/20">
                         {checkoutPosOrders.map((order: any) => (
                           <tr key={order.id}>
-                            <td className="px-3 py-2 text-text-secondary whitespace-nowrap">{order.orderNumber}</td>
-                            <td className="px-3 py-2 text-text-primary">{order.items?.map((i: any) => i.name).join(', ') || order.guestName}</td>
-                            <td className="px-3 py-2 text-amber-400 font-mono font-bold text-right">&#8377;{(order.total || 0).toLocaleString()}</td>
+                            <td className="px-3.5 py-2 text-slate-700 dark:text-slate-300 font-semibold whitespace-nowrap">{order.orderNumber}</td>
+                            <td className="px-3.5 py-2 text-slate-900 dark:text-slate-100">{order.items?.map((i: any) => i.name).join(', ') || order.guestName}</td>
+                            <td className="px-3.5 py-2 text-amber-600 dark:text-amber-400 font-mono font-bold text-right">&#8377;{(order.total || 0).toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="border-t border-border/50 bg-black/30">
+                      <tfoot className="border-t border-amber-300/60 dark:border-amber-500/30 bg-amber-500/10">
                         <tr>
-                          <td colSpan={2} className="px-3 py-2 text-xs font-bold text-text-secondary">POS Sub-total</td>
-                          <td className="px-3 py-2 text-xs font-bold text-amber-400 font-mono text-right">&#8377;{posTotal.toLocaleString()}</td>
+                          <td colSpan={2} className="px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200">POS Sub-total</td>
+                          <td className="px-3.5 py-2 text-xs font-bold text-amber-600 dark:text-amber-400 font-mono text-right">&#8377;{posTotal.toLocaleString()}</td>
                         </tr>
                       </tfoot>
                     </table>
                   </div>
                 ) : !checkoutPosLoading ? (
-                  <div className="border border-dashed border-border/40 rounded-xl px-4 py-3 flex items-center gap-2">
-                    <p className="text-xs text-text-tertiary">No pending POS orders found for this room. Add manual charges below if needed.</p>
+                  <div className="border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl px-4 py-3 flex items-center gap-2 bg-slate-50/40 dark:bg-slate-900/20">
+                    <p className="text-xs text-slate-600 dark:text-slate-400">No pending POS orders found for this room. Add manual charges below if needed.</p>
                   </div>
                 ) : null}
               </div>
 
-              {/* Extra Charges */}
+              {/* Extra Charges (Manual) */}
               <div>
-                <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest mb-2">Extra Charges (Manual)</p>
+                <p className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5">Extra Charges (Manual)</p>
                 <div className="flex gap-2">
-                  <input type="text" value={checkoutExtraChargeLabel} onChange={e => setCheckoutExtraChargeLabel(e.target.value)}
-                    placeholder="Description (e.g. Minibar, Laundry, Phone)"
-                    className="flex-1 bg-black/40 border border-border/50 rounded-xl px-3 py-2 text-xs text-text-primary outline-none focus:border-[#4A9EFF]" />
-                  <input type="number" value={checkoutExtraCharge}
-                    onChange={e => {
-                      setCheckoutExtraCharge(e.target.value)
-                      const pC = parseFloat(e.target.value) || 0
-                      const d = parseFloat(checkoutDiscount) || 0
-                      const newGrand = Math.max(0, baseInvoice + posTotal + pC - d)
-                      setCheckoutPaidAmount(Math.max(0, newGrand - alreadyPaid).toString())
-                    }}
-                    placeholder="&#8377; Amount"
-                    className="w-32 bg-black/40 border border-border/50 rounded-xl px-3 py-2 text-xs text-text-primary font-mono outline-none focus:border-[#4A9EFF] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  <input 
+                    type="text" 
+                    value={checkoutExtraChargeLabel} 
+                    onChange={e => setCheckoutExtraChargeLabel(e.target.value)}
+                    placeholder="Description (e.g. Minibar, Laundry, Telephone)"
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm" 
+                  />
+                  <div className="relative w-36">
+                    <span className="absolute left-3 top-2 text-xs font-bold text-slate-400">&#8377;</span>
+                    <input 
+                      type="number" 
+                      value={checkoutExtraCharge}
+                      onChange={e => {
+                        setCheckoutExtraCharge(e.target.value)
+                        const pC = parseFloat(e.target.value) || 0
+                        const d = parseFloat(checkoutDiscount) || 0
+                        const newGrand = Math.max(0, baseInvoice + posTotal + pC + halfDayCharge - d)
+                        setCheckoutPaidAmount(Math.max(0, newGrand - alreadyPaid).toString())
+                      }}
+                      placeholder="0.00"
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-6 pr-3 py-2 text-xs text-slate-900 dark:text-white font-mono font-bold outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Discount */}
               <div>
-                <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest mb-2">Discount / Complimentary</p>
+                <p className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-1.5">Discount / Complimentary</p>
                 <div className="flex gap-2">
-                  <input type="text" value={checkoutDiscountLabel} onChange={e => setCheckoutDiscountLabel(e.target.value)}
-                    placeholder="Reason (e.g. Loyalty, Complaint resolution)"
-                    className="flex-1 bg-black/40 border border-border/50 rounded-xl px-3 py-2 text-xs text-text-primary outline-none focus:border-emerald-500" />
-                  <input type="number" value={checkoutDiscount}
-                    onChange={e => {
-                      setCheckoutDiscount(e.target.value)
-                      const d = parseFloat(e.target.value) || 0
-                      const eC = parseFloat(checkoutExtraCharge) || 0
-                      const newGrand = Math.max(0, baseInvoice + posTotal + eC - d)
-                      setCheckoutPaidAmount(Math.max(0, newGrand - alreadyPaid).toString())
-                    }}
-                    placeholder="&#8377; Amount"
-                    className="w-32 bg-black/40 border border-emerald-500/30 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono outline-none focus:border-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                  <input 
+                    type="text" 
+                    value={checkoutDiscountLabel} 
+                    onChange={e => setCheckoutDiscountLabel(e.target.value)}
+                    placeholder="Reason (e.g. Loyalty Guest, Resolution Settle)"
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm" 
+                  />
+                  <div className="relative w-36">
+                    <span className="absolute left-3 top-2 text-xs font-bold text-emerald-500">&#8377;</span>
+                    <input 
+                      type="number" 
+                      value={checkoutDiscount}
+                      onChange={e => {
+                        setCheckoutDiscount(e.target.value)
+                        const d = parseFloat(e.target.value) || 0
+                        const eC = parseFloat(checkoutExtraCharge) || 0
+                        const newGrand = Math.max(0, baseInvoice + posTotal + eC + halfDayCharge - d)
+                        setCheckoutPaidAmount(Math.max(0, newGrand - alreadyPaid).toString())
+                      }}
+                      placeholder="0.00"
+                      className="w-full bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-500/40 rounded-xl pl-6 pr-3 py-2 text-xs text-emerald-600 dark:text-emerald-400 font-mono font-bold outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Bill Summary */}
-              <div className="bg-black/40 border border-border rounded-2xl p-4">
-                <p className="text-[10px] font-black text-text-tertiary uppercase tracking-widest mb-3">Bill Summary</p>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between text-text-secondary">
+              <div className="bg-slate-900 text-white rounded-2xl p-4.5 border border-slate-800 shadow-xl space-y-2">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Official Bill Summary</p>
+                  <span className="text-[10px] font-bold text-blue-300 bg-blue-500/20 px-2 py-0.5 rounded-full border border-blue-400/30">
+                    Invoice Settlement
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-xs pt-1">
+                  <div className="flex justify-between text-slate-300">
                     <span>{isComp ? 'Room (Complimentary) + Meal Plan' : 'Room + Taxes + Meal Plan'}</span>
-                    <span className="font-mono">
+                    <span className="font-mono font-semibold">
                       {isComp && baseInvoice === 0 ? (
                         <span className="text-emerald-400 font-bold">&#8377;0</span>
                       ) : (
@@ -1729,77 +2103,297 @@ export default function BookingsPage() {
                       )}
                     </span>
                   </div>
+
+                  {checkoutHalfDayLate && halfDayCharge > 0 && (
+                    <div className="flex justify-between text-amber-300 font-semibold">
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        Late Check-Out / Half-Day Surcharge
+                      </span>
+                      <span className="font-mono font-bold">+ &#8377;{halfDayCharge.toLocaleString()}</span>
+                    </div>
+                  )}
+
                   {posTotal > 0 && (
-                    <div className="flex justify-between text-amber-400">
-                      <span>Food &amp; Beverage (POS)</span>
-                      <span className="font-mono">+ &#8377;{posTotal.toLocaleString()}</span>
+                    <div className="flex justify-between text-amber-400 font-semibold">
+                      <span>Food &amp; Beverage (POS Orders)</span>
+                      <span className="font-mono font-bold">+ &#8377;{posTotal.toLocaleString()}</span>
                     </div>
                   )}
+
                   {extraCharge > 0 && (
-                    <div className="flex justify-between text-text-secondary">
+                    <div className="flex justify-between text-slate-300">
                       <span>{checkoutExtraChargeLabel || 'Extra Charges'}</span>
-                      <span className="font-mono">+ &#8377;{extraCharge.toLocaleString()}</span>
+                      <span className="font-mono font-semibold">+ &#8377;{extraCharge.toLocaleString()}</span>
                     </div>
                   )}
+
                   {discount > 0 && (
-                    <div className="flex justify-between text-emerald-400">
-                      <span>{checkoutDiscountLabel || 'Discount'}</span>
-                      <span className="font-mono">- &#8377;{discount.toLocaleString()}</span>
+                    <div className="flex justify-between text-emerald-400 font-semibold">
+                      <span>{checkoutDiscountLabel || 'Discount / Concession'}</span>
+                      <span className="font-mono font-bold">- &#8377;{discount.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="border-t border-border/50 pt-2 flex justify-between font-bold text-sm">
-                    <span className="text-text-primary">Grand Total</span>
-                    <span className="text-text-primary font-mono">&#8377;{grandTotal.toLocaleString()}</span>
+
+                  <div className="border-t border-slate-800 pt-2 flex justify-between font-bold text-sm text-white">
+                    <span>Grand Total</span>
+                    <span className="font-mono text-base">&#8377;{grandTotal.toLocaleString()}</span>
                   </div>
+
                   {alreadyPaid > 0 && (
-                    <div className="flex justify-between text-emerald-400 text-[11px]">
+                    <div className="flex justify-between text-emerald-400 text-xs font-semibold">
                       <span>Advance / Already Paid</span>
                       <span className="font-mono">- &#8377;{alreadyPaid.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-black text-base border-t border-border pt-2">
-                    <span className="text-[#4A9EFF]">Balance Due</span>
-                    <span className="text-[#4A9EFF] font-mono">&#8377;{balanceDue.toLocaleString()}</span>
+
+                  {/* Balance Due High-Contrast Glowing Callout */}
+                  <div className="mt-2.5 p-3.5 rounded-xl bg-gradient-to-r from-blue-950/70 via-indigo-950/70 to-slate-900 border border-blue-500/40 flex items-center justify-between shadow-inner">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+                        <CreditCard className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-blue-300 uppercase tracking-wider block">Net Balance Due</span>
+                        <span className="text-[10px] text-slate-400">Total payable at check-out</span>
+                      </div>
+                    </div>
+                    <span className="text-2xl font-mono font-black text-cyan-300 tracking-tight">&#8377;{balanceDue.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
 
               {/* Payment Method */}
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Select Payment Mode</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">Select Payment Mode</label>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Click to select settlement channel</span>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    { id: 'CASH', label: 'Cash', icon: Banknote, color: 'text-emerald-400' },
-                    { id: 'CARD', label: 'Credit / Debit Card', icon: CreditCard, color: 'text-blue-400' },
-                    { id: 'ONLINE', label: 'Online / UPI', icon: Smartphone, color: 'text-purple-400' },
-                    { id: 'CORPORATE_CLEARANCE', label: 'Corporate Clearance', icon: Building2, color: 'text-amber-400' },
-                    { id: 'OTHER', label: 'Other', icon: HelpCircle, color: 'text-text-secondary' },
+                    { id: 'CASH', label: 'Cash', icon: Banknote, color: 'text-emerald-500' },
+                    { id: 'CARD', label: 'Credit / Debit Card', icon: CreditCard, color: 'text-blue-500' },
+                    { id: 'ONLINE', label: 'Online / UPI', icon: Smartphone, color: 'text-purple-500' },
+                    { id: 'SPLIT', label: 'Split / Multi-Pay', icon: Layers, color: 'text-amber-500' },
+                    { id: 'CORPORATE_CLEARANCE', label: 'Corporate Clearance', icon: Building2, color: 'text-indigo-500' },
+                    { id: 'OTHER', label: 'Other', icon: HelpCircle, color: 'text-slate-500' },
                   ].map(m => {
                     const Icon = m.icon
                     const isSel = checkoutPaymentMethod === m.id
                     return (
-                      <button key={m.id} type="button" onClick={() => setCheckoutPaymentMethod(m.id as any)}
-                        className={cn('p-3 rounded-2xl border text-left flex flex-col justify-between gap-2 transition-all',
-                          isSel ? 'bg-[#4A9EFF]/15 border-[#4A9EFF] ring-1 ring-[#4A9EFF]' : 'bg-black/20 border-border text-text-secondary')}>
+                      <button 
+                        key={m.id} 
+                        type="button" 
+                        onClick={() => {
+                          setCheckoutPaymentMethod(m.id as any)
+                          if (m.id === 'SPLIT' && !bSplitCash && !bSplitCard && !bSplitUpi && targetAmountToCollect > 0) {
+                            const half = Math.round((targetAmountToCollect / 2) * 100) / 100
+                            setBSplitCash(String(half))
+                            setBSplitUpi(String(Math.round((targetAmountToCollect - half) * 100) / 100))
+                            setBSplitCard('0')
+                          }
+                        }}
+                        className={cn(
+                          'p-3 rounded-2xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer shadow-sm',
+                          isSel 
+                            ? 'bg-blue-50 dark:bg-blue-950/60 border-2 border-blue-600 dark:border-blue-500 ring-2 ring-blue-500/20 text-blue-950 dark:text-blue-100 shadow-md' 
+                            : 'bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                        )}
+                      >
                         <div className="flex items-center justify-between w-full">
-                          <Icon className={cn('w-4 h-4', isSel ? 'text-[#4A9EFF]' : m.color)} />
-                          {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-[#4A9EFF]" />}
+                          <Icon className={cn('w-4 h-4', isSel ? 'text-blue-600 dark:text-blue-400' : m.color)} />
+                          {isSel && <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />}
                         </div>
-                        <span className={cn('text-xs font-bold truncate', isSel ? 'text-text-primary' : 'text-text-secondary')}>{m.label}</span>
+                        <span className={cn('text-xs font-bold truncate', isSel ? 'text-blue-950 dark:text-white' : 'text-slate-800 dark:text-slate-200')}>
+                          {m.label}
+                        </span>
                       </button>
                     )
                   })}
                 </div>
 
+                {/* Split Payment Allocation UI */}
+                {checkoutPaymentMethod === 'SPLIT' && (
+                  <div className="mt-3 space-y-3 bg-amber-500/10 p-4 rounded-2xl border border-amber-500/30 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-amber-500" />
+                        Split Payment Allocation
+                      </label>
+                      <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                        Target: &#8377;{targetAmountToCollect.toLocaleString()}
+                      </span>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBookingSplitPreset('50-50-cash-upi')}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+                      >
+                        50% Cash + 50% UPI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBookingSplitPreset('50-50-cash-card')}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+                      >
+                        50% Cash + 50% Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBookingSplitPreset('50-50-card-upi')}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+                      >
+                        50% Card + 50% UPI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApplyBookingSplitPreset('33-33-33')}
+                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-colors cursor-pointer"
+                      >
+                        1/3 Cash + Card + UPI
+                      </button>
+                    </div>
+
+                    {/* Multi-mode inputs */}
+                    <div className="space-y-2">
+                      {/* Cash */}
+                      <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                            <Banknote className="w-3.5 h-3.5 text-emerald-500" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Cash</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-400">&#8377;</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={bSplitCash}
+                            onChange={e => setBSplitCash(e.target.value)}
+                            className="w-28 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-right text-slate-900 dark:text-white outline-none focus:border-amber-500"
+                          />
+                          {bSplitRemaining > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => fillBookingRemainingTo('cash')}
+                              className="px-2 py-1 text-[9px] font-bold rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                              title="Add remaining balance to Cash"
+                            >
+                              +Fill
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card */}
+                      <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                            <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Card</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-400">&#8377;</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={bSplitCard}
+                            onChange={e => setBSplitCard(e.target.value)}
+                            className="w-28 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-right text-slate-900 dark:text-white outline-none focus:border-amber-500"
+                          />
+                          {bSplitRemaining > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => fillBookingRemainingTo('card')}
+                              className="px-2 py-1 text-[9px] font-bold rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                              title="Add remaining balance to Card"
+                            >
+                              +Fill
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* UPI */}
+                      <div className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2 shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                            <Smartphone className="w-3.5 h-3.5 text-purple-500" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">UPI / Online</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-400">&#8377;</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={bSplitUpi}
+                            onChange={e => setBSplitUpi(e.target.value)}
+                            className="w-28 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2.5 py-1 text-xs font-mono font-bold text-right text-slate-900 dark:text-white outline-none focus:border-amber-500"
+                          />
+                          {bSplitRemaining > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => fillBookingRemainingTo('upi')}
+                              className="px-2 py-1 text-[9px] font-bold rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/30 transition-colors cursor-pointer"
+                              title="Add remaining balance to UPI"
+                            >
+                              +Fill
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Allocation Status */}
+                    {isBSplitBalanced ? (
+                      <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          Split Balanced (100% Allocated)
+                        </span>
+                        <span>&#8377;{bSplitAllocated.toLocaleString()}</span>
+                      </div>
+                    ) : bSplitRemaining > 0 ? (
+                      <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 text-amber-500" />
+                          Remaining to Allocate:
+                        </span>
+                        <span className="font-mono text-amber-800 dark:text-amber-200">&#8377;{bSplitRemaining.toLocaleString()}</span>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300 text-xs flex items-center justify-between font-bold">
+                        <span className="flex items-center gap-1.5">
+                          <AlertCircle className="w-4 h-4 text-red-500" />
+                          Over-allocated:
+                        </span>
+                        <span className="font-mono text-red-800 dark:text-red-200">+&#8377;{Math.abs(targetAmountToCollect - bSplitAllocated).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Other Payment Type Tabs & Input */}
                 {checkoutPaymentMethod === 'OTHER' && (
-                  <div className="mt-3 space-y-2.5 bg-black/30 p-3.5 rounded-2xl border border-border/70 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="mt-3 space-y-2.5 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold text-text-primary uppercase tracking-widest flex items-center gap-1.5">
-                        <HelpCircle className="w-3.5 h-3.5 text-[#4A9EFF]" />
+                      <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
+                        <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
                         What Other Payment Type?
                       </label>
-                      <span className="text-[9px] text-[#4A9EFF] font-bold bg-[#4A9EFF]/10 px-2 py-0.5 rounded-full border border-[#4A9EFF]/20">
+                      <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
                         Select Type or Specify
                       </span>
                     </div>
@@ -1821,10 +2415,10 @@ export default function BookingsPage() {
                             type="button"
                             onClick={() => setCheckoutOtherType(tab === 'Custom' ? '' : tab)}
                             className={cn(
-                              'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border',
+                              'px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer',
                               isTabSel
-                                ? 'bg-[#4A9EFF]/20 text-[#4A9EFF] border-[#4A9EFF] shadow-sm shadow-[#4A9EFF]/20 ring-1 ring-[#4A9EFF]/40'
-                                : 'bg-black/30 text-text-secondary border-border/60 hover:bg-white/5 hover:text-text-primary'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                             )}
                           >
                             {tab}
@@ -1839,66 +2433,132 @@ export default function BookingsPage() {
                       value={checkoutOtherType}
                       onChange={e => setCheckoutOtherType(e.target.value)}
                       placeholder="e.g. HDFC Cheque #33910, IMPS Ref #88192, Traveloka Voucher"
-                      className="w-full bg-black/40 border border-border/50 focus:border-[#4A9EFF] rounded-xl px-3.5 py-2.5 text-xs text-text-primary font-medium outline-none placeholder:text-text-tertiary transition-all"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-medium outline-none placeholder:text-slate-400 transition-all"
                     />
                   </div>
                 )}
               </div>
 
-              {/* Guest / Corporate GSTIN */}
-              <div className="space-y-1.5 bg-black/25 p-3.5 rounded-2xl border border-border/60">
+              {/* Guest / Corporate GSTIN & Company Info */}
+              <div className="space-y-2.5 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-text-primary uppercase tracking-widest flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-[#4A9EFF]" />
-                    Guest / Company GSTIN
+                  <label className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-blue-500" />
+                    Guest / Company GSTIN (B2B Tax Invoice)
                   </label>
-                  <span className="text-[9px] text-[#4A9EFF] font-bold bg-[#4A9EFF]/10 px-2 py-0.5 rounded-full border border-[#4A9EFF]/20">
-                    Optional &bull; For B2B Tax Invoice
+                  <span className="text-[9px] text-blue-600 dark:text-blue-400 font-bold bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20">
+                    Auto-Fetch
                   </span>
                 </div>
-                <input 
-                  type="text" 
-                  value={checkoutGuestGst} 
-                  onChange={e => setCheckoutGuestGst(e.target.value.toUpperCase())}
-                  maxLength={15}
-                  className="w-full bg-black/40 border border-border/50 rounded-xl px-3.5 py-2.5 text-text-primary font-mono font-bold text-xs uppercase tracking-wider outline-none focus:border-[#4A9EFF] placeholder:font-sans placeholder:normal-case placeholder:font-normal placeholder:text-text-tertiary" 
-                  placeholder="e.g. 07AAAAA0000A1Z5 (15-character GST Number)" 
-                />
-                <p className="text-[10px] text-text-tertiary">
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="text" 
+                    value={checkoutGuestGst} 
+                    onChange={e => handleCheckoutGstChange(e.target.value)}
+                    maxLength={15}
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-slate-900 dark:text-white font-mono font-bold text-xs uppercase tracking-wider outline-none focus:border-blue-500 placeholder:font-sans placeholder:normal-case placeholder:font-normal placeholder:text-slate-400 shadow-sm" 
+                    placeholder="e.g. 27AAACT2727Q1ZW (15-character GST Number)" 
+                  />
+                  <button
+                    type="button"
+                    disabled={isFetchingCheckoutGst || !checkoutGuestGst}
+                    onClick={() => handleCheckoutGstLookup()}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-all shadow-md active:scale-95 shrink-0 flex items-center gap-1 cursor-pointer"
+                  >
+                    {isFetchingCheckoutGst ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Fetch Details'}
+                  </button>
+                </div>
+
+                {(checkoutCompanyName || checkoutGuestGst.length === 15) && (
+                  <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800 animate-in fade-in duration-200">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Company Legal / Trade Name</label>
+                      <input
+                        type="text"
+                        value={checkoutCompanyName}
+                        onChange={e => setCheckoutCompanyName(e.target.value)}
+                        placeholder="Company Name (e.g. Tata Consultancy Services Ltd)"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500 shadow-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Company Registered Address</label>
+                      <textarea
+                        rows={2}
+                        value={checkoutCompanyAddress}
+                        onChange={e => setCheckoutCompanyAddress(e.target.value)}
+                        placeholder="Registered Address for Tax Invoice"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2 text-[11px] text-slate-700 dark:text-slate-300 outline-none focus:border-blue-500 resize-none shadow-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
                   Enter GSTIN to generate an official B2B Tax Invoice with input tax credit (ITC) for the company.
                 </p>
               </div>
 
-              {/* Amount to Collect */}
+              {/* Amount Being Collected Now */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Amount Being Collected Now (&#8377;)</label>
-                <input type="number" value={checkoutPaidAmount} onChange={e => setCheckoutPaidAmount(e.target.value)}
-                  className="w-full bg-black/40 border border-border/50 rounded-2xl px-4 py-3 text-text-primary font-mono font-bold text-base outline-none focus:border-[#4A9EFF]"
-                  placeholder="Enter amount" />
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                    Amount Being Collected Now (&#8377;)
+                  </label>
+                  {targetAmountToCollect !== balanceDue && (
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutPaidAmount(balanceDue.toString())}
+                      className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      Set to full balance (&#8377;{balanceDue.toLocaleString()})
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-4 top-3 text-base font-bold text-slate-400">&#8377;</span>
+                  <input 
+                    type="number" 
+                    value={checkoutPaidAmount} 
+                    onChange={e => setCheckoutPaidAmount(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 focus:border-blue-600 rounded-2xl pl-8 pr-4 py-3 text-slate-900 dark:text-white font-mono font-black text-lg outline-none shadow-sm transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="0.00" 
+                  />
+                </div>
               </div>
 
               {/* Notes */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">
+                <label className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
                   {checkoutPaymentMethod === 'CORPORATE_CLEARANCE' 
                     ? 'Corporate Company / PO Number' 
                     : checkoutPaymentMethod === 'OTHER'
                     ? `Payment Reference / Remarks (${checkoutOtherType || 'Other'})`
                     : 'Payment Reference / Transaction Notes'}
                 </label>
-                <input type="text" value={checkoutNotes} onChange={e => setCheckoutNotes(e.target.value)}
-                  className="w-full bg-black/40 border border-border/50 rounded-2xl px-4 py-3 text-text-primary text-xs font-semibold outline-none focus:border-[#4A9EFF]"
-                  placeholder={checkoutPaymentMethod === 'CORPORATE_CLEARANCE' ? 'e.g. Infosys Ltd - PO #8849' : checkoutPaymentMethod === 'OTHER' ? 'e.g. Cheque clearance date, counter voucher number' : 'e.g. HDFC Card Slip #4410 or UPI Ref ID'} />
+                <input 
+                  type="text" 
+                  value={checkoutNotes} 
+                  onChange={e => setCheckoutNotes(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 focus:border-blue-600 rounded-2xl px-4 py-3 text-slate-900 dark:text-white text-xs font-semibold outline-none shadow-sm transition-all"
+                  placeholder={checkoutPaymentMethod === 'CORPORATE_CLEARANCE' ? 'e.g. Infosys Ltd - PO #8849' : checkoutPaymentMethod === 'OTHER' ? 'e.g. Cheque clearance date, counter voucher number' : 'e.g. HDFC Card Slip #4410 or UPI Ref ID'} 
+                />
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setShowCheckoutModal(false)}
-                  className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-text-secondary font-bold rounded-2xl text-xs uppercase tracking-wider transition-all">
+              <div className="flex gap-3 pt-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowCheckoutModal(false)}
+                  className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all cursor-pointer"
+                >
                   Cancel
                 </button>
-                <button type="button" disabled={isUpdating} onClick={handleConfirmCheckoutPayment}
-                  className="flex-1 py-3 bg-[#4A9EFF] hover:bg-surface text-text-primary font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#4A9EFF]/20 active:scale-95 flex items-center justify-center gap-2">
+                <button 
+                  type="button" 
+                  disabled={isUpdating} 
+                  onClick={handleConfirmCheckoutPayment}
+                  className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-blue-600/30 active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
                   {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Check-Out &amp; Invoice</span> <ArrowRight className="w-4 h-4 stroke-[2.5]" /></>}
                 </button>
               </div>

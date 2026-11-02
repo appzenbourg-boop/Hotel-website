@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Sparkles, Check, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react'
+import { X, Crown, Check, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface RoomUpgradeModalProps {
@@ -89,7 +89,7 @@ export default function RoomUpgradeModal({
                 <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
                     <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                            <Sparkles className="w-5 h-5" />
+                            <Crown className="w-5 h-5" />
                         </div>
                         <div>
                             <h2 className="text-lg font-bold text-white">Upgrade Your Room</h2>

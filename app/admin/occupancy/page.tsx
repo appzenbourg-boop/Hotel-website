@@ -17,7 +17,6 @@ import {
   XOctagon,
   Building2,
   X,
-  Sparkles,
   ArrowRight,
   Phone,
   Calendar,
@@ -133,26 +132,33 @@ export default function RoomOccupancyPage() {
 
       {/* KPI Summary Cards — Solid Colours Matching Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Occupied */}
+        {/* Occupied — RED */}
         <div 
           onClick={() => setActiveFilter('OCCUPIED')}
           className={cn(
             "relative overflow-hidden rounded-3xl p-5 group shadow-lg transition-all cursor-pointer select-none",
-            "bg-[#581C87] text-white shadow-[0_12px_24px_rgba(88,28,135,0.4)]",
-            activeFilter === 'OCCUPIED' && "ring-2 ring-purple-300 scale-[1.02]"
+            "bg-[#991B1B] text-white shadow-[0_12px_24px_rgba(153,27,27,0.4)]",
+            activeFilter === 'OCCUPIED' && "ring-2 ring-red-400 scale-[1.02]"
           )}
         >
           <div className="flex justify-between items-start mb-3 relative z-10">
-            <p className="text-[10px] font-black text-purple-200 uppercase tracking-[0.2em]">Occupied</p>
+            <p className="text-[10px] font-black text-red-200 uppercase tracking-[0.2em]">Occupied</p>
             <div className="w-9 h-9 rounded-2xl bg-black/20 flex items-center justify-center">
-              <UserCheck className="w-4 h-4 text-purple-200" />
+              <UserCheck className="w-4 h-4 text-red-200" />
             </div>
           </div>
           <p className="text-3xl font-black text-white tracking-tight">{summary.occupiedCount}</p>
-          <p className="text-[11px] text-purple-200/90 font-semibold mt-2">Active Checked-in Guests</p>
+          <div className="flex items-center justify-between mt-2 flex-wrap gap-1">
+            <p className="text-[11px] text-red-200/90 font-semibold">Active Checked-in Guests</p>
+            {Boolean(summary.checkoutTomorrowCount) && (
+              <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 flex items-center gap-1 shadow-sm">
+                ⚡ {summary.checkoutTomorrowCount} Tomorrow Check-Out
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Ready */}
+        {/* Ready — GREEN */}
         <div 
           onClick={() => setActiveFilter('READY')}
           className={cn(
@@ -171,42 +177,42 @@ export default function RoomOccupancyPage() {
           <p className="text-[11px] text-emerald-200/90 font-semibold mt-2">Ready for Immediate Booking</p>
         </div>
 
-        {/* Service */}
+        {/* Service — YELLOW */}
         <div 
           onClick={() => setActiveFilter('SERVICE')}
           className={cn(
             "relative overflow-hidden rounded-3xl p-5 group shadow-lg transition-all cursor-pointer select-none",
-            "bg-[#78350F] text-white shadow-[0_12px_24px_rgba(120,53,15,0.4)]",
+            "bg-[#D97706] text-white shadow-[0_12px_24px_rgba(217,119,6,0.4)]",
             activeFilter === 'SERVICE' && "ring-2 ring-amber-300 scale-[1.02]"
           )}
         >
           <div className="flex justify-between items-start mb-3 relative z-10">
-            <p className="text-[10px] font-black text-amber-200 uppercase tracking-[0.2em]">Service</p>
+            <p className="text-[10px] font-black text-amber-100 uppercase tracking-[0.2em]">Service</p>
             <div className="w-9 h-9 rounded-2xl bg-black/20 flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-amber-200" />
+              <Wrench className="w-4 h-4 text-amber-100" />
             </div>
           </div>
           <p className="text-3xl font-black text-white tracking-tight">{summary.serviceCount ?? 0}</p>
-          <p className="text-[11px] text-amber-200/90 font-semibold mt-2">Under Cleaning / Housekeeping</p>
+          <p className="text-[11px] text-amber-100/90 font-semibold mt-2">Under Cleaning / Housekeeping</p>
         </div>
 
-        {/* Out of Order */}
+        {/* Out of Order — PURPLE */}
         <div 
           onClick={() => setActiveFilter('OUT_OF_ORDER')}
           className={cn(
             "relative overflow-hidden rounded-3xl p-5 group shadow-lg transition-all cursor-pointer select-none",
-            "bg-[#7F1D1D] text-white shadow-[0_12px_24px_rgba(127,29,29,0.4)]",
-            activeFilter === 'OUT_OF_ORDER' && "ring-2 ring-rose-300 scale-[1.02]"
+            "bg-[#581C87] text-white shadow-[0_12px_24px_rgba(88,28,135,0.4)]",
+            activeFilter === 'OUT_OF_ORDER' && "ring-2 ring-purple-300 scale-[1.02]"
           )}
         >
           <div className="flex justify-between items-start mb-3 relative z-10">
-            <p className="text-[10px] font-black text-rose-200 uppercase tracking-[0.2em]">Out of Order</p>
+            <p className="text-[10px] font-black text-purple-200 uppercase tracking-[0.2em]">Out of Order</p>
             <div className="w-9 h-9 rounded-2xl bg-black/20 flex items-center justify-center">
-              <XOctagon className="w-4 h-4 text-rose-200" />
+              <XOctagon className="w-4 h-4 text-purple-200" />
             </div>
           </div>
           <p className="text-3xl font-black text-white tracking-tight">{summary.outOfOrderCount ?? 0}</p>
-          <p className="text-[11px] text-rose-200/90 font-semibold mt-2">Maintenance / Blocked</p>
+          <p className="text-[11px] text-purple-200/90 font-semibold mt-2">Maintenance / Blocked</p>
         </div>
       </div>
 
@@ -253,6 +259,8 @@ export default function RoomOccupancyPage() {
         </div>
       </div>
 
+
+
       {/* Rooms Occupancy Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -274,20 +282,25 @@ export default function RoomOccupancyPage() {
             const isOutOfOrder = room.isOutOfOrder
             const isReady = !isOccupied && !isService && !isOutOfOrder
             const booking = room.currentBooking
+            const isCheckoutTomorrow = Boolean(room.isCheckoutTomorrow)
+            const isCheckoutToday = Boolean(room.isCheckoutToday)
 
             return (
               <div
                 key={room.id}
                 onClick={() => setSelectedRoom(room)}
                 className={cn(
-                  "relative rounded-[28px] p-6 flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] cursor-pointer overflow-hidden border-0 h-60 shadow-lg select-none group",
+                  "relative rounded-[28px] p-6 flex flex-col justify-between transition-all duration-300 hover:scale-[1.03] hover:z-30 cursor-pointer overflow-hidden border-0 h-64 sm:h-60 shadow-lg select-none group",
+                  // Occupied: RED | Out of Order: PURPLE | Service: YELLOW | Ready: GREEN
                   isOccupied
-                    ? "bg-[#581C87] text-white shadow-[0_12px_24px_rgba(88,28,135,0.4)] hover:bg-[#4c1d95]"
+                    ? "bg-[#991B1B] text-white shadow-[0_12px_24px_rgba(153,27,27,0.4)] hover:bg-[#7F1D1D]"
                     : isService
-                      ? "bg-[#78350F] text-white shadow-[0_12px_24px_rgba(120,53,15,0.35)] hover:bg-[#92400e]"
+                      ? "bg-[#D97706] text-white shadow-[0_12px_24px_rgba(217,119,6,0.35)] hover:bg-[#B45309]"
                       : isOutOfOrder
-                        ? "bg-[#7F1D1D] text-white shadow-[0_12px_24px_rgba(127,29,29,0.35)] hover:bg-[#991b1b]"
-                        : "bg-[#065F46] text-white shadow-[0_12px_24px_rgba(6,95,70,0.35)] hover:bg-[#047857]"
+                        ? "bg-[#581C87] text-white shadow-[0_12px_24px_rgba(88,28,135,0.35)] hover:bg-[#4C1D95]"
+                        : "bg-[#065F46] text-white shadow-[0_12px_24px_rgba(6,95,70,0.35)] hover:bg-[#047857]",
+                  // If Checkout Tomorrow: Clean amber border highlight (no bouncing or glowing animation)
+                  isCheckoutTomorrow && "ring-2 ring-amber-400"
                 )}
               >
                 {/* Header */}
@@ -296,30 +309,40 @@ export default function RoomOccupancyPage() {
                     <h3 className="text-3xl font-black tracking-tight text-white leading-none">
                       {room.roomNumber}
                     </h3>
-                    <p className="text-xs font-bold uppercase tracking-wider mt-2 opacity-80">
+                    <p className="text-xs font-bold uppercase tracking-wider mt-2 opacity-85">
                       {room.type || room.category || 'Standard Room'}
                     </p>
                   </div>
                   
                   {/* Status Indicator Badge */}
-                  <div className="flex items-center gap-1.5">
-                    {isOccupied && (
-                      <span className="px-3 py-1 bg-black/25 text-purple-200 rounded-full text-[10px] font-black tracking-widest uppercase">
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {isCheckoutTomorrow && (
+                      <span className="px-2.5 py-1 bg-amber-400 text-slate-950 rounded-full text-[10px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-sm">
+                        Tomorrow Check-Out
+                      </span>
+                    )}
+                    {isCheckoutToday && (
+                      <span className="px-2.5 py-1 bg-rose-500 text-white rounded-full text-[10px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-sm">
+                        Today Check-Out
+                      </span>
+                    )}
+                    {!isCheckoutTomorrow && !isCheckoutToday && isOccupied && (
+                      <span className="px-3 py-1 bg-black/30 text-red-100 rounded-full text-[10px] font-black tracking-widest uppercase">
                         Occupied
                       </span>
                     )}
                     {isService && (
-                      <span className="px-3 py-1 bg-black/25 text-amber-200 rounded-full text-[10px] font-black tracking-widest uppercase">
+                      <span className="px-3 py-1 bg-black/30 text-yellow-100 rounded-full text-[10px] font-black tracking-widest uppercase">
                         Cleaning
                       </span>
                     )}
                     {isOutOfOrder && (
-                      <span className="px-3 py-1 bg-black/25 text-rose-200 rounded-full text-[10px] font-black tracking-widest uppercase">
+                      <span className="px-3 py-1 bg-black/30 text-purple-200 rounded-full text-[10px] font-black tracking-widest uppercase">
                         Maintenance
                       </span>
                     )}
                     {isReady && (
-                      <span className="px-3 py-1 bg-black/25 text-emerald-200 rounded-full text-[10px] font-black tracking-widest uppercase">
+                      <span className="px-3 py-1 bg-black/30 text-emerald-200 rounded-full text-[10px] font-black tracking-widest uppercase">
                         Ready
                       </span>
                     )}
@@ -336,32 +359,33 @@ export default function RoomOccupancyPage() {
                       <div className="text-2xl font-black tracking-tight text-white truncate">
                         {booking?.guestName || 'Occupied Room'}
                       </div>
-                      <div className="text-xs font-bold text-purple-200/90 uppercase tracking-wider mt-1">
-                        {booking ? `Out: ${new Date(booking.checkOut).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}` : 'In House'}
+                      <div className="flex items-center justify-between text-xs font-bold text-red-200/90 uppercase tracking-wider mt-1">
+                        <span>{booking ? `Out: ${new Date(booking.checkOut).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}` : 'In House'}</span>
+                        <span className="font-mono text-white/90">₹{(room.basePrice || 2100).toLocaleString('en-IN')}/nt</span>
                       </div>
                     </div>
                   ) : isService ? (
                     <div>
-                      <div className="text-2xl font-black tracking-tight text-amber-100">
+                      <div className="text-2xl font-black tracking-tight text-yellow-50">
                         Cleaning
                       </div>
-                      <div className="text-xs font-bold text-amber-200/90 uppercase tracking-wider mt-1">
+                      <div className="text-xs font-bold text-yellow-100/90 uppercase tracking-wider mt-1">
                         Tap to change status
                       </div>
                     </div>
                   ) : isOutOfOrder ? (
                     <div>
-                      <div className="text-2xl font-black tracking-tight text-rose-100">
+                      <div className="text-2xl font-black tracking-tight text-purple-100">
                         Maintenance
                       </div>
-                      <div className="text-xs font-bold text-rose-200/90 uppercase tracking-wider mt-1">
+                      <div className="text-xs font-bold text-purple-200/90 uppercase tracking-wider mt-1">
                         Tap to change status
                       </div>
                     </div>
                   ) : (
                     <div>
                       <div className="text-3xl font-black tracking-tight text-white">
-                        {formatCurrency(room.basePrice || 2500)}
+                        {formatCurrency(room.basePrice || 2100)}
                       </div>
                       <div className="text-xs font-bold text-emerald-200 uppercase tracking-wider mt-1">
                         Tap to Book or Edit ↗
@@ -369,6 +393,101 @@ export default function RoomOccupancyPage() {
                     </div>
                   )}
                 </div>
+
+                {/* HOVER OVERLAY (Displays full guest details on hover) */}
+                {isOccupied && booking && (
+                  <div className="absolute inset-0 z-20 bg-gradient-to-b from-[#180505]/95 via-[#230909]/95 to-[#120303]/98 backdrop-blur-md p-4 sm:p-5 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none rounded-[28px] border-2 border-red-400/50 shadow-2xl">
+                    {/* Header */}
+                    <div>
+                      <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                        <div>
+                          <span className="text-base font-black text-white tracking-tight">Room {room.roomNumber}</span>
+                          <span className="text-[10px] text-red-200 font-semibold block uppercase">{room.type || 'Standard'}</span>
+                        </div>
+                        {isCheckoutTomorrow ? (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold text-[9px] uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                            Check-Out Tomorrow
+                          </span>
+                        ) : isCheckoutToday ? (
+                          <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white font-bold text-[9px] uppercase tracking-wider shadow-sm">
+                            Check-Out Today
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-200 font-bold text-[9px] uppercase tracking-wider">
+                            ● In-House
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Guest Dossier */}
+                      <div className="space-y-1 mt-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-full bg-red-500/30 text-red-200 flex items-center justify-center shrink-0">
+                            <User className="w-3 h-3" />
+                          </div>
+                          <p className="text-xs font-black text-white truncate leading-tight">
+                            {booking.guestName || 'In-House Guest'}
+                          </p>
+                        </div>
+
+                        {booking.guestPhone && (
+                          <div className="flex items-center gap-2 text-[10px] text-red-100 pl-7 font-mono font-bold">
+                            <Phone className="w-2.5 h-2.5 text-red-300 shrink-0" />
+                            <span>{booking.guestPhone}</span>
+                          </div>
+                        )}
+
+                        {booking.companyName && (
+                          <div className="flex items-center gap-1 text-[10px] text-blue-300 pl-7 font-semibold truncate">
+                            <Building2 className="w-2.5 h-2.5 shrink-0" />
+                            <span className="truncate">{booking.companyName}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stay Dates & Price */}
+                    <div className="space-y-1.5 pt-1.5 border-t border-white/10 text-[10px]">
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div className="bg-black/30 p-1.5 rounded-lg border border-white/5">
+                          <span className="text-gray-400 font-bold uppercase block text-[8px]">Check-In</span>
+                          <span className="text-white font-semibold">
+                            {new Date(booking.checkIn).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
+                          </span>
+                        </div>
+                        <div className={cn(
+                          "p-1.5 rounded-lg border",
+                          isCheckoutTomorrow ? "bg-amber-400/20 border-amber-400/50 text-amber-200" : "bg-black/30 border-white/5 text-white"
+                        )}>
+                          <span className="text-gray-400 font-bold uppercase block text-[8px]">Check-Out</span>
+                          <span className={cn("font-bold", isCheckoutTomorrow ? "text-amber-300" : "text-white")}>
+                            {new Date(booking.checkOut).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
+                        <div>
+                          <span className="text-[8px] text-gray-400 uppercase font-bold block">Tariff</span>
+                          <span className="font-mono font-bold text-white text-[11px]">₹{(room.basePrice || 2100).toLocaleString('en-IN')}<span className="text-[8px] text-gray-400">/nt</span></span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[8px] text-gray-400 uppercase font-bold block">Total Bill</span>
+                          <span className="font-mono font-black text-amber-300 text-xs">
+                            ₹{(booking.totalAmount || (room.basePrice * 1) || 2100).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Prompt */}
+                    <div className="text-center pt-1 border-t border-white/5">
+                      <span className="text-[8px] font-black text-red-200 uppercase tracking-widest">
+                        Tap card to Manage / Check-Out
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -409,13 +528,13 @@ export default function RoomOccupancyPage() {
 
               {/* Guest Details if Occupied */}
               {selectedRoom.isOccupied && selectedRoom.currentBooking && (
-                <div className="bg-[#0F172A] border border-white/10 rounded-2xl p-4 space-y-3">
+                <div className="bg-[#0F172A] border border-red-500/30 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-400">Current In-House Guest</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">Checked In</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-red-400">Current In-House Guest</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-300 font-bold">Checked In</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold">
+                    <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-300 flex items-center justify-center font-bold">
                       <User className="w-5 h-5" />
                     </div>
                     <div>
@@ -439,7 +558,7 @@ export default function RoomOccupancyPage() {
                     <button
                       onClick={() => handleUpdateStatus('CLEANING', true)}
                       disabled={isUpdating}
-                      className="flex-1 py-2.5 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
+                      className="flex-1 py-2.5 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md active:scale-95"
                     >
                       <LogOut className="w-3.5 h-3.5" /> Check Out & Send to Cleaning
                     </button>
@@ -485,7 +604,7 @@ export default function RoomOccupancyPage() {
                     className={cn(
                       "p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all",
                       selectedRoom.isService 
-                        ? "bg-[#78350F] border-amber-400 text-white shadow-lg" 
+                        ? "bg-[#D97706] border-amber-400 text-white shadow-lg" 
                         : "bg-[#0F172A] border-white/10 text-gray-300 hover:border-amber-500/50 hover:bg-amber-950/20"
                     )}
                   >
@@ -494,7 +613,7 @@ export default function RoomOccupancyPage() {
                       {selectedRoom.isService && <span className="text-[10px] font-black uppercase text-amber-200">Current</span>}
                     </div>
                     <span className="text-sm font-bold text-white">Housekeeping</span>
-                    <span className="text-[10px] text-amber-300 mt-1">Cleaning & sanitization</span>
+                    <span className="text-[10px] text-amber-200 mt-1">Cleaning & sanitization</span>
                   </button>
 
                   {/* Out of Order / Maintenance */}
@@ -504,16 +623,16 @@ export default function RoomOccupancyPage() {
                     className={cn(
                       "p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all",
                       selectedRoom.isOutOfOrder 
-                        ? "bg-[#7F1D1D] border-rose-400 text-white shadow-lg" 
-                        : "bg-[#0F172A] border-white/10 text-gray-300 hover:border-rose-500/50 hover:bg-rose-950/20"
+                        ? "bg-[#581C87] border-purple-400 text-white shadow-lg" 
+                        : "bg-[#0F172A] border-white/10 text-gray-300 hover:border-purple-500/50 hover:bg-purple-950/20"
                     )}
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <AlertTriangle className="w-4 h-4 text-rose-400" />
-                      {selectedRoom.isOutOfOrder && <span className="text-[10px] font-black uppercase text-rose-200">Current</span>}
+                      <AlertTriangle className="w-4 h-4 text-purple-400" />
+                      {selectedRoom.isOutOfOrder && <span className="text-[10px] font-black uppercase text-purple-200">Current</span>}
                     </div>
                     <span className="text-sm font-bold text-white">Out of Order</span>
-                    <span className="text-[10px] text-rose-300 mt-1">Blocked / Under repairs</span>
+                    <span className="text-[10px] text-purple-300 mt-1">Blocked / Under repairs</span>
                   </button>
 
                   {/* New Booking shortcut */}

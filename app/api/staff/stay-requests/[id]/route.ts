@@ -61,7 +61,7 @@ export async function PATCH(
             // Update service request
             await prisma.serviceRequest.update({
                 where: { id: params.id },
-                data: { status: 'COMPLETED' }
+                data: { status: 'COMPLETED', completedAt: new Date() }
             });
         } else {
             // REJECTED

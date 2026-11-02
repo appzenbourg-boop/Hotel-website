@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Clock, Send, Utensils, Search, Plus, Minus, ShoppingBag, X, Sparkles, ChefHat, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Clock, Send, Utensils, Search, Plus, Minus, ShoppingBag, X, ChefHat, Check, AlertCircle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface MenuItem {

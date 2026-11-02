@@ -5,6 +5,7 @@ import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns'
 import { Loader2, Download, Calendar, Users, IndianRupee, FileText, BarChart3 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { downloadFile } from '@/lib/download'
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   ENQUIRY: { label: 'Enquiry', color: 'text-blue-400' },
@@ -92,11 +93,9 @@ export default function BanquetReport() {
       )
     ]
     const csv = rows.map(r => r.join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `banquet-report-${dateFrom}-${dateTo}.csv`; a.click()
-    URL.revokeObjectURL(url)
+    const dateRange = (dateFrom || dateTo) ? `${dateFrom || 'start'}_to_${dateTo || 'end'}` : new Date().toISOString().slice(0, 10)
+    const filename = `banquet-report-${dateRange}.csv`
+    downloadFile(csv, filename, 'text/csv;charset=utf-8;')
     toast.success('Banquet report exported!')
   }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ClipboardCheck, Sparkles, User, CheckCircle2 } from 'lucide-react'
+import { ClipboardCheck, User, CheckCircle2 } from 'lucide-react'
 
 export default function StockRequestsPage() {
   const requests = [

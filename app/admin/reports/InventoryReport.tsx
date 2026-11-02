@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Calendar, Download, RefreshCcw, Table } from 'lucide-react'
 import { toast } from 'sonner'
+import { downloadFile } from '@/lib/download'
 
 export default function InventoryReport() {
     const [fromDate, setFromDate] = useState('')
@@ -50,15 +51,8 @@ export default function InventoryReport() {
             row['Unit Price'] ?? 0
         ])
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `inventory-report-${fromDate || 'start'}-to-${toDate || 'end'}.csv`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        const filename = `inventory-report-${fromDate || 'start'}-to-${toDate || 'end'}.csv`
+        downloadFile(csvContent, filename, 'text/csv;charset=utf-8;')
         toast.success('Inventory report exported successfully!')
     }
 

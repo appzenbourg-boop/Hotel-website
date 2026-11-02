@@ -9,6 +9,7 @@ import Input from '@/components/ui/Input'
 import Badge from '@/components/ui/Badge'
 import { toast } from 'sonner'
 import { formatCurrency, cn } from '@/lib/utils'
+import { buildContextUrl, getAdminContext } from '@/lib/admin-context'
 
 export default function MenuPage() {
     const [menuItems, setMenuItems] = useState<any[]>([])
@@ -34,7 +35,8 @@ export default function MenuPage() {
 
     const fetchMenu = async () => {
         try {
-            const res = await fetch('/api/admin/content/menu')
+            const menuFetchUrl = typeof window !== 'undefined' ? buildContextUrl('/api/admin/content/menu') : '/api/admin/content/menu'
+            const res = await fetch(menuFetchUrl)
             if (res.ok) {
                 const data = await res.json()
                 setMenuItems(Array.isArray(data.menuItems) ? data.menuItems : [])
@@ -95,7 +97,7 @@ export default function MenuPage() {
             const res = await fetch('/api/admin/content/menu', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, propertyId: (typeof window !== 'undefined' && getAdminContext().propertyId !== 'ALL') ? getAdminContext().propertyId : undefined })
             })
 
             if (res.ok) {

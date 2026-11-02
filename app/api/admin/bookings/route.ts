@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         const [guests, rooms] = await Promise.all([
             prisma.guest.findMany({
                 where: { id: { in: guestIds } },
-                select: { id: true, name: true, phone: true, email: true, address: true, idType: true, idNumber: true, gstNumber: true }
+                select: { id: true, name: true, phone: true, email: true, address: true, idType: true, idNumber: true, gstNumber: true, companyName: true, companyAddress: true }
             }),
             prisma.room.findMany({
                 where: { id: { in: roomIds } },
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
             const room = roomMap.get(b.roomId)
             return {
                 ...b,
-                guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email, address: guest.address, idType: guest.idType, idNumber: guest.idNumber, gstNumber: guest.gstNumber } : { name: 'Unknown Guest', phone: 'N/A', email: '', address: '', idType: 'Aadhar', idNumber: '', gstNumber: null },
+                guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email, address: guest.address, idType: guest.idType, idNumber: guest.idNumber, gstNumber: guest.gstNumber, companyName: guest.companyName, companyAddress: guest.companyAddress } : { name: 'Unknown Guest', phone: 'N/A', email: '', address: '', idType: 'Aadhar', idNumber: '', gstNumber: null, companyName: null, companyAddress: null },
                 room: room ? { roomNumber: room.roomNumber, type: room.type, category: room.category } : { roomNumber: 'N/A', type: 'N/A', category: 'STANDARD' }
             }
         })
@@ -131,7 +131,9 @@ export async function POST(request: NextRequest) {
             discountPercent: manualDiscount, discountAmount: inputDiscountAmount,
             marketSegment, billTo, taxExempt, isComplimentary,
             mealPlan: mealPlanType, mealPlanPricePerDay: customMealPlanRate,
-            extraAddons: inputExtraAddons
+            extraAddons: inputExtraAddons,
+            guestGstNumber, guestCompanyName, guestCompanyAddress,
+            specialRequests, notes
         } = body
 
         if (!guestId || !roomId || !checkIn || !checkOut) {
@@ -229,7 +231,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Apply pricing (on room cost only — meal plan & extra add-ons added separately)
-        const pricing = calculatePricing(baseAmount, pricingSettings, manualDiscount)
+        const pricing = calculatePricing(baseAmount, pricingSettings, manualDiscount, nights)
 
         // Adjust for Ad-hoc Discount Amount
         if (inputDiscountAmount) {
@@ -237,6 +239,10 @@ export async function POST(request: NextRequest) {
             pricing.finalAmount = Math.max(0, pricing.finalAmount - inputDiscountAmount)
             pricing.totalAmount = Math.max(0, pricing.totalAmount - inputDiscountAmount)
         }
+
+        const cleanGuestGst = guestGstNumber ? String(guestGstNumber).trim().toUpperCase() : null
+        const cleanCompanyName = guestCompanyName ? String(guestCompanyName).trim() : null
+        const cleanCompanyAddress = guestCompanyAddress ? String(guestCompanyAddress).trim() : null
 
         const booking = await prisma.booking.create({
             data: {
@@ -258,6 +264,12 @@ export async function POST(request: NextRequest) {
                 discountPercent: pricing.discountPercent,
                 discountAmount: pricing.discountAmount,
                 finalAmount: pricing.finalAmount + mealPlanAmount + extraAddonsAmount,
+                // B2B GST Corporate Info
+                guestGstNumber: cleanGuestGst,
+                guestCompanyName: cleanCompanyName,
+                guestCompanyAddress: cleanCompanyAddress,
+                specialRequests: specialRequests || null,
+                notes: notes || null,
                 // Meal plan
                 mealPlan: resolvedMealPlan,
                 mealPlanPricePerDay: mealPlanPricePerDay,
@@ -278,6 +290,22 @@ export async function POST(request: NextRequest) {
                 property: { select: { name: true } },
             },
         })
+
+        // Also update Guest record with GST & Company info for future auto-fill
+        if (cleanGuestGst || cleanCompanyName) {
+            try {
+                await prisma.guest.update({
+                    where: { id: guestId },
+                    data: {
+                        ...(cleanGuestGst ? { gstNumber: cleanGuestGst } : {}),
+                        ...(cleanCompanyName ? { companyName: cleanCompanyName } : {}),
+                        ...(cleanCompanyAddress ? { companyAddress: cleanCompanyAddress } : {}),
+                    }
+                })
+            } catch (guestUpdateErr) {
+                console.warn('Failed to update guest profile with corporate GST info:', guestUpdateErr)
+            }
+        }
 
         // Send confirmation notifications (non-blocking)
         const checkInStr = format(new Date(checkIn), 'MMM dd, yyyy')

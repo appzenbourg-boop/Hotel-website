@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: Request) {
     try {
         const body = await request.json()
-        let { name, phone, idProof, bookingId } = body
+        let { name, phone, idProof, bookingId, idType, aadharNumber, additionalGuests } = body
 
         if (!name || !phone) {
             return new NextResponse('Name and Phone are required', { status: 400 })
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
         // Get the booking's propertyId so we can link the guest to the right hotel
         let bookingPropertyId: string | null = null
         let validBooking = false
+        let existingBookingNotes = ''
 
         if (bookingId && bookingId !== 'null' && bookingId !== 'undefined') {
             try {
@@ -31,8 +32,8 @@ export async function POST(request: Request) {
                     guestId = booking.guestId
                     bookingPropertyId = booking.propertyId
                     validBooking = true
+                    existingBookingNotes = booking.notes || ''
                 } else {
-                    // If no booking found, the ID might actually be a guestId (e.g. a walk-in guest without an active booking)
                     const directGuest = await prisma.guest.findUnique({
                         where: { id: bookingId }
                     })
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
             resolvedGuest = await prisma.guest.findUnique({ where: { phone: cleanPhone } })
         }
 
-        // 3. Let's see if they have an active booking if they just walked in (no valid booking from URL)
+        // 3. Check for active reserved booking if not passed
         if (!validBooking && resolvedGuest) {
             const activeBooking = await prisma.booking.findFirst({
                 where: { guestId: resolvedGuest.id, status: 'RESERVED' },
@@ -68,7 +69,21 @@ export async function POST(request: Request) {
                 bookingPropertyId = activeBooking.propertyId
                 guestId = resolvedGuest.id
                 validBooking = true
+                existingBookingNotes = activeBooking.notes || ''
             }
+        }
+
+        // Prepare Accompanying Guests Data
+        const validAdditionalGuests = Array.isArray(additionalGuests)
+            ? additionalGuests.filter(g => g && g.name && g.name.trim().length > 0)
+            : []
+
+        let coGuestsNote = ''
+        if (validAdditionalGuests.length > 0) {
+            const summary = validAdditionalGuests.map((g, i) => 
+                `Guest ${i + 2}: ${g.name}${g.age ? ` (${g.age} yrs)` : ''}${g.aadharNumber ? ` - ID: ${g.aadharNumber}` : ''}`
+            ).join('\n')
+            coGuestsNote = `\n\n[ACCOMPANYING_GUESTS: ${JSON.stringify(validAdditionalGuests)}]\nAccompanying Guests (${validAdditionalGuests.length}):\n${summary}`
         }
 
         let guest
@@ -82,10 +97,11 @@ export async function POST(request: Request) {
                 data: {
                     name,
                     ...(phoneToUpdate && { phone: phoneToUpdate }),
-                    idDocumentFront: idProof,
+                    idType: idType || resolvedGuest.idType || 'Aadhaar Card',
+                    idNumber: aadharNumber || resolvedGuest.idNumber || undefined,
+                    idDocumentFront: idProof || resolvedGuest.idDocumentFront,
                     checkInStatus: 'COMPLETED',
                     checkInCompletedAt: new Date(),
-                    // Link to property if not already set
                     ...(bookingPropertyId && !resolvedGuest.createdByPropertyId
                         ? { createdByPropertyId: bookingPropertyId }
                         : {}),
@@ -96,6 +112,8 @@ export async function POST(request: Request) {
                 data: {
                     name,
                     phone: cleanPhone,
+                    idType: idType || 'Aadhaar Card',
+                    idNumber: aadharNumber || undefined,
                     idDocumentFront: idProof,
                     checkInStatus: 'COMPLETED',
                     checkInCompletedAt: new Date(),
@@ -104,13 +122,18 @@ export async function POST(request: Request) {
             })
         }
 
-        // 3. Critically: Ensure the booking points to this resolved guest
-        // This handles cases where the booking was originally linked to a guest with a different phone
+        // Ensure the booking points to this resolved guest and updates accompanying guests in notes
         if (validBooking && bookingId) {
+            // Clean out old accompanying guests tag if re-submitting
+            const cleanedNotes = existingBookingNotes.replace(/\[ACCOMPANYING_GUESTS:[\s\S]*?\][\s\S]*?(?=\n\n|$)/g, '').trim()
+            const finalNotes = (cleanedNotes + coGuestsNote).trim()
+
             await prisma.booking.update({
                 where: { id: bookingId },
                 data: {
                     guestId: guest.id,
+                    notes: finalNotes || undefined,
+                    numberOfGuests: 1 + validAdditionalGuests.length,
                     updatedAt: new Date()
                 }
             })
@@ -119,7 +142,8 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             guestId: guest.id,
-            bookingRef: 'ZB-' + guest.id.slice(-4).toUpperCase()
+            bookingRef: 'ZB-' + guest.id.slice(-4).toUpperCase(),
+            additionalGuestsCount: validAdditionalGuests.length
         })
 
     } catch (error) {

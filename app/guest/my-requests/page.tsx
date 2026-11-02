@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Clock, CheckCircle2, AlertCircle, Loader2, Utensils, Sparkles, CalendarCheck, Droplets, ConciergeBell, RotateCw, Wrench } from 'lucide-react'
+import { ArrowLeft, Clock, CheckCircle2, AlertCircle, Loader2, Utensils, Crown, CalendarCheck, Droplets, ConciergeBell, RotateCw, Wrench } from 'lucide-react'
 
 interface ServiceRequest {
     id: string
@@ -78,7 +78,7 @@ export default function MyRequestsPage() {
             return <Utensils className="w-4 h-4 text-orange-400" />
         }
         if (titleLower.includes('upgrade')) {
-            return <Sparkles className="w-4 h-4 text-amber-400" />
+            return <Crown className="w-4 h-4 text-amber-400" />
         }
         if (titleLower.includes('extension') || titleLower.includes('extend')) {
             return <CalendarCheck className="w-4 h-4 text-[#4A9EFF]" />

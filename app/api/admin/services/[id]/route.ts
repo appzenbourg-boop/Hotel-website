@@ -67,6 +67,15 @@ export async function PATCH(
 
     try {
         const body = await request.json()
+        if (body.status === 'COMPLETED' && !body.completedAt) {
+            body.completedAt = new Date()
+        }
+        if (body.status === 'ACCEPTED' && !body.acceptedAt) {
+            body.acceptedAt = new Date()
+        }
+        if (body.status === 'IN_PROGRESS' && !body.startedAt) {
+            body.startedAt = new Date()
+        }
         const updated = await prisma.serviceRequest.update({
             where: { id: params.id },
             data: body,

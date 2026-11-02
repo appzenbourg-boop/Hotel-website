@@ -26,25 +26,74 @@ export async function GET(req: Request) {
             }
         }
 
+        const property = propertyId ? await prisma.property.findUnique({
+            where: { id: propertyId },
+            select: { name: true, address: true, phone: true }
+        }) : null
+
         let data: any[] = []
 
         if (base === 'checkin') {
             const bookings = await prisma.booking.findMany({
                 where: {
                     propertyId,
-                    ...(dateFilter ? { checkIn: dateFilter } : {})
+                    ...(dateFilter && Object.keys(dateFilter).length > 0 ? { checkIn: dateFilter } : {})
                 },
                 include: { guest: true, room: true },
-                take: 100
+                orderBy: { checkIn: 'desc' },
+                take: 200
             })
-            data = bookings.map(b => ({
-                'Guest Name': b.guest?.name || 'Unknown',
-                'Room No': b.room?.roomNumber || 'N/A',
-                'Check-in Date': b.checkIn ? new Date(b.checkIn).toLocaleDateString() : 'N/A',
-                'Check-out Date': b.checkOut ? new Date(b.checkOut).toLocaleDateString() : 'N/A',
-                'Status': b.status,
-                'Balance': (b.totalAmount || 0) - (b.paidAmount || 0)
-            }))
+            data = bookings.map(b => {
+                const checkInDate = b.checkIn ? new Date(b.checkIn) : null
+                const checkOutDate = b.checkOut ? new Date(b.checkOut) : null
+                const actualIn = b.actualCheckIn ? new Date(b.actualCheckIn) : checkInDate
+                const actualOut = b.actualCheckOut ? new Date(b.actualCheckOut) : null
+
+                const rawIdNumber = b.guest?.idNumber?.trim()
+                const rawIdType = b.guest?.idType?.trim() || 'AADHAAR'
+                const idDisplay = rawIdNumber || 'Pending Verification'
+                const phone = b.guest?.phone || 'N/A'
+                const fullAddress = [b.guest?.address, b.guest?.city, b.guest?.state, b.guest?.pinCode].filter(Boolean).join(', ') || 'N/A'
+
+                const combinedNotes = `${b.specialRequests || ''} ${b.notes || ''}`
+                const vehicleMatch = combinedNotes.match(/(?:VIN|Vehicle|Car|Bike|Reg(?:istration)?|Auto)[:\s]+([A-Z0-9\s-]+)/i)
+                const vehicleNo = vehicleMatch ? vehicleMatch[1].trim() : '-'
+
+                const balance = Math.max(0, (b.totalAmount || 0) - (b.paidAmount || 0))
+
+                return {
+                    'Room No': b.room?.roomNumber || 'N/A',
+                    'Guest Name': b.guest?.name || 'Unknown',
+                    'Aadhar / ID Number': idDisplay,
+                    'Aadhar': idDisplay,
+                    'Aadhar ID': idDisplay,
+                    'AADHAR': idDisplay,
+                    'ID Number': idDisplay,
+                    'ID Type': rawIdType,
+                    'Mobile': phone,
+                    'Phone': phone,
+                    'Pax': b.numberOfGuests || 1,
+                    'Guests': b.numberOfGuests || 1,
+                    'Address': fullAddress,
+                    'City': b.guest?.city || 'N/A',
+                    'State': b.guest?.state || 'N/A',
+                    'Check-in Date': checkInDate ? checkInDate.toLocaleDateString('en-IN') : 'N/A',
+                    'Check-in Time': actualIn ? actualIn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                    'Check-out Date': checkOutDate ? checkOutDate.toLocaleDateString('en-IN') : 'N/A',
+                    'Check-out Time': actualOut ? actualOut.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : (b.status === 'CHECKED_IN' ? 'In House' : '11:00 AM'),
+                    'Status': b.status,
+                    'Tariff': b.baseAmount || b.totalAmount || 0,
+                    'Total Amount': b.totalAmount || 0,
+                    'Paid Amount': b.paidAmount || 0,
+                    'Balance': balance,
+                    'Vehicle No': vehicleNo,
+                    'VIN': vehicleNo,
+                    'Company': b.guestCompanyName || b.guest?.companyName || '-',
+                    'GSTIN': b.guestGstNumber || b.guest?.gstNumber || '-',
+                    'Police Verification': rawIdNumber ? 'Verified (ID On File)' : 'Pending ID Proof',
+                    'Police Sign': '               '
+                }
+            })
         } else if (base === 'pos_sales') {
             const orders = await prisma.pOSOrder.findMany({
                 where: {
@@ -108,7 +157,7 @@ export async function GET(req: Request) {
             }))
         }
 
-        return NextResponse.json({ data })
+        return NextResponse.json({ data, property })
     } catch (error) {
         console.error('Dynamic Report Error:', error)
         return new NextResponse('Internal Error', { status: 500 })

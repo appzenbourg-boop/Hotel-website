@@ -32,9 +32,16 @@ export async function GET(req: NextRequest) {
                 where.staffId = staffId
             } else {
                 // Property based filtering
-                let targetPropertyId = authResult.user.propertyId
+                let targetPropertyId = authResult.user.propertyId || queryPropertyId
                 if (authResult.user.role === 'SUPER_ADMIN') {
                     targetPropertyId = (queryPropertyId && queryPropertyId !== 'ALL') ? queryPropertyId : null
+                }
+                if (!targetPropertyId) {
+                    const owned = await prisma.property.findFirst({
+                        where: { ownerIds: { has: authResult.user.id } },
+                        select: { id: true }
+                    })
+                    if (owned) targetPropertyId = owned.id
                 }
 
                 if (targetPropertyId) {
@@ -214,5 +221,91 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
         console.error('[ATTENDANCE_POST_ERROR]', error)
         return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+    }
+}
+
+/**
+ * PATCH /api/attendance
+ * Admin / Manager endpoint to regularize attendance:
+ * Mark Absent as Present, update punch in/out time, adjust hours, change status to PRESENT/ABSENT/HALF_DAY/ON_LEAVE/LATE.
+ */
+export async function PATCH(req: NextRequest) {
+    try {
+        const authResult = await requireAuth(req, ['SUPER_ADMIN', 'HOTEL_ADMIN', 'MANAGER'])
+        if (authResult instanceof NextResponse) return authResult
+
+        const body = await req.json()
+        const { staffId, date, status, punchIn, punchOut, hoursWorked, location, notes } = body
+
+        if (!staffId) {
+            return NextResponse.json({ error: 'staffId is required' }, { status: 400 })
+        }
+
+        // Normalize target date to IST day boundary
+        let targetDate: Date
+        if (date) {
+            const dateStr = typeof date === 'string' ? date.slice(0, 10) : new Date(date).toISOString().slice(0, 10)
+            targetDate = new Date(`${dateStr}T00:00:00+05:30`)
+        } else {
+            const istDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())
+            targetDate = new Date(`${istDateStr}T00:00:00+05:30`)
+        }
+
+        // Calculate hours worked if punchIn and punchOut exist
+        let computedHours = hoursWorked !== undefined && hoursWorked !== null ? Number(hoursWorked) : 0
+        const punchInDate = punchIn ? new Date(punchIn) : null
+        const punchOutDate = punchOut ? new Date(punchOut) : null
+
+        if (punchInDate && punchOutDate && (hoursWorked === undefined || hoursWorked === null)) {
+            computedHours = parseFloat(((punchOutDate.getTime() - punchInDate.getTime()) / (1000 * 60 * 60)).toFixed(2))
+            if (computedHours < 0) computedHours = 0
+        }
+
+        const validStatus = ['PRESENT', 'ABSENT', 'LATE', 'HALF_DAY', 'ON_LEAVE'].includes(status) ? status : 'PRESENT'
+
+        const attendance = await prisma.attendance.upsert({
+            where: {
+                staffId_date: {
+                    staffId,
+                    date: targetDate
+                }
+            },
+            update: {
+                status: validStatus,
+                punchIn: punchInDate,
+                punchOut: punchOutDate,
+                hoursWorked: computedHours,
+                overtimeHours: Math.max(0, computedHours - 8),
+                punchInLocation: location || 'Manual HR Entry',
+                notes: notes || undefined
+            },
+            create: {
+                staffId,
+                date: targetDate,
+                status: validStatus,
+                punchIn: punchInDate,
+                punchOut: punchOutDate,
+                hoursWorked: computedHours,
+                overtimeHours: Math.max(0, computedHours - 8),
+                punchInLocation: location || 'Manual HR Entry',
+                notes: notes || undefined
+            },
+            include: {
+                staff: {
+                    include: {
+                        user: { select: { name: true } }
+                    }
+                }
+            }
+        })
+
+        return NextResponse.json({
+            success: true,
+            attendance,
+            message: `Attendance marked as ${validStatus} successfully`
+        })
+    } catch (error: any) {
+        console.error('[ATTENDANCE_PATCH_ERROR]', error)
+        return NextResponse.json({ error: error?.message || 'Failed to update attendance' }, { status: 500 })
     }
 }
