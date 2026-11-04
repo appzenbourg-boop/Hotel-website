@@ -102,7 +102,7 @@ export async function generateBookingPDFVoucher(
     doc.setTextColor(accentColor[0], accentColor[1], accentColor[2])
     doc.setFont('Helvetica', 'bold')
     doc.setFontSize(20)
-    doc.text((property.name || 'ZENBOURG HOTEL').toUpperCase(), logoXOffset, 24)
+    doc.text((property.name || 'HOTEL & RESORT').toUpperCase(), logoXOffset, 24)
 
     // Subtitle
     doc.setTextColor(darkGrey[0], darkGrey[1], darkGrey[2])
@@ -326,5 +326,10 @@ export async function generateBookingPDFVoucher(
     doc.text(`Email: ${property.email || 'support@zenbourg.com'}  |  Website: https://zenbourg.com  |  Phone: ${property.phone || '+91 79991 35895'}`, 105, footerY + 9, { align: 'center' })
 
     // Save File
-    doc.save(`Zenbourg_Voucher_${booking.bookingNumber || booking.id.substring(0, 8)}.pdf`)
+    const cleanHotelName = (property.name || 'StayIn_Hotel')
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '') || 'Hotel'
+    const cleanRef = (booking.bookingNumber || booking.id.substring(0, 8)).replace(/[^a-zA-Z0-9_-]/g, '_')
+    doc.save(`${cleanHotelName}_Voucher_${cleanRef}.pdf`)
 }

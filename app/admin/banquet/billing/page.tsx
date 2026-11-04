@@ -88,15 +88,26 @@ function BanquetBillingInner() {
       {/* Bill Card */}
       <div id="banquet-bill" className="bg-surface border border-border/50 rounded-2xl overflow-hidden print:shadow-none">
         {/* Bill Header */}
-        <div className="bg-[#4A9EFF] px-6 py-5">
+        <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 px-6 py-6 text-white shadow-md">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-black text-white">BANQUET INVOICE</h2>
-              <p className="text-blue-100 text-sm mt-0.5">Booking #{booking.bookingNumber}</p>
+              <h2 className="text-xl font-black uppercase tracking-tight">{booking.property?.name || 'HOTEL & BANQUET'}</h2>
+              {booking.property?.address && (
+                <p className="text-blue-100 text-xs mt-0.5">{booking.property.address}</p>
+              )}
+              {booking.property?.gstNumber && (
+                <span className="inline-block mt-2 px-2.5 py-0.5 bg-white/20 backdrop-blur-md rounded-md text-[10px] font-mono font-bold tracking-wider text-white border border-white/25">
+                  GSTIN: {booking.property.gstNumber}
+                </span>
+              )}
             </div>
-            <div className="text-right text-blue-100 text-xs">
-              <p>Date: {format(new Date(booking.createdAt), 'dd MMM yyyy')}</p>
-              <p className="mt-0.5">Status: <span className="font-black text-white">{booking.status}</span></p>
+            <div className="text-right">
+              <p className="text-blue-200 text-[10px] uppercase font-bold tracking-wider">BANQUET TAX INVOICE</p>
+              <p className="text-base font-mono font-bold tracking-tight">#{booking.bookingNumber}</p>
+              <p className="text-blue-100 text-[10px] mt-1">Date: {format(new Date(booking.createdAt), 'dd MMM yyyy')}</p>
+              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-white/20 text-white">
+                {booking.status}
+              </span>
             </div>
           </div>
         </div>

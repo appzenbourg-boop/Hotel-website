@@ -84,7 +84,7 @@ export function printBanquetQuotation(booking: any, hotel?: HotelInfo) {
     <html lang="en">
     <head>
       <meta charset="utf-8" />
-      <title>Banquet Quotation - ${bookingNo}</title>
+      <title>${hotelName} - Banquet Quotation - ${bookingNo}</title>
       <style>
         @page {
           size: A4 portrait;

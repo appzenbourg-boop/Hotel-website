@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
             }),
             prisma.room.findMany({
                 where: { id: { in: roomIds } },
-                select: { id: true, roomNumber: true, type: true, category: true }
+                select: { id: true, roomNumber: true, type: true, category: true, images: true, basePrice: true, description: true }
             })
         ])
 
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
             return {
                 ...b,
                 guest: guest ? { name: guest.name, phone: guest.phone, email: guest.email, address: guest.address, idType: guest.idType, idNumber: guest.idNumber, gstNumber: guest.gstNumber, companyName: guest.companyName, companyAddress: guest.companyAddress } : { name: 'Unknown Guest', phone: 'N/A', email: '', address: '', idType: 'Aadhar', idNumber: '', gstNumber: null, companyName: null, companyAddress: null },
-                room: room ? { roomNumber: room.roomNumber, type: room.type, category: room.category } : { roomNumber: 'N/A', type: 'N/A', category: 'STANDARD' }
+                room: room ? { id: room.id, roomNumber: room.roomNumber, type: room.type, category: room.category, images: room.images ?? [], basePrice: room.basePrice, description: room.description } : { roomNumber: 'N/A', type: 'N/A', category: 'STANDARD', images: [] }
             }
         })
 
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
             },
             include: {
                 guest: { select: { name: true, phone: true, email: true } },
-                room: { select: { roomNumber: true, type: true } },
+                room: { select: { id: true, roomNumber: true, type: true, category: true, images: true, basePrice: true, description: true } },
                 property: { select: { name: true } },
             },
         })
@@ -424,7 +424,7 @@ export async function PUT(request: NextRequest) {
             },
             include: {
                 guest: { select: { name: true, phone: true, email: true } },
-                room: { select: { roomNumber: true, type: true } },
+                room: { select: { id: true, roomNumber: true, type: true, category: true, images: true, basePrice: true, description: true } },
             }
         })
 

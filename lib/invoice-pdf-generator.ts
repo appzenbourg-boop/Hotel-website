@@ -55,6 +55,24 @@ async function loadImageAsDataUrl(url?: string): Promise<string | null> {
     if (!url || typeof window === 'undefined') return null
     if (url.startsWith('data:image/')) return url
 
+    // Method 1: Try fetch + FileReader blob
+    try {
+        const res = await fetch(url, { mode: 'cors' })
+        if (res.ok) {
+            const blob = await res.blob()
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.onerror = reject
+                reader.readAsDataURL(blob)
+            })
+            if (base64) return base64
+        }
+    } catch {
+        // Fallback to Image element
+    }
+
+    // Method 2: HTML Image element
     return new Promise((resolve) => {
         try {
             const img = new Image()
