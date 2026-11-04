@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { format, differenceInDays } from 'date-fns'
-import { Download, Printer } from 'lucide-react'
+import { Download, Printer, BedDouble } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { generateTaxInvoicePDF, TaxInvoiceItem } from '@/lib/invoice-pdf-generator'
@@ -62,8 +62,8 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
   const ltPct      = booking.luxuryTaxPercent ?? 0
   const discPct    = booking.discountPercent  ?? 0
   const invoiceNo  = `INV-${booking.id?.slice(-6).toUpperCase() ?? '000000'}`
-  const hotelName  = hotelGstLegalName || booking.property?.name || 'Hotel'
-  const hotelAddress = hotelGstAddress || booking.property?.address || 'Hotel Address, City, 123456'
+  const hotelName  = hotelGstLegalName || booking.property?.name || 'StayIn Hotel'
+  const hotelAddress = hotelGstAddress || booking.property?.address || 'Hotel Address, City, India'
 
   const guestName  = booking.guest?.name || guest?.name || 'Guest'
   const guestPhone = booking.guest?.phone || guest?.phone || '—'
@@ -78,7 +78,10 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
   const itcText = isItcEligible ? 'Full ITC Eligible (Tariff > ₹7,500/nt)' : 'No ITC Eligibility (Tariff ≤ ₹7,500/nt)'
 
   const roomNo     = booking.room?.roomNumber ?? booking.roomNumber ?? '—'
-  const roomType   = booking.room?.type ?? booking.roomType ?? ''
+  const roomType   = booking.room?.type ?? booking.roomType ?? 'Standard King'
+  const roomImage  = (booking.room?.images && booking.room.images.length > 0)
+    ? booking.room.images[0]
+    : (booking.room?.coverImage || booking.room?.image || booking.raw?.room?.images?.[0] || null)
   
   const cgstAmt = gstAmt / 2;
   const sgstAmt = gstAmt / 2;
@@ -175,7 +178,7 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
         })
       }
 
-      generateTaxInvoicePDF({
+      await generateTaxInvoicePDF({
         invoiceNo,
         billDate: new Date(),
         isB2B: Boolean(guestGst),
@@ -199,6 +202,7 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
         roomType: roomType || 'Standard King',
         mealPlan: booking.mealPlan || 'EP',
         source: booking.source || 'DIRECT',
+        roomImage: roomImage || undefined,
         items,
         totalAmount: finalAmt,
         amountInWords: numberToWords(Math.round(finalAmt)),
@@ -219,32 +223,63 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
           className="w-full max-w-3xl bg-white text-slate-900 rounded-3xl shadow-2xl pointer-events-auto overflow-hidden max-h-[90vh] overflow-y-auto"
           onClick={e => e.stopPropagation()}
         >
-          {/* Invoice Header */}
-          <div className="bg-[#C26A2C] px-6 py-6 text-white">
+          {/* Invoice Header - Modern Blue Theme */}
+          <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700 px-6 py-6 text-white shadow-md">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-xl font-black uppercase tracking-tight">{hotelName}</h2>
-                <p className="text-[#F2C4A7] text-xs mt-0.5">{hotelAddress}</p>
-                <p className="text-[#F2C4A7] text-xs mt-0.5">Phone: {booking.property?.phone || '9876543210'} | Email: {booking.property?.email || 'hotel@example.com'}</p>
+                <p className="text-blue-100 text-xs mt-0.5">{hotelAddress}</p>
+                <p className="text-blue-200 text-xs mt-0.5">Phone: {booking.property?.phone || '9876543210'} | Email: {booking.property?.email || 'hotel@example.com'}</p>
                 {hotelGstNumber && (
-                  <span className="inline-block mt-2 px-2 py-0.5 bg-white/20 backdrop-blur-md rounded text-[10px] font-mono font-bold tracking-wider text-white">
+                  <span className="inline-block mt-2 px-2.5 py-0.5 bg-white/20 backdrop-blur-md rounded-md text-[10.5px] font-mono font-bold tracking-wider text-white border border-white/25">
                     GSTIN: {hotelGstNumber}
                   </span>
                 )}
               </div>
               <div className="text-right">
-                <p className="text-[#E8A375] text-[10px] uppercase tracking-wider">{guestGst ? 'B2B TAX INVOICE' : 'TAX INVOICE'}</p>
-                <p className="text-base font-mono font-bold">{invoiceNo}</p>
-                <p className="text-[#F2C4A7] text-[10px] mt-1">Bill Date: {format(new Date(), 'dd MMM yyyy')}</p>
+                <p className="text-blue-200 text-[10px] uppercase font-bold tracking-wider">{guestGst ? 'B2B TAX INVOICE' : 'TAX INVOICE'}</p>
+                <p className="text-base font-mono font-bold tracking-tight">{invoiceNo}</p>
+                <p className="text-blue-100 text-[10px] mt-1">Bill Date: {format(new Date(), 'dd MMM yyyy')}</p>
               </div>
             </div>
           </div>
 
           <div className="p-6 space-y-5">
+            {/* Room Photo Card (If room image exists) */}
+            {roomImage && (
+              <div className="flex items-center gap-4 p-3 rounded-2xl bg-blue-50/70 border border-blue-200/80 shadow-sm">
+                <div className="relative w-28 h-20 rounded-xl overflow-hidden shrink-0 border border-blue-300 shadow-sm bg-slate-100">
+                  <img
+                    src={roomImage}
+                    alt={`Room ${roomNo}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white font-mono font-bold text-xs shadow-sm">
+                      Room #{roomNo}
+                    </span>
+                    <span className="font-bold text-sm text-slate-800 truncate">
+                      {roomType}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-1">
+                    {booking.room?.description || `${nights} night${nights > 1 ? 's' : ''} stay • ${booking.numberOfGuests || 1} guest(s)`}
+                  </p>
+                  <div className="flex items-center gap-3 mt-1.5 text-[11px] font-semibold text-blue-700">
+                    <span>Base Tariff: ₹{perNightRate.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/night</span>
+                    <span>•</span>
+                    <span>Meal Plan: {booking.mealPlan || 'EP'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Guest + Stay Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Guest Info</p>
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-1 mb-2">Guest Info</p>
                 {[
                   ['Guest Name',    guestName],
                   ...(companyName ? [['Company', companyName]] : []),
@@ -267,7 +302,7 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
                 ))}
               </div>
               <div>
-                <p className="text-[10px] font-bold text-[#C26A2C] uppercase tracking-widest border-b border-[#C26A2C]/20 pb-1 mb-2">Stay Details</p>
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-1 mb-2">Stay Details</p>
                 {[
                   ['Check-in',  format(new Date(booking.checkIn),  'dd MMM yyyy HH:mm')],
                   ['Check-out (Standard)', '11:00 AM'],
@@ -287,10 +322,10 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
             </div>
 
             {/* Charges Table */}
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-[#C26A2C]/10 text-[#C26A2C]">
+                  <tr className="bg-blue-50/80 text-blue-800 border-b border-blue-100">
                     <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest">Date</th>
                     <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest">RoomNo</th>
                     <th className="px-3 py-2 text-[10px] font-bold uppercase tracking-widest">Description</th>
@@ -390,23 +425,23 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
                       <td className="px-3 py-2 text-xs font-mono font-bold text-red-500 text-right">-{discAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                     </tr>
                   )}
-                  <tr className="bg-[#C26A2C]/10 border-t-2 border-[#C26A2C]/30">
+                  <tr className="bg-blue-50/80 border-t-2 border-blue-200">
                     <td colSpan={4} className="px-3 py-3 text-sm font-black text-slate-800 uppercase tracking-wide">Total Bill Amount</td>
-                    <td colSpan={2} className="px-3 py-3 text-lg font-mono font-black text-[#C26A2C] text-right">₹{finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td colSpan={2} className="px-3 py-3 text-lg font-mono font-black text-blue-600 text-right">₹{finalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
             
             {/* Words and instructions */}
-            <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 flex flex-col gap-1">
-                <p className="text-xs font-semibold text-slate-700">Amount in Words: <span className="text-[#C26A2C]">{numberToWords(Math.round(finalAmt))}</span></p>
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex flex-col gap-1">
+                <p className="text-xs font-semibold text-slate-700">Amount in Words: <span className="text-blue-600 font-bold">{numberToWords(Math.round(finalAmt))}</span></p>
                 <div className="mt-2 text-[10px] text-slate-500 space-y-1">
                     <p>* Payment to be made in favour of {hotelName}.</p>
                     <p>* We are committed to look after your needs.</p>
                     <p>* The hotel is not responsible for loss or damage to personal belongings.</p>
                     <p>* Any disputes arising from this agreement shall be governed by the laws of the jurisdiction where the hotel is located.</p>
-                    <p className="font-bold text-[#C26A2C] mt-2 uppercase">* WE HOPE YOU ENJOYED YOUR STAY AND WOULD LIKE TO WELCOME YOU BACK</p>
+                    <p className="font-bold text-blue-600 mt-2 uppercase">* WE HOPE YOU ENJOYED YOUR STAY AND WOULD LIKE TO WELCOME YOU BACK</p>
                 </div>
             </div>
 
@@ -426,7 +461,7 @@ export function InvoiceModal({ booking, guest, onClose }: InvoiceModalProps) {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={handleDownloadPDF}
-                className="flex-1 flex items-center justify-center gap-2 h-11 bg-[#C26A2C] hover:bg-[#A85822] text-white text-sm font-bold rounded-2xl transition-all active:scale-95"
+                className="flex-1 flex items-center justify-center gap-2 h-11 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/25 active:scale-95"
               >
                 <Download className="w-4 h-4" /> Download PDF
               </button>

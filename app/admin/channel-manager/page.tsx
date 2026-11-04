@@ -468,6 +468,7 @@ export default function ChannelRatesInventoryPage() {
   const [masterKeyInput, setMasterKeyInput] = useState('')
   const [masterProvider, setMasterProvider] = useState('CHANNEX')
   const [isSavingMasterKey, setIsSavingMasterKey] = useState(false)
+  const [isSyncingChannex, setIsSyncingChannex] = useState(false)
 
   // Dynamic Automated Rates toggle per channel
   const [dynamicRates, setDynamicRates] = useState<Record<string, boolean>>({
@@ -499,6 +500,13 @@ export default function ChannelRatesInventoryPage() {
   const connectedChannelsCount = useMemo(() => {
     return CHANNELS.filter(c => connectionMap[c.id]?.isConnected).length
   }, [connectionMap])
+
+  const channexPropertyId = useMemo(() => {
+    const conn = data?.connections?.find(c => 
+      c.otaName === 'CHANNEX' || (c.credentials as any)?.channexPropertyId
+    )
+    return (conn?.credentials as any)?.channexPropertyId || null
+  }, [data?.connections])
 
   // Sync initial mappings from database into local state
   useEffect(() => {
@@ -734,6 +742,32 @@ export default function ChannelRatesInventoryPage() {
     }
   }
 
+  // Trigger Full Two-Way Synchronization with Channex
+  const handleChannexSync = async () => {
+    setIsSyncingChannex(true)
+    const toastId = toast.loading('Synchronizing properties and room types with Channex.io...')
+    try {
+      const res = await fetch('/api/admin/channel-manager/channex/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyId })
+      })
+      const result = await res.json()
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Failed to sync with Channex')
+      }
+      toast.success('Channex Synchronization Successful!', {
+        id: toastId,
+        description: `Provisioned Property ${result.data?.channexPropertyId || ''} — Mapped ${result.data?.roomsMapped || 0} room units across ${result.data?.roomTypesSynced || 0} categories.`
+      })
+      await mutate()
+    } catch (err: any) {
+      toast.error(err.message || 'Channex sync failed', { id: toastId })
+    } finally {
+      setIsSyncingChannex(false)
+    }
+  }
+
   // Get cell state for a room & channel
   const getCell = (roomId: string, channelId: string, basePrice: number, defaultMarkup: number) => {
     const key = `${roomId}_${channelId}`
@@ -924,6 +958,29 @@ export default function ChannelRatesInventoryPage() {
             <Key className="w-3.5 h-3.5" />
             <span>Connect Master API Key</span>
           </button>
+
+          {/* Channex Sync / Status Button */}
+          {channexPropertyId ? (
+            <button
+              onClick={handleChannexSync}
+              disabled={isSyncingChannex}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-[#4A9EFF] border border-blue-500/35 text-xs font-bold transition-all shadow-sm active:scale-95"
+              title={`Channex Property ID: ${channexPropertyId}. Click to force sync room types.`}
+            >
+              <Zap className={cn("w-3.5 h-3.5 text-[#4A9EFF]", isSyncingChannex && "animate-spin")} />
+              <span>Channex Sync ({channexPropertyId.slice(0, 8)}...)</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleChannexSync}
+              disabled={isSyncingChannex}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-[#4A9EFF] border border-blue-500/25 text-xs font-bold transition-all shadow-sm active:scale-95"
+              title="Bootstrap property and room types to Channex"
+            >
+              <Zap className={cn("w-3.5 h-3.5 text-[#4A9EFF]", isSyncingChannex && "animate-spin")} />
+              <span>Sync to Channex</span>
+            </button>
+          )}
 
           {/* Connected Channels Counter Pill */}
           <div className="px-3 py-1.5 rounded-xl bg-surface border border-border text-xs font-bold text-text-secondary flex items-center gap-2">
@@ -2058,6 +2115,25 @@ export default function ChannelRatesInventoryPage() {
                               <Link2 className="w-3 h-3 text-[#4A9EFF]" />
                               <span>Copy Free iCal Feed</span>
                             </button>
+
+                            {(() => {
+                              const chMapping = (room.otaMappings || []).find((m: any) => {
+                                const c = data?.connections?.find((conn: any) => conn.id === m.otaConnectionId)
+                                return c?.otaName === 'CHANNEX' || (m.otaRoomId && m.otaRoomId.length > 20)
+                              })
+                              if (chMapping?.otaRoomId) {
+                                return (
+                                  <div 
+                                    className="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-[9px] font-mono text-emerald-400 font-bold w-fit"
+                                    title={`Channex Room ID: ${chMapping.otaRoomId}`}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                                    <span className="truncate max-w-[170px]">Channex: {chMapping.otaRoomId.slice(0, 10)}...</span>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
                           </div>
                         </td>
 

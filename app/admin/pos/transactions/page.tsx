@@ -57,6 +57,28 @@ export default function POSTransactionsPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
 
+  // Hotel details for receipt & invoice
+  const [hotelInfo, setHotelInfo] = useState<{ name: string; address: string; gstNumber: string }>({
+    name: 'STAYIN HOTEL & RESTAURANT',
+    address: '',
+    gstNumber: ''
+  })
+
+  useEffect(() => {
+    fetch('/api/admin/settings/financial')
+      .then(res => res.json())
+      .then(j => {
+        if (j.data) {
+          setHotelInfo({
+            name: (j.data.gstTradeName || j.data.gstLegalName || 'STAYIN HOTEL & RESTAURANT').toUpperCase(),
+            address: j.data.gstAddress || '',
+            gstNumber: j.data.gstNumber || ''
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     if (queryOrderId) {
       setSelectedOrderId(queryOrderId)
@@ -419,7 +441,7 @@ export default function POSTransactionsPage() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Receipt - Order ${orderToPrint.orderNumber}</title>
+          <title>${hotelInfo.name} - Order ${orderToPrint.orderNumber}</title>
           <style>
             body { font-family: monospace; padding: 24px; max-width: 320px; margin: 0 auto; color: #111; }
             h2 { text-align: center; margin-bottom: 2px; }
@@ -429,8 +451,10 @@ export default function POSTransactionsPage() {
           </style>
         </head>
         <body>
-          <h2>ZENBOURG RESORT & POS</h2>
-          <p style="text-align: center; font-size: 11px;">Official Tax Invoice / Receipt</p>
+          <h2>${hotelInfo.name}</h2>
+          ${hotelInfo.address ? `<p style="text-align: center; font-size: 10px; color: #555;">${hotelInfo.address}</p>` : ''}
+          ${hotelInfo.gstNumber ? `<p style="text-align: center; font-size: 10px; font-weight: bold;">GSTIN: ${hotelInfo.gstNumber}</p>` : ''}
+          <p style="text-align: center; font-size: 11px; margin-top: 4px;">Official Tax Invoice / Receipt</p>
           <hr/>
           <p><strong>Table / Outlet:</strong> ${orderToPrint.table}</p>
           <p><strong>Order #:</strong> ${orderToPrint.orderNumber}</p>
@@ -1208,8 +1232,11 @@ export default function POSTransactionsPage() {
             </button>
 
             <div className="text-center pb-4 border-b border-white/5">
-              <h3 className="text-xl font-black text-white tracking-tight">Tax Invoice & Receipt</h3>
-              <p className="text-xs text-gray-400 mt-1">Official Guest POS Receipt</p>
+              <h2 className="text-lg font-black text-white uppercase tracking-tight">{hotelInfo.name}</h2>
+              {hotelInfo.gstNumber && (
+                <p className="text-[10.5px] font-mono text-[#3B82F6] font-bold mt-0.5">GSTIN: {hotelInfo.gstNumber}</p>
+              )}
+              <h3 className="text-sm font-bold text-gray-300 tracking-tight mt-1">Tax Invoice & POS Receipt</h3>
             </div>
 
             <div className="py-4 space-y-4">

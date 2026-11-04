@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { unauthorized, forbidden, badRequest, conflict, serverError } from '@/lib/api-response'
 import { redis } from '@/lib/redis'
 import { autoHealCleaningRooms, invalidateRoomAndDashboardCaches } from '@/lib/room-status'
+import { syncSingleRoomToChannex } from '@/lib/channex'
 
 export const dynamic = 'force-dynamic'
 
@@ -205,7 +206,23 @@ export async function POST(request: NextRequest) {
         // Invalidate common caches
         await invalidateRoomAndDashboardCaches(propertyId)
 
-        return NextResponse.json({ success: true, data: room }, { status: 201 })
+        // Automatic Synchronization Event with Channex Channel Manager
+        let channexSync: any = null
+        try {
+            channexSync = await syncSingleRoomToChannex({
+                id: room.id,
+                propertyId: room.propertyId,
+                roomNumber: room.roomNumber,
+                type: room.type,
+                category: room.category,
+                basePrice: room.basePrice,
+                maxOccupancy: room.maxOccupancy
+            })
+        } catch (channexErr: any) {
+            console.warn('[CHANNEX_AUTOSYNC_TRIGGER_ERROR]', channexErr?.message)
+        }
+
+        return NextResponse.json({ success: true, data: room, channexSync }, { status: 201 })
     } catch (error: any) {
         if (error?.code === 'P2002') return conflict('Room number already exists in this hotel property')
         return serverError(error, 'ROOMS_POST')

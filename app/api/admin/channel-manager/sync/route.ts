@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
 import { prisma } from '@/lib/db'
 import { parseICal } from '@/lib/ical'
+import { syncAllStayInRoomsToChannex } from '@/lib/channex'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,6 +69,22 @@ export async function POST(req: NextRequest) {
     const availableRooms = totalRooms - occupiedRooms
 
     const syncResults: any[] = []
+
+    // Execute automated Channex Provisioning and Room Mapping Sync if Channex key is present
+    let channexSyncResult: any = null
+    const hasChannex = connections.some(c => 
+      c.otaName === 'CHANNEX' || 
+      (c.credentials as any)?.provider === 'CHANNEX' ||
+      (c.credentials as any)?.isMasterKey
+    )
+
+    if (hasChannex) {
+      try {
+        channexSyncResult = await syncAllStayInRoomsToChannex(propertyId)
+      } catch (chErr: any) {
+        console.warn('[CHANNEX_SYNC_ON_DISPATCH_WARN]', chErr?.message)
+      }
+    }
 
     for (const conn of connections) {
       const creds: any = conn.credentials || {}
@@ -184,7 +201,8 @@ export async function POST(req: NextRequest) {
         totalRooms,
         availableRooms,
         occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0
-      }
+      },
+      channexSync: channexSyncResult
     })
 
   } catch (error: any) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth/options'
+import { syncAllStayInRoomsToChannex } from '@/lib/channex'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,7 +92,17 @@ export async function POST(req: Request) {
       }
     })
 
-    return NextResponse.json(connection)
+    // If connecting Channex, immediately provision property, room types and rate plans
+    let channexSyncResult: any = null
+    if (otaName === 'CHANNEX' || credentials?.provider === 'CHANNEX' || credentials?.isMasterKey) {
+      try {
+        channexSyncResult = await syncAllStayInRoomsToChannex(propertyId)
+      } catch (chErr: any) {
+        console.warn('[CHANNEX_BOOTSTRAP_WARN]', chErr?.message)
+      }
+    }
+
+    return NextResponse.json({ ...connection, channexSync: channexSyncResult })
   } catch (error) {
     console.error('Error updating OTA connection:', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

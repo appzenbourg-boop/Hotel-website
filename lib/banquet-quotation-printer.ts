@@ -604,6 +604,12 @@ export function downloadBanquetQuotationPDF(booking: any, hotel?: HotelInfo) {
   doc.text('Prepared By (Banquet Sales)', 37, footerY + 36, { align: 'center' })
   doc.text('Client Acceptance Signature', 173, footerY + 36, { align: 'center' })
 
-  // Save the document
-  doc.save(`Banquet_Quotation_${bookingNo}.pdf`)
+  // Save the document with dynamic current hotel name
+  const cleanHotel = (hotelName || 'Hotel')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '') || 'Hotel'
+  const cleanBookingNo = (bookingNo || 'BQ').replace(/[^a-zA-Z0-9_-]/g, '_')
+
+  doc.save(`${cleanHotel}_Banquet_Quotation_${cleanBookingNo}.pdf`)
 }
