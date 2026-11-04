@@ -95,12 +95,20 @@ export default function ApprovalsPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {requests.map((req: any) => (
-                        <Card key={req.id} className="relative overflow-hidden group hover:border-primary/30 transition-all duration-300">
+                    {requests.map((req: any) => {
+                        const isDuplicate = statusFilter === 'PENDING' && 
+                            requests.filter((r: any) => r.bookingId === req.bookingId && r.status === 'PENDING').length > 1 && 
+                            requests.findIndex((r: any) => r.bookingId === req.bookingId) > 0;
+
+                        return (
+                        <Card key={req.id} className={cn(
+                            "relative overflow-hidden group hover:border-primary/30 transition-all duration-300",
+                            isDuplicate && "border-amber-500/40 bg-amber-500/[0.02]"
+                        )}>
                             {/* Accent Line */}
                             <div className={cn(
                                 "absolute top-0 left-0 w-full h-1",
-                                req.type === 'UPGRADE' ? "bg-blue-500" : "bg-emerald-500"
+                                isDuplicate ? "bg-amber-500" : (req.type === 'UPGRADE' ? "bg-blue-500" : "bg-emerald-500")
                             )} />
 
                             <div className="p-6">
@@ -108,14 +116,23 @@ export default function ApprovalsPage() {
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "w-12 h-12 rounded-2xl flex items-center justify-center border",
-                                            req.type === 'UPGRADE' ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                                            isDuplicate 
+                                                ? "bg-amber-500/10 border-amber-500/20 text-amber-400" 
+                                                : (req.type === 'UPGRADE' ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400")
                                         )}>
                                             {req.type === 'UPGRADE' ? <ArrowUp className="w-6 h-6" /> : <Calendar className="w-6 h-6" />}
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-black text-text-primary uppercase tracking-tight">
-                                                {req.type} REQUEST
-                                            </h3>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-lg font-black text-text-primary uppercase tracking-tight">
+                                                    {req.type} REQUEST
+                                                </h3>
+                                                {isDuplicate && (
+                                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
+                                                        Duplicate
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="flex items-center gap-2 mt-1">
                                                 <Badge variant="secondary" className="text-[9px] py-0 px-2 font-black tracking-[0.1em]">
                                                     ID: #{req.id.slice(-6)}
@@ -165,8 +182,12 @@ export default function ApprovalsPage() {
                                                         <Building2 className="w-4 h-4 text-blue-400" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-text-primary">Room {req.details.newRoomId?.slice(-3)}</p>
-                                                        <p className="text-[9px] text-text-tertiary uppercase font-bold">Premium Tier</p>
+                                                        <p className="text-sm font-black text-text-primary">
+                                                            Room {req.details?.newRoomNumber || (req.details?.newRoomId ? req.details.newRoomId.slice(-3) : 'Selected')}
+                                                        </p>
+                                                        <p className="text-[9px] text-text-tertiary uppercase font-bold">
+                                                            {req.details?.newRoomType || 'Premium Tier'}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </>
@@ -195,21 +216,32 @@ export default function ApprovalsPage() {
                                         <button
                                             disabled={processingId === req.id}
                                             onClick={() => handleProcess(req.id, 'APPROVE')}
-                                            className="flex-1 h-11 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                                            className="flex-1 h-11 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
                                             {processingId === req.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                                             Approve Request
                                         </button>
-                                        <button
-                                            disabled={processingId === req.id}
-                                            onClick={() => {
-                                                setRejectingRequest(req)
-                                                setRejectionReason('')
-                                            }}
-                                            className="h-11 px-6 bg-white/5 hover:bg-red-500/10 border border-border/50 hover:border-red-500/20 text-text-tertiary hover:text-red-400 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                        >
-                                            Reject
-                                        </button>
+                                        {isDuplicate ? (
+                                            <button
+                                                disabled={processingId === req.id}
+                                                onClick={() => handleProcess(req.id, 'REJECT', 'Duplicate submission auto-dismissed')}
+                                                className="h-11 px-4 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                title="Dismiss duplicate request"
+                                            >
+                                                Dismiss Duplicate
+                                            </button>
+                                        ) : (
+                                            <button
+                                                disabled={processingId === req.id}
+                                                onClick={() => {
+                                                    setRejectingRequest(req)
+                                                    setRejectionReason('')
+                                                }}
+                                                className="h-11 px-6 bg-white/5 hover:bg-red-500/10 border border-border/50 hover:border-red-500/20 text-text-tertiary hover:text-red-400 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                            >
+                                                Reject
+                                            </button>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="pt-4 border-t border-border flex items-center justify-between">
@@ -235,7 +267,8 @@ export default function ApprovalsPage() {
                                 )}
                             </div>
                         </Card>
-                    ))}
+                        )
+                    })}
                 </div>
             )}
 

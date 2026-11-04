@@ -20,6 +20,36 @@ export async function POST(request: NextRequest) {
         if (!bookingId || !type || !details) return badRequest('bookingId, type, and details are required')
         if (!['UPGRADE', 'EXTENSION'].includes(type)) return badRequest('Invalid request type')
 
+        // 1. Double-click buffer: 10s cooldown window per booking
+        const tenSecondsAgo = new Date(Date.now() - 10 * 1000)
+        const recentDuplicate = await prisma.bookingRequest.findFirst({
+            where: {
+                bookingId,
+                createdAt: { gte: tenSecondsAgo }
+            }
+        })
+        if (recentDuplicate) {
+            return NextResponse.json({
+                success: false,
+                error: 'A request was just submitted a few moments ago. Please wait before submitting another.'
+            }, { status: 429 })
+        }
+
+        // 2. Prevent duplicate pending requests of the same type for this booking
+        const existingPending = await prisma.bookingRequest.findFirst({
+            where: {
+                bookingId,
+                type,
+                status: 'PENDING'
+            }
+        })
+        if (existingPending) {
+            return NextResponse.json({
+                success: false,
+                error: `A ${type.toLowerCase()} request (#${existingPending.id.slice(-6)}) is already pending approval for this booking. Please approve or reject it first.`
+            }, { status: 409 })
+        }
+
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
             include: { property: { select: { ownerIds: true } } }
@@ -27,11 +57,28 @@ export async function POST(request: NextRequest) {
 
         if (!booking) return notFound('Booking')
 
+        // Enrich details with target room details if available
+        let requestDetails = { ...details }
+        if (type === 'UPGRADE' && details.newRoomId) {
+            try {
+                const targetRoom = await prisma.room.findUnique({
+                    where: { id: details.newRoomId },
+                    select: { roomNumber: true, type: true, basePrice: true }
+                })
+                if (targetRoom) {
+                    requestDetails.newRoomNumber = targetRoom.roomNumber
+                    requestDetails.newRoomType = targetRoom.type
+                }
+            } catch (err) {
+                console.error('[BookingRequest] Target room lookup failed:', err)
+            }
+        }
+
         const newRequest = await prisma.bookingRequest.create({
             data: {
                 bookingId,
                 type,
-                details,
+                details: requestDetails,
                 requestedById: session.user.id,
                 status: 'PENDING'
             }
@@ -96,33 +143,49 @@ export async function GET(request: NextRequest) {
             orderBy: { createdAt: 'desc' }
         })
 
-        // Enrich requests with calculated extraCharge if it's missing/zero
+        // Enrich requests with calculated extraCharge and room details if missing
         const enriched = await Promise.all(requests.map(async (req) => {
-            const details = req.details as any;
-            if ((details?.extraCharge || 0) > 0) return req;
-
-            // Recalculate
-            let calculatedCharge = 0;
+            const details = (req.details as any) || {};
+            let calculatedCharge = details?.extraCharge || 0;
             const booking = req.booking as any;
             const currentPrice = booking?.room?.basePrice || 0;
+            let newRoomNumber = details.newRoomNumber;
+            let newRoomType = details.newRoomType;
 
-            if (req.type === 'EXTENSION' && details?.newCheckOut && booking) {
+            if (req.type === 'UPGRADE' && details?.newRoomId) {
+                if (!newRoomNumber || calculatedCharge === 0) {
+                    const newRoom = await prisma.room.findUnique({ 
+                        where: { id: details.newRoomId }, 
+                        select: { roomNumber: true, type: true, basePrice: true } 
+                    });
+                    if (newRoom) {
+                        newRoomNumber = newRoom.roomNumber;
+                        newRoomType = newRoom.type;
+                        if (calculatedCharge === 0) {
+                            const priceDiff = Math.max(0, (newRoom?.basePrice || 0) - currentPrice);
+                            const checkIn = new Date(booking.checkIn);
+                            const checkOut = new Date(booking.checkOut);
+                            const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+                            calculatedCharge = priceDiff * nights;
+                        }
+                    }
+                }
+            } else if (req.type === 'EXTENSION' && details?.newCheckOut && calculatedCharge === 0 && booking) {
                 const currentCheckOut = new Date(booking.checkOut);
                 const newCheckOut = new Date(details.newCheckOut);
                 const extraNights = Math.max(0, Math.ceil((newCheckOut.getTime() - currentCheckOut.getTime()) / (1000 * 60 * 60 * 24)));
                 calculatedCharge = extraNights * currentPrice;
-            } else if (req.type === 'UPGRADE' && details?.newRoomId) {
-                const newRoom = await prisma.room.findUnique({ where: { id: details.newRoomId }, select: { basePrice: true } });
-                const priceDiff = Math.max(0, (newRoom?.basePrice || 0) - currentPrice);
-                const checkIn = new Date(booking.checkIn);
-                const checkOut = new Date(booking.checkOut);
-                const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
-                calculatedCharge = priceDiff * nights;
             }
 
             return {
                 ...req,
-                details: { ...details, extraCharge: calculatedCharge, _calculated: true }
+                details: { 
+                    ...details, 
+                    extraCharge: calculatedCharge, 
+                    newRoomNumber: newRoomNumber || details.newRoomNumber,
+                    newRoomType: newRoomType || details.newRoomType,
+                    _calculated: true 
+                }
             };
         }))
 
@@ -225,6 +288,20 @@ export async function PATCH(request: NextRequest) {
                     data: {
                         status: 'APPROVED',
                         approvedById: session.user.id
+                    }
+                })
+
+                // Auto-dismiss any sibling pending requests for the same booking
+                await tx.bookingRequest.updateMany({
+                    where: {
+                        bookingId: existing.bookingId,
+                        id: { not: requestId },
+                        status: 'PENDING'
+                    },
+                    data: {
+                        status: 'REJECTED',
+                        rejectedById: session.user.id,
+                        rejectionReason: `Auto-dismissed: Booking already updated by approved request #${requestId.slice(-6)}`
                     }
                 })
 

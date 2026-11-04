@@ -361,9 +361,12 @@ function BanquetNewPageInner() {
       }
 
       const { propertyId } = getAdminContext()
+      const firstEventHall = halls.find(h => h.id === events[0]?.hallId || h.name === events[0]?.hallName)
+      const targetPropertyId = (propertyId && propertyId !== 'ALL') ? propertyId : (firstEventHall?.propertyId || undefined)
+
       const url = '/api/admin/banquet/bookings'
       const method = isEdit ? 'PUT' : 'POST'
-      const body = isEdit ? { id: editId, ...payload } : { ...payload, propertyId: propertyId !== 'ALL' ? propertyId : undefined }
+      const body = isEdit ? { id: editId, ...payload } : { ...payload, propertyId: targetPropertyId }
 
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const json = await res.json()

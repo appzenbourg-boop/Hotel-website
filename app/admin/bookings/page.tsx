@@ -655,6 +655,7 @@ export default function BookingsPage() {
   }
 
   const handleRequestUpgrade = async (newRoomId: string, extraCharge: number) => {
+    if (requestLoading) return
     setRequestLoading(true)
     try {
       const res = await fetch('/api/admin/bookings/requests', {
@@ -682,6 +683,7 @@ export default function BookingsPage() {
   }
 
   const handleRequestExtension = async (extraCharge: number) => {
+    if (requestLoading) return
     setRequestLoading(true)
     try {
       const newCheckOut = addDays(selectedBooking.endDate, extensionDays)
@@ -1387,12 +1389,16 @@ export default function BookingsPage() {
               ) : availableUpgrades.map(room => (
                 <button
                   key={room.id}
+                  disabled={requestLoading}
                   onClick={() => handleRequestUpgrade(room.id, (room.basePrice - rooms.find(r => r.roomNumber === selectedBooking.room)?.basePrice || 0) * selectedBooking.nights)}
-                  className="w-full p-4 bg-surface hover:bg-surface border border-border rounded-2xl flex items-center justify-between group transition-all"
+                  className="w-full p-4 bg-surface hover:bg-surface border border-border rounded-2xl flex items-center justify-between group transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <div className="text-left">
-                    <p className="text-sm font-black text-text-primary">Room {room.roomNumber}</p>
-                    <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest">{room.type}</p>
+                  <div className="text-left flex items-center gap-3">
+                    {requestLoading && <Loader2 className="w-4 h-4 animate-spin text-[#4A9EFF]" />}
+                    <div>
+                      <p className="text-sm font-black text-text-primary">Room {room.roomNumber}</p>
+                      <p className="text-[10px] text-text-tertiary font-bold uppercase tracking-widest">{room.type}</p>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-black text-emerald-400">+{formatCurrency(room.basePrice - (rooms.find(r => r.roomNumber === selectedBooking.room)?.basePrice || 0))}/night</p>
@@ -1454,7 +1460,13 @@ export default function BookingsPage() {
                 onClick={() => handleRequestExtension(extensionDays * (rooms.find(r => r.roomNumber === selectedBooking.room)?.basePrice || 0))}
                 className="w-full py-4 bg-[#4A9EFF] hover:bg-surface text-text-primary text-sm font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-[#4A9EFF]/20 disabled:opacity-50"
               >
-                {requestLoading ? 'Submitting...' : 'Submit Extension Request'}
+                {requestLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Submitting...
+                  </span>
+                ) : (
+                  'Submit Extension Request'
+                )}
               </button>
             </div>
             <button

@@ -211,6 +211,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Fallback: Infer propertyId from the selected banquet hall
+    if (!propertyId && body.events?.[0]?.hallId) {
+      const hId = safeObjectId(body.events[0].hallId)
+      if (hId) {
+        const hall = await (prisma as any).banquetHall.findUnique({
+          where: { id: hId },
+          select: { propertyId: true }
+        })
+        if (hall?.propertyId) propertyId = hall.propertyId
+      }
+    }
+
+    // Ultimate fallback: First property in the system
+    if (!propertyId) {
+      const firstProp = await prisma.property.findFirst({ select: { id: true } })
+      if (firstProp) propertyId = firstProp.id
+    }
+
     if (!propertyId) {
       return NextResponse.json({ error: 'Property ID is required' }, { status: 400 })
     }
@@ -238,24 +256,36 @@ export async function POST(req: NextRequest) {
     // Calculate total
     const totalAmount = (body.events || []).reduce((s: number, e: any) => s + (e.amount || 0), 0)
 
-    // Prepare events data with validated ObjectId and parsed dates
-    const eventsCreateData = (body.events || []).map((e: any) => ({
-      hallId: safeObjectId(e.hallId),
-      hallName: e.hallName || 'Main Hall',
-      eventType: e.eventType || 'Event',
-      eventDate: parseSafeDate(e.eventDate),
-      startTime: e.startTime || '09:00',
-      endTime: e.endTime || '17:00',
-      menuCard: e.menuCard || null,
-      guaranteedPax: parseInt(e.guaranteedPax) || 0,
-      childPax: parseInt(e.childPax) || 0,
-      hallOnRent: e.hallOnRent !== false,
-      rateType: e.rateType || 'Season',
-      hallRent: parseFloat(e.hallRent) || 0,
-      perPlateRate: parseFloat(e.perPlateRate) || 0,
-      inclusive: Boolean(e.inclusive),
-      amount: parseFloat(e.amount) || 0,
-      fpNumber: e.fpNumber || null
+    // Prepare events data with validated ObjectId, verified hall existence, and parsed dates
+    const eventsCreateData = await Promise.all((body.events || []).map(async (e: any) => {
+      let validHallId: string | null = null
+      const candidateId = safeObjectId(e.hallId)
+      if (candidateId) {
+        const hallExists = await (prisma as any).banquetHall.findUnique({
+          where: { id: candidateId },
+          select: { id: true }
+        })
+        if (hallExists) validHallId = hallExists.id
+      }
+
+      return {
+        hallId: validHallId,
+        hallName: e.hallName || 'Main Hall',
+        eventType: e.eventType || 'Event',
+        eventDate: parseSafeDate(e.eventDate),
+        startTime: e.startTime || '09:00',
+        endTime: e.endTime || '17:00',
+        menuCard: e.menuCard || null,
+        guaranteedPax: parseInt(e.guaranteedPax) || 0,
+        childPax: parseInt(e.childPax) || 0,
+        hallOnRent: e.hallOnRent !== false,
+        rateType: e.rateType || 'Season',
+        hallRent: parseFloat(e.hallRent) || 0,
+        perPlateRate: parseFloat(e.perPlateRate) || 0,
+        inclusive: Boolean(e.inclusive),
+        amount: parseFloat(e.amount) || 0,
+        fpNumber: e.fpNumber || null
+      }
     }))
 
     // Create booking with automatic collision retry
@@ -369,23 +399,35 @@ export async function PUT(req: NextRequest) {
     // Delete old events and recreate
     await (prisma as any).banquetEvent.deleteMany({ where: { bookingId: id } })
 
-    const eventsCreateData = (events || []).map((e: any) => ({
-      hallId: safeObjectId(e.hallId),
-      hallName: e.hallName || 'Main Hall',
-      eventType: e.eventType || 'Event',
-      eventDate: parseSafeDate(e.eventDate),
-      startTime: e.startTime || '09:00',
-      endTime: e.endTime || '17:00',
-      menuCard: e.menuCard || null,
-      guaranteedPax: parseInt(e.guaranteedPax) || 0,
-      childPax: parseInt(e.childPax) || 0,
-      hallOnRent: e.hallOnRent !== false,
-      rateType: e.rateType || 'Season',
-      hallRent: parseFloat(e.hallRent) || 0,
-      perPlateRate: parseFloat(e.perPlateRate) || 0,
-      inclusive: Boolean(e.inclusive),
-      amount: parseFloat(e.amount) || 0,
-      fpNumber: e.fpNumber || null
+    const eventsCreateData = await Promise.all((events || []).map(async (e: any) => {
+      let validHallId: string | null = null
+      const candidateId = safeObjectId(e.hallId)
+      if (candidateId) {
+        const hallExists = await (prisma as any).banquetHall.findUnique({
+          where: { id: candidateId },
+          select: { id: true }
+        })
+        if (hallExists) validHallId = hallExists.id
+      }
+
+      return {
+        hallId: validHallId,
+        hallName: e.hallName || 'Main Hall',
+        eventType: e.eventType || 'Event',
+        eventDate: parseSafeDate(e.eventDate),
+        startTime: e.startTime || '09:00',
+        endTime: e.endTime || '17:00',
+        menuCard: e.menuCard || null,
+        guaranteedPax: parseInt(e.guaranteedPax) || 0,
+        childPax: parseInt(e.childPax) || 0,
+        hallOnRent: e.hallOnRent !== false,
+        rateType: e.rateType || 'Season',
+        hallRent: parseFloat(e.hallRent) || 0,
+        perPlateRate: parseFloat(e.perPlateRate) || 0,
+        inclusive: Boolean(e.inclusive),
+        amount: parseFloat(e.amount) || 0,
+        fpNumber: e.fpNumber || null
+      }
     }))
 
     const booking = await (prisma as any).banquetBooking.update({
